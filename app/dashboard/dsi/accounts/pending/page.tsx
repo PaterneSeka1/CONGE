@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type PendingEmp = {
   id: string;
@@ -16,12 +17,63 @@ type PendingEmp = {
 };
 
 export default function DsiAccountsPending() {
-  const [rows, setRows] = useState<PendingEmp[]>([
-    { id: "1", firstName: "Awa", lastName: "Traoré", email: "awa@ex.com", matricule: "EMP020", department: "DAF", status: "PENDING" },
-  ]);
+  const [rows, setRows] = useState<PendingEmp[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [departments, setDepartments] = useState<{ id: string; label: string }[]>([]);
+  const [services, setServices] = useState<{ id: string; label: string; departmentId: string }[]>(
+    []
+  );
 
   useEffect(() => {
-    // TODO: GET /api/admin/employees/pending
+    const token = getToken();
+    if (!token) return;
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [res, depRes, svcRes] = await Promise.all([
+          fetch("/api/admin/employees/pending", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
+          fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const data = await res.json().catch(() => ({}));
+        const depData = await depRes.json().catch(() => ({}));
+        const svcData = await svcRes.json().catch(() => ({}));
+        if (res.ok) {
+          setRows(
+            (data?.employees ?? []).map((e: any) => ({
+              id: e.id,
+              firstName: e.firstName,
+              lastName: e.lastName,
+              email: e.email,
+              matricule: e.matricule,
+              department: e.departmentId ?? "",
+              service: e.serviceId ?? "",
+              status: e.status,
+            }))
+          );
+          setDepartments(
+            (depData?.departments ?? []).map((d: any) => ({
+              id: d.id,
+              label: d.type ?? d.name ?? d.id,
+            }))
+          );
+          setServices(
+            (svcData?.services ?? []).map((s: any) => ({
+              id: s.id,
+              label: s.type ?? s.name ?? s.id,
+              departmentId: s.departmentId,
+            }))
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
   }, []);
 
   const setDeptFor = (id: string, value: string) => {
@@ -42,16 +94,57 @@ export default function DsiAccountsPending() {
       alert("Veuillez sélectionner un département avant validation.");
       return;
     }
+    const token = getToken();
+    if (!token) return;
 
-    // TODO: POST /api/admin/employees/:id/approve { departmentType, serviceType? }
-    alert(
-      `APPROVE ACCOUNT ${id} (dept=${target.department}, service=${target.service ?? "none"}) (UI)`
-    );
+    try {
+      await fetch(`/api/employees/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          departmentId: target.department || null,
+          serviceId: target.service || null,
+        }),
+      });
+
+      const res = await fetch(`/api/admin/employees/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "ACTIVE" }),
+      });
+
+      if (res.ok) {
+        setRows((prev) => prev.filter((row) => row.id !== id));
+      }
+    } catch {
+      alert("Erreur lors de la validation.");
+    }
   };
 
   const reject = async (id: string) => {
-    // TODO: POST /api/admin/employees/:id/reject
-    alert(`REJECT ACCOUNT ${id} (UI)`);
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/admin/employees/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: "REJECTED" }),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((row) => row.id !== id));
+      }
+    } catch {
+      alert("Erreur lors du refus.");
+    }
   };
 
   const columns = useMemo<ColumnDef<PendingEmp>[]>(
@@ -79,10 +172,11 @@ export default function DsiAccountsPending() {
             className="w-full border border-vdm-gold-200 rounded-md p-1 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           >
             <option value="">Choisir</option>
-            <option value="DSI">DSI</option>
-            <option value="DAF">DAF</option>
-            <option value="OPERATIONS">OPERATIONS</option>
-            <option value="OTHERS">OTHERS</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
           </select>
         ),
       },
@@ -95,8 +189,13 @@ export default function DsiAccountsPending() {
             className="w-full border border-vdm-gold-200 rounded-md p-1 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           >
             <option value="">Aucun</option>
-            <option value="INFORMATION">INFORMATION</option>
-            <option value="REPUTATION">REPUTATION</option>
+            {services
+              .filter((s) => !row.original.department || s.departmentId === row.original.department)
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
           </select>
         ),
       },
@@ -121,7 +220,7 @@ export default function DsiAccountsPending() {
         ),
       },
     ],
-    [approve, reject, setDeptFor, setServiceFor, rows]
+    [approve, reject, setDeptFor, setServiceFor, rows, departments, services]
   );
 
   return (
@@ -135,7 +234,11 @@ export default function DsiAccountsPending() {
         data={rows}
         columns={columns}
         searchPlaceholder="Rechercher un employé..."
+        pageSize={8}
       />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des comptes...</div>
+      ) : null}
     </div>
   );
 }

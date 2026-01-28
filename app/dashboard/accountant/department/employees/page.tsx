@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
   id: string;
@@ -18,20 +19,10 @@ type EmployeeRow = {
 };
 
 export default function AccountantDepartmentEmployees() {
-  const [rows, setRows] = useState<EmployeeRow[]>([
-    {
-      id: "1",
-      firstName: "Mariam",
-      lastName: "Kouadio",
-      email: "mariam@ex.com",
-      matricule: "DAF010",
-      jobTitle: "Comptable",
-      role: "ACCOUNTANT",
-      status: "ACTIVE",
-      department: "DAF",
-      service: "REPUTATION",
-    },
-  ]);
+  const [rows, setRows] = useState<EmployeeRow[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [departments, setDepartments] = useState<Record<string, string>>({});
+  const [services, setServices] = useState<Record<string, string>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EmployeeRow | null>(null);
@@ -48,11 +39,76 @@ export default function AccountantDepartmentEmployees() {
 
   const saveEdit = async () => {
     if (!draft) return;
+    const token = getToken();
+    if (!token) return;
     setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
     setEditingId(null);
     setDraft(null);
-    // TODO: PUT /api/departments/daf/employees/:id
+    await fetch(`/api/employees/${draft.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        firstName: draft.firstName,
+        lastName: draft.lastName,
+        email: draft.email,
+        matricule: draft.matricule,
+        jobTitle: draft.jobTitle,
+        departmentId: draft.department ?? null,
+        serviceId: draft.service ?? null,
+      }),
+    });
   };
+
+  const loadEmployees = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const [empRes, depRes, svcRes] = await Promise.all([
+        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      const empData = await empRes.json().catch(() => ({}));
+      const depData = await depRes.json().catch(() => ({}));
+      const svcData = await svcRes.json().catch(() => ({}));
+
+      const depMap: Record<string, string> = {};
+      (depData?.departments ?? []).forEach((d: any) => {
+        depMap[d.id] = d.type ?? d.name ?? d.id;
+      });
+
+      const svcMap: Record<string, string> = {};
+      (svcData?.services ?? []).forEach((s: any) => {
+        svcMap[s.id] = s.type ?? s.name ?? s.id;
+      });
+
+      setDepartments(depMap);
+      setServices(svcMap);
+
+      const employees = (empData?.employees ?? []).map((e: any) => ({
+        id: e.id,
+        firstName: e.firstName,
+        lastName: e.lastName,
+        email: e.email,
+        matricule: e.matricule,
+        jobTitle: e.jobTitle,
+        role: e.role ?? "EMPLOYEE",
+        status: e.status ?? "ACTIVE",
+        department: e.departmentId ?? null,
+        service: e.serviceId ?? null,
+      })) as EmployeeRow[];
+
+      setRows(employees.filter((e) => (depMap[e.department ?? ""] ?? "") === "DAF"));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEmployees();
+  }, [loadEmployees]);
 
   const columns = useMemo<ColumnDef<EmployeeRow>[]>(
     () => [
@@ -174,7 +230,7 @@ export default function AccountantDepartmentEmployees() {
         accessorKey: "department",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.department ?? "—";
+          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "—";
           return (
             <input
               value={draft.department ?? ""}
@@ -189,7 +245,7 @@ export default function AccountantDepartmentEmployees() {
         accessorKey: "service",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.service ?? "—";
+          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "—";
           return (
             <input
               value={draft.service ?? ""}
@@ -233,7 +289,7 @@ export default function AccountantDepartmentEmployees() {
         },
       },
     ],
-    [editingId, draft]
+    [editingId, draft, departments, services, saveEdit]
   );
 
   return (
@@ -244,6 +300,9 @@ export default function AccountantDepartmentEmployees() {
       </div>
 
       <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." pageSize={6} />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
+      ) : null}
     </div>
   );
 }

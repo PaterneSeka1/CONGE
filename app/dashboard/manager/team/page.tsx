@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getEmployee, getToken } from "@/lib/auth-client";
 
 type TeamMember = {
   id: string;
@@ -13,21 +14,12 @@ type TeamMember = {
   jobTitle?: string | null;
   status: "ACTIVE" | "PENDING" | "REJECTED";
   service?: string | null;
+  departmentId?: string | null;
 };
 
 export default function ManagerTeamPage() {
-  const [rows, setRows] = useState<TeamMember[]>([
-    {
-      id: "1",
-      firstName: "Awa",
-      lastName: "Traoré",
-      email: "awa@ex.com",
-      matricule: "EMP020",
-      jobTitle: "Développeuse",
-      status: "ACTIVE",
-      service: "INFORMATION",
-    },
-  ]);
+  const [rows, setRows] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const removeEmployee = useCallback(
     async (id: string) => {
@@ -41,6 +33,46 @@ export default function ManagerTeamPage() {
     },
     [rows]
   );
+
+  const loadTeam = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    const me = getEmployee();
+    if (!me) return;
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/employees", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      const employees = (data?.employees ?? []).map((e: any) => ({
+        id: e.id,
+        firstName: e.firstName,
+        lastName: e.lastName,
+        email: e.email,
+        matricule: e.matricule,
+        jobTitle: e.jobTitle,
+        status: e.status ?? "ACTIVE",
+        service: e.serviceId ?? null,
+        departmentId: e.departmentId ?? null,
+      })) as TeamMember[];
+
+      const filtered = employees.filter((e) => {
+        if (me.serviceId) return e.service === me.serviceId;
+        if (me.departmentId) return e.departmentId === me.departmentId;
+        return true;
+      });
+
+      setRows(filtered);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTeam();
+  }, [loadTeam]);
 
   const columns = useMemo<ColumnDef<TeamMember>[]>(
     () => [
@@ -85,6 +117,9 @@ export default function ManagerTeamPage() {
       </div>
 
       <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'équipe...</div>
+      ) : null}
     </div>
   );
 }

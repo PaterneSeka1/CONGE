@@ -32,6 +32,8 @@ export async function GET(req: Request) {
       lastName: true,
       jobTitle: true,
       isCeo: true,
+      role: true,
+      status: true,
       departmentId: true,
       serviceId: true,
       createdAt: true,

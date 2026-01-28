@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
   id: string;
@@ -13,37 +14,15 @@ type EmployeeRow = {
   jobTitle?: string | null;
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
-  department?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS";
-  service?: "INFORMATION" | "REPUTATION" | null;
+  departmentId?: string | null;
+  serviceId?: string | null;
 };
 
 export default function CeoEmployees() {
-  const [rows] = useState<EmployeeRow[]>([
-    {
-      id: "1",
-      firstName: "Awa",
-      lastName: "Traoré",
-      email: "awa@ex.com",
-      matricule: "EMP020",
-      jobTitle: "Développeuse",
-      role: "EMPLOYEE",
-      status: "ACTIVE",
-      department: "DSI",
-      service: "INFORMATION",
-    },
-    {
-      id: "2",
-      firstName: "Mariam",
-      lastName: "Kouadio",
-      email: "mariam@ex.com",
-      matricule: "DAF010",
-      jobTitle: "Comptable",
-      role: "ACCOUNTANT",
-      status: "ACTIVE",
-      department: "DAF",
-      service: "REPUTATION",
-    },
-  ]);
+  const [rows, setRows] = useState<EmployeeRow[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [departments, setDepartments] = useState<Record<string, string>>({});
+  const [services, setServices] = useState<Record<string, string>>({});
 
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
@@ -52,13 +31,15 @@ export default function CeoEmployees() {
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
-      if (departmentFilter !== "ALL" && r.department !== departmentFilter) return false;
+      const deptType = departments[r.departmentId ?? ""] ?? "ALL";
+      const svcType = services[r.serviceId ?? ""] ?? "NONE";
+      if (departmentFilter !== "ALL" && deptType !== departmentFilter) return false;
       if (roleFilter !== "ALL" && r.role !== roleFilter) return false;
       if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
-      if (serviceFilter !== "ALL" && (r.service ?? "NONE") !== serviceFilter) return false;
+      if (serviceFilter !== "ALL" && svcType !== serviceFilter) return false;
       return true;
     });
-  }, [rows, departmentFilter, roleFilter, statusFilter, serviceFilter]);
+  }, [rows, departmentFilter, roleFilter, statusFilter, serviceFilter, departments, services]);
 
   const columns = useMemo<ColumnDef<EmployeeRow>[]>(
     () => [
@@ -79,11 +60,70 @@ export default function CeoEmployees() {
       { header: "Poste", accessorKey: "jobTitle" },
       { header: "Rôle", accessorKey: "role" },
       { header: "Statut", accessorKey: "status" },
-      { header: "Département", accessorKey: "department" },
-      { header: "Service", accessorKey: "service" },
+      {
+        header: "Département",
+        accessorFn: (row) => departments[row.departmentId ?? ""] ?? "—",
+        cell: ({ row }) => departments[row.original.departmentId ?? ""] ?? "—",
+      },
+      {
+        header: "Service",
+        accessorFn: (row) => services[row.serviceId ?? ""] ?? "—",
+        cell: ({ row }) => services[row.original.serviceId ?? ""] ?? "—",
+      },
     ],
-    []
+    [departments, services]
   );
+
+  const loadEmployees = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    setIsLoading(true);
+    try {
+      const [empRes, depRes, svcRes] = await Promise.all([
+        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+
+      const empData = await empRes.json().catch(() => ({}));
+      const depData = await depRes.json().catch(() => ({}));
+      const svcData = await svcRes.json().catch(() => ({}));
+
+      const depMap: Record<string, string> = {};
+      (depData?.departments ?? []).forEach((d: any) => {
+        depMap[d.id] = d.type ?? d.name ?? d.id;
+      });
+
+      const svcMap: Record<string, string> = {};
+      (svcData?.services ?? []).forEach((s: any) => {
+        svcMap[s.id] = s.type ?? s.name ?? s.id;
+      });
+
+      setDepartments(depMap);
+      setServices(svcMap);
+
+      setRows(
+        (empData?.employees ?? []).map((e: any) => ({
+          id: e.id,
+          firstName: e.firstName,
+          lastName: e.lastName,
+          email: e.email,
+          matricule: e.matricule,
+          jobTitle: e.jobTitle,
+          role: e.role ?? "EMPLOYEE",
+          status: e.status ?? "ACTIVE",
+          departmentId: e.departmentId ?? null,
+          serviceId: e.serviceId ?? null,
+        }))
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadEmployees();
+  }, [loadEmployees]);
 
   return (
     <div className="p-6">
@@ -141,6 +181,9 @@ export default function CeoEmployees() {
       </div>
 
       <DataTable data={filteredRows} columns={columns} searchPlaceholder="Rechercher un employé..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
+      ) : null}
     </div>
   );
 }

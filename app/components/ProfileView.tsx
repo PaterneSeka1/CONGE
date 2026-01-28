@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { getEmployee } from "@/lib/auth-client";
+import { useEffect, useMemo, useState } from "react";
+import { getEmployee, getToken } from "@/lib/auth-client";
 import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
 import { adjacencyGraphs, dictionary as commonDictionary } from "@zxcvbn-ts/language-common";
 import { dictionary as frDictionary } from "@zxcvbn-ts/language-fr";
@@ -44,6 +44,23 @@ export default function ProfileView() {
     return zxcvbn(password, userInputs as string[]);
   }, [password, draft?.email, draft?.firstName, draft?.lastName]);
 
+  useEffect(() => {
+    const token = getToken();
+    if (!token || !employee?.id) return;
+    const load = async () => {
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.employee) {
+        const refreshed = { ...employee, ...data.employee };
+        localStorage.setItem("employee", JSON.stringify(refreshed));
+        setDraft(refreshed);
+      }
+    };
+    load();
+  }, [employee]);
+
   if (!employee || !draft) {
     return (
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
@@ -59,7 +76,7 @@ export default function ProfileView() {
     setIsEditing(false);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (password) {
       if (password.length < 6) {
         setPasswordError("Le mot de passe doit contenir au moins 6 caractères.");
@@ -71,11 +88,30 @@ export default function ProfileView() {
       }
     }
     setPasswordError(null);
-    // TODO: PUT /api/employees/me (prénom, nom, email, jobTitle, phone, password)
-    const updated = { ...draft };
-    localStorage.setItem("employee", JSON.stringify(updated));
-    setPassword("");
-    setIsEditing(false);
+    const token = getToken();
+    if (!token) return;
+
+    const payload: Record<string, unknown> = {
+      firstName: draft.firstName,
+      lastName: draft.lastName,
+      email: draft.email,
+      jobTitle: draft.jobTitle ?? null,
+    };
+    if (password) payload.password = password;
+
+    const res = await fetch(`/api/employees/${draft.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const updated = data?.employee ? { ...draft, ...data.employee } : { ...draft };
+      localStorage.setItem("employee", JSON.stringify(updated));
+      setPassword("");
+      setIsEditing(false);
+    }
   };
 
   return (
