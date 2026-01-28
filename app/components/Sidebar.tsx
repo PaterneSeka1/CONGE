@@ -18,17 +18,15 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+import type { SidebarIconKey, SidebarSection } from "./sidebar-types";
 
-export type SidebarLink = {
-  label: string;
-  to: string;
-  icon: IconType;
-};
-
-export type SidebarSection = {
-  title: string | null;
-  links: SidebarLink[];
+const sidebarIconMap: Record<SidebarIconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
+  home: Home,
+  clipboard: ClipboardCheck,
+  clock: Clock,
+  users: Users,
+  user: User,
+  shield: ShieldCheck,
 };
 
 function getEmployee() {
@@ -104,7 +102,7 @@ export function Sidebar({
           <>
             <button
               onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
-              className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-gray-800 text-white hover:bg-gray-700 font-semibold transition border border-gray-700"
+              className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-vdm-gold-800 text-white hover:bg-vdm-gold-700 font-semibold transition border border-vdm-gold-900"
             >
               <div className="flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-white" />
@@ -125,7 +123,7 @@ export function Sidebar({
                       setOrgDropdownOpen(false);
                       setIsOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition text-sm font-medium text-gray-800 ${
+                    className={`w-full text-left px-3 py-2 hover:bg-vdm-gold-50 transition text-sm font-medium text-vdm-gold-900 ${
                       i !== organizations.length - 1 ? "border-b" : ""
                     }`}
                   >
@@ -137,7 +135,7 @@ export function Sidebar({
                     console.log("Ajouter organisation");
                     setOrgDropdownOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 bg-gray-50 hover:bg-gray-100 transition text-sm font-semibold text-gray-900 border-t"
+                  className="w-full text-left px-3 py-2 bg-vdm-gold-50 hover:bg-vdm-gold-100 transition text-sm font-semibold text-vdm-gold-900 border-t"
                 >
                   <div className="flex items-center gap-2">
                     <Plus className="w-4 h-4" />
@@ -148,7 +146,7 @@ export function Sidebar({
             )}
           </>
         ) : (
-          <button className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl bg-gray-800 text-white hover:bg-gray-700 font-semibold transition border border-gray-700">
+          <button className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl bg-vdm-gold-800 text-white hover:bg-vdm-gold-700 font-semibold transition border border-vdm-gold-900">
             <Plus className="w-4 h-4 text-white" />
             <span className="text-xs">Ajouter organisation</span>
           </button>
@@ -160,20 +158,20 @@ export function Sidebar({
   return (
     <>
       {/* MOBILE TOPBAR */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-gray-900 shadow px-4 py-3 flex items-center justify-between border-b border-gray-800">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-vdm-gold-900 shadow px-4 py-3 flex items-center justify-between border-b border-vdm-gold-800">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gray-800 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-xl bg-vdm-gold-800 flex items-center justify-center">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-base font-bold text-white tracking-tight">{brandTitle}</div>
-            <div className="text-xs text-white/70 font-medium">{brandSubtitle}</div>
+            <div className="text-base font-bold text-vdm-gold-100 tracking-tight">{brandTitle}</div>
+            <div className="text-xs text-vdm-gold-200 font-medium">{brandSubtitle}</div>
           </div>
         </div>
 
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 rounded-xl bg-gray-800 text-white hover:bg-gray-700 transition border border-gray-700"
+          className="p-2 rounded-xl bg-vdm-gold-800 text-white hover:bg-vdm-gold-700 transition border border-vdm-gold-900"
         >
           {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
@@ -191,14 +189,14 @@ export function Sidebar({
       <div
         ref={menuRef}
         style={{ maxHeight: isOpen ? `${menuHeight}px` : "0px" }}
-        className="lg:hidden fixed top-[72px] left-0 right-0 bottom-0 z-40 bg-gray-900 overflow-y-auto transition-all duration-300 ease-out shadow-lg"
+        className="lg:hidden fixed top-[72px] left-0 right-0 bottom-0 z-40 bg-vdm-gold-900 overflow-y-auto transition-all duration-300 ease-out shadow-lg"
       >
         <div className="p-4 space-y-4">
           <div className="px-2">
-            <div className="text-sm font-semibold text-white">
+            <div className="text-sm font-semibold text-vdm-gold-100">
               {employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-white/60">{employee?.role ?? ""}</div>
+            <div className="text-xs text-vdm-gold-200">{employee?.role ?? ""}</div>
           </div>
 
           <OrgButton />
@@ -207,7 +205,7 @@ export function Sidebar({
             <div key={idx} className="space-y-1">
               {section.title && (
                 <div className="px-2 mb-1">
-                  <div className="text-xs font-bold text-white/60 uppercase tracking-widest">
+                  <div className="text-xs font-bold text-vdm-gold-200 uppercase tracking-widest">
                     {section.title}
                   </div>
                 </div>
@@ -215,14 +213,16 @@ export function Sidebar({
 
               {section.links.map((link) => {
                 const isActive = pathname.startsWith(link.to);
-                const Icon = link.icon;
+                const Icon = sidebarIconMap[link.icon];
                 return (
                   <Link
                     key={link.to}
                     href={link.to}
                     onClick={() => setIsOpen(false)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl transition ${
-                      isActive ? "bg-gray-700 text-white" : "text-white/90 hover:bg-gray-800"
+                      isActive
+                        ? "bg-vdm-gold-700 text-white"
+                        : "text-vdm-gold-100 hover:bg-vdm-gold-800"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -244,23 +244,23 @@ export function Sidebar({
       </div>
 
       {/* DESKTOP SIDEBAR */}
-      <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-64 bg-gray-900 shadow-lg z-30">
-        <div className="p-5 border-b border-gray-800">
+      <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-64 bg-vdm-gold-900 shadow-lg z-30">
+        <div className="p-5 border-b border-vdm-gold-800">
           <div className="flex items-center gap-3 mb-4">
-            <div className="h-9 w-9 rounded-xl bg-gray-800 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-xl bg-vdm-gold-800 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-lg font-bold text-white tracking-tight">{brandTitle}</div>
-              <div className="text-[11px] text-white/70 font-semibold">{brandSubtitle}</div>
+              <div className="text-lg font-bold text-vdm-gold-100 tracking-tight">{brandTitle}</div>
+              <div className="text-[11px] text-vdm-gold-200 font-semibold">{brandSubtitle}</div>
             </div>
           </div>
 
           <div className="px-1 mb-3">
-            <div className="text-sm font-semibold text-white">
+            <div className="text-sm font-semibold text-vdm-gold-100">
               {employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-white/60">{employee?.role ?? ""}</div>
+            <div className="text-xs text-vdm-gold-200">{employee?.role ?? ""}</div>
           </div>
 
           <OrgButton />
@@ -271,7 +271,7 @@ export function Sidebar({
             <div key={idx} className="space-y-1">
               {section.title && (
                 <div className="px-2 mb-1">
-                  <div className="text-[10px] font-bold text-white/60 uppercase tracking-widest">
+                  <div className="text-[10px] font-bold text-vdm-gold-200 uppercase tracking-widest">
                     {section.title}
                   </div>
                 </div>
@@ -279,13 +279,15 @@ export function Sidebar({
 
               {section.links.map((link) => {
                 const isActive = pathname.startsWith(link.to);
-                const Icon = link.icon;
+                const Icon = sidebarIconMap[link.icon];
                 return (
                   <Link
                     key={link.to}
                     href={link.to}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl transition ${
-                      isActive ? "bg-gray-700 text-white" : "text-white/90 hover:bg-gray-800"
+                      isActive
+                        ? "bg-vdm-gold-700 text-white"
+                        : "text-vdm-gold-100 hover:bg-vdm-gold-800"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -297,10 +299,10 @@ export function Sidebar({
           ))}
         </nav>
 
-        <div className="p-3 border-t border-gray-800">
+        <div className="p-3 border-t border-vdm-gold-800">
           <button
             onClick={() => logout(router)}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-white hover:bg-gray-800 transition w-full font-semibold"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-vdm-gold-100 hover:bg-vdm-gold-800 transition w-full font-semibold"
           >
             <LogOut className="w-5 h-5" />
             <span className="text-sm">Déconnexion</span>
@@ -311,11 +313,3 @@ export function Sidebar({
   );
 }
 
-// Export d’icônes utiles pour composer les menus
-export const SidebarIcons = {
-  HomeIcon: Home,
-  ClipboardDocumentCheckIcon: ClipboardCheck,
-  ClockIcon: Clock,
-  UsersIcon: Users,
-  UserIcon: User,
-};

@@ -23,7 +23,7 @@ export default function DashboardShell({
       <header className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <div className="text-lg font-semibold">{title}</div>
+            <div className="text-lg font-semibold text-vdm-gold-800">{title}</div>
             <div className="text-sm text-gray-600">
               {employee ? `${employee.firstName} ${employee.lastName} — ${employee.role}` : ""}
             </div>
@@ -31,7 +31,7 @@ export default function DashboardShell({
 
           <button
             onClick={onLogout}
-            className="px-3 py-2 rounded-md border bg-white hover:bg-gray-100 text-sm"
+            className="px-3 py-2 rounded-md border border-vdm-gold-300 bg-vdm-gold-50 text-vdm-gold-900 hover:bg-vdm-gold-100 text-sm"
           >
             Déconnexion
           </button>

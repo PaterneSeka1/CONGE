@@ -26,9 +26,9 @@ function strengthPercent(score: number) {
 function StrengthBar({ value }: { value: number }) {
   return (
     <div className="mt-2">
-      <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-vdm-gold-200 overflow-hidden">
         <div
-          className="h-2 rounded-full bg-gray-900 transition-all"
+          className="h-2 rounded-full bg-vdm-gold-700 transition-all"
           style={{ width: `${strengthPercent(value)}%` }}
         />
       </div>
@@ -37,7 +37,7 @@ function StrengthBar({ value }: { value: number }) {
 }
 
 function norm(v: string) {
-  return v.trim();
+  return (v ?? "").trim();
 }
 
 export default function RegisterPage() {
@@ -98,7 +98,6 @@ export default function RegisterPage() {
     const t = toast.loading("Création du compte...");
 
     try {
-      // 1) REGISTER
       const regRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,27 +117,7 @@ export default function RegisterPage() {
         return;
       }
 
-      // 2) AUTO LOGIN (matricule ou email)
-      const loginRes = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          identifier: matriculeTrim,
-          password,
-        }),
-      });
-
-      const loginData = await loginRes.json().catch(() => ({}));
-
-      if (!loginRes.ok) {
-        toast.error(loginData?.error ?? "Compte créé, mais connexion impossible.", { id: t });
-        return;
-      }
-
-      localStorage.setItem("token", loginData.token);
-      localStorage.setItem("employee", JSON.stringify(loginData.employee));
-
-      toast.success("Compte créé et connecté", { id: t });
+      toast.success("Compte créé. En attente de validation par l’admin.", { id: t });
 
       setFirstName("");
       setLastName("");
@@ -147,7 +126,7 @@ export default function RegisterPage() {
       setPassword("");
       setConfirmPassword("");
 
-      window.location.href = "/dashboard";
+      window.location.href = "/login?pending=1";
     } catch {
       toast.error("Erreur réseau. Vérifiez votre connexion.", { id: t });
     } finally {
@@ -162,7 +141,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex">
       {/* LEFT SIDE */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex-col justify-center items-center text-white">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-vdm-gold-500 to-vdm-gold-100 p-12 flex-col justify-center items-center text-white">
         <div className="max-w-md">
           <h1 className="text-5xl font-bold mb-6">Créer un compte</h1>
           <p className="text-xl opacity-90 leading-relaxed">
@@ -188,15 +167,15 @@ export default function RegisterPage() {
       </div>
 
       {/* RIGHT SIDE */}
-      <div className="flex-1 flex items-center justify-center p-2">
+      <div className="flex-1 flex items-center justify-center p-2 bg-gray-50">
         <div className="w-full max-w-md">
-          <div className="">
-            <div className="text-center mb-0.5">
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">Inscription</h2>
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center mb-2">
+              <h2 className="text-3xl font-bold text-vdm-gold-800 mb-2">Inscription</h2>
               <p className="text-gray-600">Créez votre compte pour continuer</p>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               {/* First name */}
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -211,7 +190,7 @@ export default function RegisterPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 focus:border-transparent transition"
                     disabled={isLoading}
                     autoComplete="given-name"
                   />
@@ -232,7 +211,7 @@ export default function RegisterPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 focus:border-transparent transition"
                     disabled={isLoading}
                     autoComplete="family-name"
                   />
@@ -253,7 +232,7 @@ export default function RegisterPage() {
                     value={matricule}
                     onChange={(e) => setMatricule(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 focus:border-transparent transition"
                     disabled={isLoading}
                     autoComplete="username"
                   />
@@ -275,7 +254,7 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     onKeyDown={handleKeyPress}
                     autoComplete="email"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 focus:border-transparent transition"
                     disabled={isLoading}
                   />
                 </div>
@@ -296,13 +275,13 @@ export default function RegisterPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={handleKeyPress}
                     autoComplete="new-password"
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 focus:border-transparent transition"
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-vdm-gold-600 hover:text-vdm-gold-700 transition"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                     disabled={isLoading}
                   >
@@ -331,13 +310,13 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     onKeyDown={handleKeyPress}
                     autoComplete="new-password"
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 focus:border-transparent transition"
                     disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-vdm-gold-600 hover:text-vdm-gold-700 transition"
                     aria-label={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                     disabled={isLoading}
                   >
@@ -349,15 +328,15 @@ export default function RegisterPage() {
               <button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+                className="w-full bg-gradient-to-r from-vdm-gold-500 to-vdm-gold-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50 mt-4"
               >
                 {isLoading ? "Création..." : "Créer mon compte"}
               </button>
             </div>
 
-            <p className="mt-4 text-center text-sm text-gray-600">
+            <p className="mt-6 text-center text-sm text-gray-600">
               Déjà un compte ?{" "}
-              <a href="/login" className="text-blue-600 hover:text-blue-800 font-semibold transition">
+              <a href="/login" className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline">
                 Se connecter
               </a>
             </p>
