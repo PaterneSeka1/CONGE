@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { EmployeeSession, getEmployee } from "@/lib/auth-client";
+import DashboardCharts from "@/app/components/DashboardCharts";
 
 type DsiEmployee = EmployeeSession & {
   leaveBalance?: number; // recommandé dans ton modèle
@@ -10,6 +11,24 @@ type DsiEmployee = EmployeeSession & {
 export default function DsiDashboard() {
   const employee = useMemo(() => getEmployee() as DsiEmployee | null, []);
   const [balance, setBalance] = useState<number>(25);
+  const lineData = [
+    { name: "Jan", value: 8 },
+    { name: "Fév", value: 11 },
+    { name: "Mar", value: 6 },
+    { name: "Avr", value: 9 },
+    { name: "Mai", value: 13 },
+    { name: "Juin", value: 7 },
+  ];
+  const pieData = [
+    { name: "En attente", value: 6 },
+    { name: "Approuvées", value: 14 },
+    { name: "Refusées", value: 2 },
+  ];
+  const barData = [
+    { name: "Inbox", value: 12 },
+    { name: "Comptes", value: 5 },
+    { name: "Historique", value: 9 },
+  ];
 
   useEffect(() => {
     // si ton backend renvoie leaveBalance, on l’affiche; sinon fallback 25
@@ -26,24 +45,32 @@ export default function DsiDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="bg-white border rounded-xl p-4">
+        <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
           <div className="text-sm text-vdm-gold-700">Solde de congé</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{balance} jours</div>
           <div className="text-xs text-gray-500 mt-2">Initialisé à 25 (par défaut).</div>
         </div>
 
-        <div className="bg-white border rounded-xl p-4">
+        <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
           <div className="text-sm text-vdm-gold-700">À traiter</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">—</div>
           <div className="text-xs text-gray-500 mt-2">Demandes transmises par la comptable.</div>
         </div>
 
-        <div className="bg-white border rounded-xl p-4">
+        <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
           <div className="text-sm text-vdm-gold-700">Comptes en attente</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">—</div>
           <div className="text-xs text-gray-500 mt-2">Validation des nouveaux employés.</div>
         </div>
       </div>
+
+      <DashboardCharts
+        title="Indicateurs DSI"
+        subtitle="Synthèse des demandes et comptes."
+        lineData={lineData}
+        pieData={pieData}
+        barData={barData}
+      />
     </div>
   );
 }

@@ -1,0 +1,249 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import DataTable from "@/app/components/DataTable";
+
+type EmployeeRow = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  matricule?: string | null;
+  jobTitle?: string | null;
+  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+  status: "PENDING" | "ACTIVE" | "REJECTED";
+  department?: string | null;
+  service?: string | null;
+};
+
+export default function CeoOthersEmployees() {
+  const [rows, setRows] = useState<EmployeeRow[]>([
+    {
+      id: "1",
+      firstName: "Issa",
+      lastName: "Koné",
+      email: "issa@ex.com",
+      matricule: "OTH010",
+      jobTitle: "Support",
+      role: "EMPLOYEE",
+      status: "ACTIVE",
+      department: "OTHERS",
+      service: "—",
+    },
+  ]);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<EmployeeRow | null>(null);
+
+  const startEdit = (row: EmployeeRow) => {
+    setEditingId(row.id);
+    setDraft({ ...row });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft(null);
+  };
+
+  const saveEdit = async () => {
+    if (!draft) return;
+    setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
+    setEditingId(null);
+    setDraft(null);
+    // TODO: PUT /api/departments/others/employees/:id
+  };
+
+  const columns = useMemo<ColumnDef<EmployeeRow>[]>(
+    () => [
+      {
+        id: "employee",
+        header: "Employé",
+        accessorFn: (row) => `${row.firstName} ${row.lastName}`,
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) {
+            return (
+              <div>
+                <div className="font-semibold">
+                  {row.original.firstName} {row.original.lastName}
+                </div>
+                <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
+              </div>
+            );
+          }
+          return (
+            <div className="grid gap-2">
+              <input
+                value={draft.firstName}
+                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Prénom"
+              />
+              <input
+                value={draft.lastName}
+                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Nom"
+              />
+              <input
+                value={draft.matricule ?? ""}
+                onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Matricule"
+              />
+            </div>
+          );
+        },
+      },
+      {
+        header: "Email",
+        accessorKey: "email",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) return row.original.email;
+          return (
+            <input
+              value={draft.email}
+              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            />
+          );
+        },
+      },
+      {
+        header: "Poste",
+        accessorKey: "jobTitle",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) return row.original.jobTitle ?? "—";
+          return (
+            <input
+              value={draft.jobTitle ?? ""}
+              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            />
+          );
+        },
+      },
+      {
+        header: "Rôle",
+        accessorKey: "role",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) return row.original.role;
+          return (
+            <select
+              value={draft.role}
+              onChange={(e) =>
+                setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })
+              }
+              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            >
+              <option value="EMPLOYEE">EMPLOYEE</option>
+              <option value="DEPT_HEAD">DEPT_HEAD</option>
+              <option value="ACCOUNTANT">ACCOUNTANT</option>
+              <option value="CEO">CEO</option>
+            </select>
+          );
+        },
+      },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) return row.original.status;
+          return (
+            <select
+              value={draft.status}
+              onChange={(e) =>
+                setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })
+              }
+              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="PENDING">PENDING</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+          );
+        },
+      },
+      {
+        header: "Département",
+        accessorKey: "department",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) return row.original.department ?? "—";
+          return (
+            <input
+              value={draft.department ?? ""}
+              onChange={(e) => setDraft({ ...draft, department: e.target.value })}
+              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            />
+          );
+        },
+      },
+      {
+        header: "Service",
+        accessorKey: "service",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit || !draft) return row.original.service ?? "—";
+          return (
+            <input
+              value={draft.service ?? ""}
+              onChange={(e) => setDraft({ ...draft, service: e.target.value })}
+              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            />
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => {
+          const isEdit = row.original.id === editingId;
+          if (!isEdit) {
+            return (
+              <button
+                onClick={() => startEdit(row.original)}
+                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+              >
+                Modifier
+              </button>
+            );
+          }
+          return (
+            <div className="flex gap-2">
+              <button
+                onClick={saveEdit}
+                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
+              >
+                Enregistrer
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+              >
+                Annuler
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [editingId, draft]
+  );
+
+  return (
+    <div className="p-6">
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés (OTHERS)</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">
+        Gestion des employés du département OTHERS.
+      </div>
+
+      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." pageSize={6} />
+    </div>
+  );
+}

@@ -77,6 +77,18 @@ export function Sidebar({
     return () => document.removeEventListener("mousedown", handler);
   }, [orgDropdownOpen]);
 
+  const isDashboardRoot = (to: string) =>
+    to === "/dashboard/dsi" ||
+    to === "/dashboard/manager" ||
+    to === "/dashboard/employee" ||
+    to === "/dashboard/accountant" ||
+    to === "/dashboard/ceo";
+
+  const isActiveLink = (path: string, to: string) => {
+    if (isDashboardRoot(to)) return path === to;
+    return path === to || path.startsWith(`${to}/`);
+  };
+
   const OrgButton = () => {
     if (!showOrgSwitcher) return null;
 
@@ -196,7 +208,7 @@ export function Sidebar({
               )}
 
               {section.links.map((link) => {
-                const isActive = pathname.startsWith(link.to);
+                const isActive = isActiveLink(pathname, link.to);
                 const Icon = sidebarIconMap[link.icon];
                 return (
                   <Link
@@ -265,7 +277,7 @@ export function Sidebar({
               )}
 
               {section.links.map((link) => {
-                const isActive = pathname.startsWith(link.to);
+                const isActive = isActiveLink(pathname, link.to);
                 const Icon = sidebarIconMap[link.icon];
                 return (
                   <Link

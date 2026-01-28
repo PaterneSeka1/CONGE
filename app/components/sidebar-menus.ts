@@ -3,10 +3,11 @@ import type { SidebarSection } from "./sidebar-types";
 export const employeeMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/employee" }] },
   {
-    title: "CongÃ©s",
+    title: "Congés",
     links: [
       { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/employee/new" },
       { label: "Mes demandes", icon: "clock", to: "/dashboard/employee/requests" },
+      { label: "Historique", icon: "clock", to: "/dashboard/employee/history" },
     ],
   },
   { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/employee/profile" }] },
@@ -17,20 +18,42 @@ export const accountantMenu: SidebarSection[] = [
   {
     title: "Demandes",
     links: [
-      { label: "Inbox (Ã  traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
+      { label: "Inbox (à traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
       { label: "Historique", icon: "clock", to: "/dashboard/accountant/history" },
     ],
   },
+  {
+    title: "Département DAF",
+    links: [
+      { label: "Employés (actuels)", icon: "users", to: "/dashboard/accountant/department/employees" },
+      {
+        label: "Historique employés",
+        icon: "users",
+        to: "/dashboard/accountant/department/employees-history",
+      },
+    ],
+  },
+
+  {
+    title: "Compte",
+    links: [{ label: "Profil", icon: "user", to: "/dashboard/accountant/profile" }],
+  },
 ];
+
 
 export const managerMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/manager" }] },
   {
-    title: "DÃ©partement",
+    title: "Département",
     links: [
       { label: "Demandes transmises", icon: "clipboard", to: "/dashboard/manager/inbox" },
-      { label: "Ã‰quipe", icon: "users", to: "/dashboard/manager/team" },
+      { label: "Équipe", icon: "users", to: "/dashboard/manager/team" },
     ],
+  },
+
+  {
+    title: "Compte",
+    links: [{ label: "Profil", icon: "user", to: "/dashboard/manager/profile" }],
   },
 ];
 
@@ -39,8 +62,30 @@ export const ceoMenu: SidebarSection[] = [
   {
     title: "Validation",
     links: [
-      { label: "Demandes escaladÃ©es", icon: "clipboard", to: "/dashboard/ceo/inbox" },
+      { label: "Demandes escaladées", icon: "clipboard", to: "/dashboard/ceo/inbox" },
       { label: "Vue globale", icon: "clock", to: "/dashboard/ceo/overview" },
     ],
+  },
+  {
+    title: "Employés",
+    links: [
+      // { label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" },
+    ],
+  },
+  {
+    title: "Département OTHERS",
+    links: [
+      { label: "Employés (actuels)", icon: "users", to: "/dashboard/ceo/department/others/employees" },
+      {
+        label: "Historique employés",
+        icon: "users",
+        to: "/dashboard/ceo/department/others/employees-history",
+      },
+    ],
+  },
+
+  {
+    title: "Compte",
+    links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }],
   },
 ];

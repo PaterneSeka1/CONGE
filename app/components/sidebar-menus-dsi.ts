@@ -24,4 +24,8 @@ export const dsiMenu: SidebarSection[] = [
     title: "Administration",
     links: [{ label: "Validation des comptes", icon: "shield", to: "/dashboard/dsi/accounts/pending" }],
   },
+  {
+    title: "Compte",
+    links: [{ label: "Profil", icon: "user", to: "/dashboard/dsi/profile" }],
+  },
 ];

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
 import toast from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
 
 type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
 
@@ -25,10 +26,20 @@ function normIdentifier(v: string) {
 }
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [identifier, setIdentifier] = useState(""); // email OU matricule
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("pending") === "1") {
+      toast("Compte en attente de validation par l'admin.", { icon: "⏳" });
+    }
+    if (searchParams.get("validated") === "1") {
+      toast.success("Votre compte est validé. Vous pouvez vous connecter.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async () => {
     const identifierTrim = normIdentifier(identifier);
@@ -102,6 +113,11 @@ export default function LoginPage() {
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-vdm-gold-800 mb-2">Connexion</h2>
               <p className="text-gray-600">Entrez vos identifiants pour continuer</p>
+              <p className="text-xs text-vdm-gold-700 mt-2">
+                {searchParams.get("pending") === "1"
+                  ? "Votre compte n'est pas encore validé, patientez quelques instants."
+                  : "Votre compte est validé. Connectez-vous pour continuer."}
+              </p>
             </div>
 
             <div className="space-y-6">
