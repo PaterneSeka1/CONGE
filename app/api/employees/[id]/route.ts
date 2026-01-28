@@ -12,8 +12,12 @@ export async function GET(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
 
+  const params = await ctx.params;
+  const id = params.id;
+  const requesterRole = String(v.payload?.role ?? "");
+
   const employee = await prisma.employee.findUnique({
-    where: { id: ctx.params.id },
+    where: { id },
     select: {
       id: true,
       email: true,
@@ -21,7 +25,8 @@ export async function GET(req: Request, ctx: Ctx) {
       firstName: true,
       lastName: true,
       jobTitle: true,
-      isCeo: true,
+      role: true,
+      status: true,
       departmentId: true,
       serviceId: true,
       createdAt: true,
@@ -37,6 +42,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
 
+  const params = await ctx.params;
+  const id = params.id;
+
   try {
     const body = await req.json().catch(() => ({}));
 
@@ -46,7 +54,15 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (body?.email !== undefined) data.email = norm(body.email).toLowerCase();
     if (body?.matricule !== undefined) data.matricule = norm(body.matricule) || null;
     if (body?.jobTitle !== undefined) data.jobTitle = body.jobTitle ?? null;
-    if (body?.isCeo !== undefined) data.isCeo = Boolean(body.isCeo);
+    if (body?.role !== undefined) {
+      if (requesterRole !== "CEO") {
+        return jsonError("Seul le CEO peut modifier le rôle d'un employé", 403);
+      }
+      if (body.role === "CEO") {
+        return jsonError("Impossible d'attribuer le rôle CEO", 403);
+      }
+      data.role = body.role;
+    }
     if (body?.departmentId !== undefined) data.departmentId = body.departmentId ?? null;
     if (body?.serviceId !== undefined) data.serviceId = body.serviceId ?? null;
 
@@ -55,19 +71,20 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
 
     const updated = await prisma.employee.update({
-      where: { id: ctx.params.id },
+      where: { id },
       data,
       select: {
         id: true,
         email: true,
         matricule: true,
-        firstName: true,
-        lastName: true,
-        jobTitle: true,
-        isCeo: true,
-        departmentId: true,
-        serviceId: true,
-        updatedAt: true,
+      firstName: true,
+      lastName: true,
+      jobTitle: true,
+      role: true,
+      status: true,
+      departmentId: true,
+      serviceId: true,
+      updatedAt: true,
       },
     });
 
@@ -81,8 +98,11 @@ export async function DELETE(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
 
+  const params = await ctx.params;
+  const id = params.id;
+
   try {
-    await prisma.employee.delete({ where: { id: ctx.params.id } });
+    await prisma.employee.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return jsonError("Erreur serveur", 500, { code: e?.code, details: e?.message });

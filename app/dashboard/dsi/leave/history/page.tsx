@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type LeaveItem = {
   id: string;
@@ -14,14 +15,38 @@ type LeaveItem = {
 };
 
 export default function DsiLeaveHistory() {
-  const [items, setItems] = useState<LeaveItem[]>([
-    // placeholder UI
-    { id: "1", type: "ANNUAL", startDate: "2026-02-01", endDate: "2026-02-05", status: "PENDING", currentAssignee: "Comptable" },
-    { id: "2", type: "SICK", startDate: "2025-11-10", endDate: "2025-11-12", status: "APPROVED", currentAssignee: "—" },
-  ]);
+  const [items, setItems] = useState<LeaveItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // TODO: GET /api/leaves/mine
+    const token = getToken();
+    if (!token) return;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/leaves?mine=1", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setItems(
+            (data?.leaves ?? []).map((x: any) => ({
+              id: x.id,
+              type: x.type,
+              startDate: x.startDate?.slice(0, 10) ?? "",
+              endDate: x.endDate?.slice(0, 10) ?? "",
+              status: x.status,
+              currentAssignee: x.currentAssignee
+                ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
+                : "—",
+            }))
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const columns = useMemo<ColumnDef<LeaveItem>[]>(
@@ -53,6 +78,9 @@ export default function DsiLeaveHistory() {
       <div className="text-sm text-vdm-gold-700 mb-4">Statuts : validé, refusé, en attente.</div>
 
       <DataTable data={items} columns={columns} searchPlaceholder="Rechercher un congé..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
+      ) : null}
     </div>
   );
 }

@@ -185,24 +185,7 @@ export default function DsiDepartmentEmployees() {
       {
         header: "Rôle",
         accessorKey: "role",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.role;
-          return (
-            <select
-              value={draft.role}
-              onChange={(e) =>
-                setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })
-              }
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="EMPLOYEE">EMPLOYEE</option>
-              <option value="DEPT_HEAD">DEPT_HEAD</option>
-              <option value="ACCOUNTANT">ACCOUNTANT</option>
-              <option value="CEO">CEO</option>
-            </select>
-          );
-        },
+        cell: ({ row }) => row.original.role,
       },
       {
         header: "Statut",

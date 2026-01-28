@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getToken } from "@/lib/auth-client";
 
 export default function EmployeeLeaveNew() {
   const [type, setType] = useState("ANNUAL");
@@ -14,8 +15,29 @@ export default function EmployeeLeaveNew() {
       alert("Veuillez renseigner la date de début et la date de fin.");
       return;
     }
-    // TODO: POST /api/leaves
-    alert("Demande prête (UI). Branche ensuite sur POST /api/leaves.");
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch("/api/leaves", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        type,
+        startDate,
+        endDate,
+        reason,
+        remainingTasks,
+      }),
+    });
+    if (res.ok) {
+      alert("Demande envoyée.");
+      setStartDate("");
+      setEndDate("");
+      setReason("");
+      setRemainingTasks("");
+      setType("ANNUAL");
+    } else {
+      alert("Erreur lors de l'envoi.");
+    }
   };
 
   return (

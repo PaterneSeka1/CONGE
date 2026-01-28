@@ -18,7 +18,7 @@ export const accountantMenu: SidebarSection[] = [
   {
     title: "Demandes",
     links: [
-      { label: "Inbox (à traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
+      { label: "Inbox (? traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
       { label: "Historique", icon: "clock", to: "/dashboard/accountant/history" },
     ],
   },
@@ -69,7 +69,7 @@ export const ceoMenu: SidebarSection[] = [
   {
     title: "Employés",
     links: [
-      // { label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" },
+      { label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" },
     ],
   },
   {
@@ -83,9 +83,9 @@ export const ceoMenu: SidebarSection[] = [
       },
     ],
   },
-
   {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }],
   },
 ];
+

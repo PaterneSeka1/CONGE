@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type HistoryItem = {
   id: string;
@@ -14,26 +15,43 @@ type HistoryItem = {
 };
 
 export default function AccountantHistory() {
-  const [rows, setRows] = useState<HistoryItem[]>([
-    {
-      id: "1",
-      employeeName: "Awa Traoré",
-      period: "2026-01-10 → 2026-01-12",
-      decision: "APPROVED",
-      decidedAt: "2026-01-05",
-    },
-    {
-      id: "2",
-      employeeName: "Souleymane Koné",
-      period: "2026-02-03 → 2026-02-06",
-      decision: "ESCALATED",
-      decidedAt: "2026-01-20",
-      target: "CEO",
-    },
-  ]);
+  const [rows, setRows] = useState<HistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // TODO: GET /api/leaves/history?scope=accountant
+    const token = getToken();
+    if (!token) return;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/leaves/history?scope=actor", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setRows(
+            (data?.decisions ?? []).map((d: any) => ({
+              id: d.id,
+              employeeName: `${d.leaveRequest?.employee?.firstName ?? ""} ${d.leaveRequest?.employee?.lastName ?? ""}`.trim(),
+              period: `${d.leaveRequest?.startDate?.slice(0, 10)} → ${d.leaveRequest?.endDate?.slice(0, 10)}`,
+              decision:
+                d.type === "APPROVE"
+                  ? "APPROVED"
+                  : d.type === "REJECT"
+                  ? "REJECTED"
+                  : d.type === "ESCALATE"
+                  ? "ESCALATED"
+                  : "CANCELLED",
+              decidedAt: d.createdAt?.slice(0, 10) ?? "",
+              target: d.toEmployee?.role ?? "—",
+            }))
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
@@ -57,6 +75,9 @@ export default function AccountantHistory() {
       <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité des validations et transmissions.</div>
 
       <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une décision..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
+      ) : null}
     </div>
   );
 }

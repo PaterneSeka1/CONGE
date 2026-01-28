@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 type PendingEmp = {
   id: string;
@@ -91,13 +92,14 @@ export default function DsiAccountsPending() {
   const approve = async (id: string) => {
     const target = rows.find((row) => row.id === id);
     if (!target?.department) {
-      alert("Veuillez sélectionner un département avant validation.");
+      toast.error("Veuillez sélectionner un département avant validation.");
       return;
     }
     const token = getToken();
     if (!token) return;
 
     try {
+      const t = toast.loading("Validation en cours...");
       await fetch(`/api/employees/${id}`, {
         method: "PATCH",
         headers: {
@@ -121,9 +123,12 @@ export default function DsiAccountsPending() {
 
       if (res.ok) {
         setRows((prev) => prev.filter((row) => row.id !== id));
+        toast.success("Compte validé.", { id: t });
+        return;
       }
+      toast.error("Erreur lors de la validation.", { id: t });
     } catch {
-      alert("Erreur lors de la validation.");
+      toast.error("Erreur lors de la validation.");
     }
   };
 
@@ -131,6 +136,7 @@ export default function DsiAccountsPending() {
     const token = getToken();
     if (!token) return;
     try {
+      const t = toast.loading("Refus en cours...");
       const res = await fetch(`/api/admin/employees/${id}/status`, {
         method: "PATCH",
         headers: {
@@ -141,9 +147,12 @@ export default function DsiAccountsPending() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((row) => row.id !== id));
+        toast.success("Compte refusé.", { id: t });
+        return;
       }
+      toast.error("Erreur lors du refus.", { id: t });
     } catch {
-      alert("Erreur lors du refus.");
+      toast.error("Erreur lors du refus.");
     }
   };
 

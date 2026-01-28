@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type LeaveItem = {
   id: string;
@@ -14,13 +15,36 @@ type LeaveItem = {
 };
 
 export default function EmployeeHistory() {
-  const [items, setItems] = useState<LeaveItem[]>([
-    { id: "1", type: "ANNUAL", startDate: "2026-01-10", endDate: "2026-01-12", status: "APPROVED", decidedAt: "2026-01-05" },
-    { id: "2", type: "SICK", startDate: "2025-11-10", endDate: "2025-11-12", status: "REJECTED", decidedAt: "2025-11-01" },
-  ]);
+  const [items, setItems] = useState<LeaveItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // TODO: GET /api/leaves/history?mine=1
+    const token = getToken();
+    if (!token) return;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/leaves/history?mine=1", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setItems(
+            (data?.leaves ?? []).map((x: any) => ({
+              id: x.id,
+              type: x.type,
+              startDate: x.startDate?.slice(0, 10) ?? "",
+              endDate: x.endDate?.slice(0, 10) ?? "",
+              status: x.status,
+              decidedAt: x.decisions?.[0]?.createdAt?.slice(0, 10) ?? "—",
+            }))
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const columns = useMemo<ColumnDef<LeaveItem>[]>(
@@ -48,6 +72,9 @@ export default function EmployeeHistory() {
       <div className="text-sm text-vdm-gold-700 mb-4">Historique complet de vos demandes.</div>
 
       <DataTable data={items} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
+      ) : null}
     </div>
   );
 }

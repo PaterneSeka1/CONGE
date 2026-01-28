@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type Req = {
   id: string;
@@ -14,47 +15,88 @@ type Req = {
 };
 
 export default function AccountantInbox() {
-  const [rows, setRows] = useState<Req[]>([
-    {
-      id: "1",
-      employeeName: "Jean Kouassi",
-      period: "2026-02-01 → 2026-02-05",
-      status: "PENDING",
-      note: "Demande classique",
-      origin: "EMPLOYEE",
-    },
-    {
-      id: "2",
-      employeeName: "Fatou Diarra",
-      period: "2026-03-10 → 2026-03-12",
-      status: "PENDING",
-      note: "Transmis par manager",
-      origin: "MANAGER",
-    },
-  ]);
+  const [rows, setRows] = useState<Req[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // TODO: GET /api/leaves/inbox?scope=all
+    const token = getToken();
+    if (!token) return;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/leaves/inbox", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setRows(
+            (data?.leaves ?? []).map((x: any) => ({
+              id: x.id,
+              employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+              period: `${x.startDate?.slice(0, 10)} → ${x.endDate?.slice(0, 10)}`,
+              status: x.status,
+              note: x.reason ?? "",
+              origin: x.employee?.role === "DEPT_HEAD" ? "MANAGER" : "EMPLOYEE",
+            }))
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const approve = async (id: string) => {
-    // TODO: POST /api/leaves/:id/decide { type: "APPROVE" }
-    alert(`APPROVE ${id} (UI)`);
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch(`/api/leaves/${id}/decide`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "APPROVE" }),
+    });
+    if (res.ok) {
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    }
   };
 
   const reject = async (id: string) => {
-    // TODO: POST /api/leaves/:id/decide { type: "REJECT" }
-    alert(`REJECT ${id} (UI)`);
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch(`/api/leaves/${id}/decide`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "REJECT" }),
+    });
+    if (res.ok) {
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    }
   };
 
   const forwardToCeo = async (id: string) => {
-    // TODO: POST /api/leaves/:id/decide { type: "ESCALATE", to: "CEO" }
-    alert(`FORWARD TO CEO ${id} (UI)`);
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch(`/api/leaves/${id}/decide`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "ESCALATE", toRole: "CEO" }),
+    });
+    if (res.ok) {
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    }
   };
 
   const forwardToManager = async (id: string) => {
-    // TODO: POST /api/leaves/:id/decide { type: "ESCALATE", to: "MANAGER" }
-    alert(`FORWARD TO MANAGER ${id} (UI)`);
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch(`/api/leaves/${id}/decide`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "ESCALATE", toRole: "MANAGER" }),
+    });
+    if (res.ok) {
+      setRows((prev) => prev.filter((r) => r.id !== id));
+    }
   };
 
   const columns = useMemo<ColumnDef<Req>[]>(
@@ -132,6 +174,9 @@ export default function AccountantInbox() {
       </div>
 
       <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
+      ) : null}
     </div>
   );
 }

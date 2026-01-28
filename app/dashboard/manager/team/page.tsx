@@ -20,6 +20,7 @@ type TeamMember = {
 export default function ManagerTeamPage() {
   const [rows, setRows] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const manager = useMemo(() => getEmployee(), []);
 
   const removeEmployee = useCallback(
     async (id: string) => {
@@ -29,7 +30,15 @@ export default function ManagerTeamPage() {
       if (!ok) return;
 
       setRows((prev) => prev.filter((r) => r.id !== id));
-      // TODO: DELETE /api/manager/team/:id (retirer du service)
+      const token = getToken();
+      if (!token) return;
+      const res = await fetch(`/api/manager/team/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        alert("Erreur lors de la suppression.");
+      }
     },
     [rows]
   );
@@ -96,17 +105,23 @@ export default function ManagerTeamPage() {
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
-          <button
-            onClick={() => removeEmployee(row.original.id)}
-            className="px-2 py-1 rounded-md border border-red-300 text-red-700 text-xs hover:bg-red-50"
-          >
-            Supprimer
-          </button>
-        ),
+        cell: ({ row }) => {
+          const canDelete =
+            (manager?.serviceId && row.original.service === manager.serviceId) ||
+            (!manager?.serviceId && manager?.departmentId && row.original.departmentId === manager.departmentId);
+          if (!canDelete) return "—";
+          return (
+            <button
+              onClick={() => removeEmployee(row.original.id)}
+              className="px-2 py-1 rounded-md border border-red-300 text-red-700 text-xs hover:bg-red-50"
+            >
+              Supprimer
+            </button>
+          );
+        },
       },
     ],
-    [removeEmployee]
+    [removeEmployee, manager]
   );
 
   return (

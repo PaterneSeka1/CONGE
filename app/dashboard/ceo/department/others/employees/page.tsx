@@ -199,7 +199,6 @@ export default function CeoOthersEmployees() {
               <option value="EMPLOYEE">EMPLOYEE</option>
               <option value="DEPT_HEAD">DEPT_HEAD</option>
               <option value="ACCOUNTANT">ACCOUNTANT</option>
-              <option value="CEO">CEO</option>
             </select>
           );
         },

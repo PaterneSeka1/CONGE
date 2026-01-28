@@ -10,8 +10,11 @@ export async function GET(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
 
+  const params = await ctx.params;
+  const id = params.id;
+
   const responsables = await prisma.departmentResponsibility.findMany({
-    where: { departmentId: ctx.params.id, endAt: null },
+    where: { departmentId: id, endAt: null },
     include: { employee: true },
     orderBy: { startAt: "desc" },
   });
@@ -22,6 +25,9 @@ export async function GET(req: Request, ctx: Ctx) {
 export async function POST(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
+
+  const params = await ctx.params;
+  const id = params.id;
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -35,11 +41,11 @@ export async function POST(req: Request, ctx: Ctx) {
     // - DAF: max 2 responsables actifs
     // (à faire côté code car Mongo/Prisma ne le force pas)
     const activeCount = await prisma.departmentResponsibility.count({
-      where: { departmentId: ctx.params.id, endAt: null },
+      where: { departmentId: id, endAt: null },
     });
 
     const dept = await prisma.department.findUnique({
-      where: { id: ctx.params.id },
+      where: { id },
       select: { type: true },
     });
 
@@ -54,7 +60,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
     const created = await prisma.departmentResponsibility.create({
       data: {
-        departmentId: ctx.params.id,
+        departmentId: id,
         employeeId,
         role,
       },

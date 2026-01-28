@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import { getToken } from "@/lib/auth-client";
 
 type LeaveItem = {
   id: string;
@@ -14,18 +15,53 @@ type LeaveItem = {
 };
 
 export default function EmployeeRequests() {
-  const [items, setItems] = useState<LeaveItem[]>([
-    { id: "1", type: "ANNUAL", startDate: "2026-02-01", endDate: "2026-02-05", status: "PENDING", currentAssignee: "Manager" },
-    { id: "2", type: "SICK", startDate: "2025-11-10", endDate: "2025-11-12", status: "APPROVED", currentAssignee: "Comptable" },
-  ]);
+  const [items, setItems] = useState<LeaveItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // TODO: GET /api/leaves/mine
+    const token = getToken();
+    if (!token) return;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/leaves?mine=1", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          setItems(
+            (data?.leaves ?? []).map((x: any) => ({
+              id: x.id,
+              type: x.type,
+              startDate: x.startDate?.slice(0, 10) ?? "",
+              endDate: x.endDate?.slice(0, 10) ?? "",
+              status: x.status,
+              currentAssignee: x.currentAssignee
+                ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
+                : "—",
+            }))
+          );
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const cancelRequest = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch(`/api/leaves/${id}/decide`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: "CANCEL" }),
+    });
+    if (!res.ok) {
+      alert("Erreur lors de l'annulation.");
+      return;
+    }
     setItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: "CANCELLED" } : x)));
-    // TODO: POST /api/leaves/:id/decide { type: "CANCEL" }
   };
 
   const columns = useMemo<ColumnDef<LeaveItem>[]>(
@@ -74,6 +110,9 @@ export default function EmployeeRequests() {
       </div>
 
       <DataTable data={items} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
+      ) : null}
     </div>
   );
 }

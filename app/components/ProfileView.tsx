@@ -20,24 +20,13 @@ type EditableEmployee = ReturnType<typeof getEmployee> & {
   phone?: string | null;
 };
 
-const departmentLabelMap: Record<string, string> = {
-  DSI: "DSI",
-  DAF: "DAF",
-  OPERATIONS: "OPERATIONS",
-  OTHERS: "OTHERS",
-};
-
-function getDepartmentLabel(departmentId?: string | null) {
-  if (!departmentId) return "—";
-  return departmentLabelMap[departmentId] ?? departmentId;
-}
-
 export default function ProfileView() {
   const employee = useMemo(() => getEmployee() as EditableEmployee | null, []);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<EditableEmployee | null>(employee);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
 
   const pw = useMemo(() => {
     const userInputs = [draft?.email, draft?.firstName, draft?.lastName].filter(Boolean);
@@ -60,6 +49,25 @@ export default function ProfileView() {
     };
     load();
   }, [employee]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    const loadDepartments = async () => {
+      const res = await fetch("/api/departments", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const map: Record<string, string> = {};
+        (data?.departments ?? []).forEach((d: any) => {
+          map[d.id] = d.name ?? d.type ?? d.id;
+        });
+        setDepartmentNames(map);
+      }
+    };
+    loadDepartments();
+  }, []);
 
   if (!employee || !draft) {
     return (
@@ -222,7 +230,7 @@ export default function ProfileView() {
         <div>
           <div className="text-xs text-vdm-gold-600">Département</div>
           <div className="text-sm text-vdm-gold-900 font-medium">
-            {getDepartmentLabel(draft.departmentId)}
+            {draft.departmentId ? departmentNames[draft.departmentId] ?? draft.departmentId : "—"}
           </div>
         </div>
         <div>

@@ -11,6 +11,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
 
+  const params = await ctx.params;
+  const id = params.id;
+
   const adminId = String(v.payload?.sub ?? "");
   if (!adminId) return jsonError("Token invalide", 401);
 
@@ -26,7 +29,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
   // Empêcher de re-valider un compte déjà traité
   const current = await prisma.employee.findUnique({
-    where: { id: ctx.params.id },
+    where: { id },
     select: { status: true },
   });
 
@@ -37,10 +40,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   const updated = await prisma.employee.update({
-    where: { id: ctx.params.id },
+    where: { id },
     data: {
       status,
-      approvedAt: status === "ACTIVE" ? new Date() : null,
       approvedById: adminId,
     },
     select: {
@@ -51,7 +53,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
       matricule: true,
       role: true,
       status: true,
-      approvedAt: true,
       approvedById: true,
       createdAt: true,
     },
