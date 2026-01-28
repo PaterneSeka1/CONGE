@@ -1,0 +1,155 @@
+"use client";
+
+import { useState } from "react";
+import { Eye, EyeOff, User, Lock } from "lucide-react";
+import toast from "react-hot-toast";
+
+export default function LoginPage() {
+  const [identifier, setIdentifier] = useState(""); // email OU matricule
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  function norm(v: string) {
+    return v.trim();
+  }
+
+  const handleSubmit = async () => {
+    const identifierTrim = norm(identifier);
+
+    if (!identifierTrim || !password) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+
+    setIsLoading(true);
+    const loadingToast = toast.loading("Connexion en cours...");
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: identifierTrim,
+          password,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        toast.error(data?.error || "Identifiants incorrects", { id: loadingToast });
+        return;
+      }
+
+      // API => { token, employee: {...} }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("employee", JSON.stringify(data.employee));
+
+      toast.success("Connexion réussie", { id: loadingToast });
+
+      window.location.href = "/dashboard";
+    } catch {
+      toast.error("Erreur réseau. Veuillez réessayer.", { id: loadingToast });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !isLoading) handleSubmit();
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* LEFT */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex-col justify-center items-center text-white">
+        <div className="max-w-md">
+          <h1 className="text-5xl font-bold mb-6">Bienvenue</h1>
+          <p className="text-xl opacity-90">
+            Connectez-vous pour accéder à votre espace personnel.
+          </p>
+        </div>
+      </div>
+
+      {/* RIGHT */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">Connexion</h2>
+              <p className="text-gray-600">Entrez vos identifiants pour continuer</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Identifier */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email ou matricule
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="ex: admin@domaine.com ou CEO001"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled={isLoading}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    disabled={isLoading}
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Button */}
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+              >
+                {isLoading ? "Connexion..." : "Se connecter"}
+              </button>
+            </div>
+
+            <p className="mt-8 text-center text-sm text-gray-600">
+              Pas encore de compte ?{" "}
+              <a href="/register" className="text-blue-600 font-semibold hover:underline">
+                Créer un compte
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

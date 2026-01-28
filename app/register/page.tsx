@@ -1,0 +1,369 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Eye, EyeOff, Mail, Lock, User, Badge, CheckCircle2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
+import { adjacencyGraphs, dictionary as commonDictionary } from "@zxcvbn-ts/language-common";
+import { dictionary as frDictionary } from "@zxcvbn-ts/language-fr";
+
+zxcvbnOptions.setOptions({
+  translations: frDictionary.translations,
+  graphs: adjacencyGraphs,
+  dictionary: {
+    ...commonDictionary,
+    ...frDictionary.dictionary,
+  },
+});
+
+function strengthLabel(score: number) {
+  return ["très faible", "faible", "moyenne", "bonne", "très bonne"][score] ?? "—";
+}
+function strengthPercent(score: number) {
+  return Math.round((Math.min(Math.max(score, 0), 4) / 4) * 100);
+}
+function StrengthBar({ value }: { value: number }) {
+  return (
+    <div className="mt-2">
+      <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+        <div
+          className="h-2 rounded-full bg-gray-900 transition-all"
+          style={{ width: `${strengthPercent(value)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function norm(v: string) {
+  return v.trim();
+}
+
+export default function RegisterPage() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [matricule, setMatricule] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const pw = useMemo(() => {
+    const emailTrim = norm(email).toLowerCase();
+    const matriculeTrim = norm(matricule);
+    const firstNameTrim = norm(firstName);
+    const lastNameTrim = norm(lastName);
+
+    const userInputs = [emailTrim, matriculeTrim, firstNameTrim, lastNameTrim].filter(Boolean);
+    return zxcvbn(password, userInputs);
+  }, [password, email, matricule, firstName, lastName]);
+
+  const handleSubmit = async () => {
+    const firstNameTrim = norm(firstName);
+    const lastNameTrim = norm(lastName);
+    const emailTrim = norm(email).toLowerCase();
+    const matriculeTrim = norm(matricule);
+
+    if (!firstNameTrim || !lastNameTrim || !emailTrim || !matriculeTrim || !password) {
+      toast.error("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (!validateEmail(emailTrim)) {
+      toast.error("Veuillez entrer une adresse email valide.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+
+    if (pw.score < 2) {
+      toast.error("Mot de passe trop faible. Renforcez-le avant de continuer.");
+      return;
+    }
+
+    setIsLoading(true);
+    const t = toast.loading("Création du compte...");
+
+    try {
+      // 1) REGISTER
+      const regRes = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: firstNameTrim,
+          lastName: lastNameTrim,
+          email: emailTrim,
+          matricule: matriculeTrim,
+          password,
+        }),
+      });
+
+      const regData = await regRes.json().catch(() => ({}));
+
+      if (!regRes.ok) {
+        toast.error(regData?.error ?? "Erreur lors de la création du compte.", { id: t });
+        return;
+      }
+
+      // 2) AUTO LOGIN (matricule ou email)
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: matriculeTrim,
+          password,
+        }),
+      });
+
+      const loginData = await loginRes.json().catch(() => ({}));
+
+      if (!loginRes.ok) {
+        toast.error(loginData?.error ?? "Compte créé, mais connexion impossible.", { id: t });
+        return;
+      }
+
+      localStorage.setItem("token", loginData.token);
+      localStorage.setItem("employee", JSON.stringify(loginData.employee));
+
+      toast.success("Compte créé et connecté", { id: t });
+
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setMatricule("");
+      setPassword("");
+      setConfirmPassword("");
+
+      window.location.href = "/dashboard";
+    } catch {
+      toast.error("Erreur réseau. Vérifiez votre connexion.", { id: t });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !isLoading) handleSubmit();
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      {/* LEFT SIDE */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex-col justify-center items-center text-white">
+        <div className="max-w-md">
+          <h1 className="text-5xl font-bold mb-6">Créer un compte</h1>
+          <p className="text-xl opacity-90 leading-relaxed">
+            Inscrivez-vous pour accéder à votre espace et gérer vos informations.
+          </p>
+
+          <div className="mt-12 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <p className="text-lg">Création rapide</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <p className="text-lg">Données sécurisées</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE */}
+      <div className="flex-1 flex items-center justify-center p-2">
+        <div className="w-full max-w-md">
+          <div className="">
+            <div className="text-center mb-0.5">
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">Inscription</h2>
+              <p className="text-gray-600">Créez votre compte pour continuer</p>
+            </div>
+
+            <div className="space-y-1">
+              {/* First name */}
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Prénom(s)
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="firstName"
+                    type="text"
+                    placeholder="Ex: Alice"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    disabled={isLoading}
+                    autoComplete="given-name"
+                  />
+                </div>
+              </div>
+
+              {/* Last name */}
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="lastName"
+                    type="text"
+                    placeholder="Ex: Dupont"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    disabled={isLoading}
+                    autoComplete="family-name"
+                  />
+                </div>
+              </div>
+
+              {/* Matricule */}
+              <div>
+                <label htmlFor="matricule" className="block text-sm font-medium text-gray-700 mb-2">
+                  Matricule
+                </label>
+                <div className="relative">
+                  <Badge className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="matricule"
+                    type="text"
+                    placeholder="Ex: EMP001"
+                    value={matricule}
+                    onChange={(e) => setMatricule(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    disabled={isLoading}
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Adresse email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="exemple@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    autoComplete="email"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    autoComplete="new-password"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                <StrengthBar value={pw.score} />
+                <div className="mt-2 text-xs text-gray-600">
+                  <span className="font-semibold">{strengthLabel(pw.score)}</span>
+                </div>
+              </div>
+
+              {/* Confirm */}
+              <div>
+                <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirmer le mot de passe
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    id="confirm"
+                    type={showConfirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    autoComplete="new-password"
+                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    aria-label={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                    disabled={isLoading}
+                  >
+                    {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
+              >
+                {isLoading ? "Création..." : "Créer mon compte"}
+              </button>
+            </div>
+
+            <p className="mt-4 text-center text-sm text-gray-600">
+              Déjà un compte ?{" "}
+              <a href="/login" className="text-blue-600 hover:text-blue-800 font-semibold transition">
+                Se connecter
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum DepartmentType {
+  DAF
+  DSI
+  OPERATIONS
+  OTHERS
+}
+
+enum ServiceType {
+  INFORMATION
+  REPUTATION
+}
+
+enum ResponsibilityRole {
+  RESPONSABLE
+  CO_RESPONSABLE
+  ADJOINT
+}
+
+enum EmployeeRole {
+  CEO
+  ACCOUNTANT
+  DEPT_HEAD
+  EMPLOYEE
+}
+
+enum EmployeeStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum LeaveStatus {
+  SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  UNPAID
+  OTHER
+}
+
+enum DecisionType {
+  SUBMIT
+  APPROVE
+  REJECT
+  ESCALATE
+  COMMENT
+  CANCEL
+}
+
+model Department {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  type        DepartmentType @unique
+  name        String
+  description String?
+
+  members      Employee[]                  @relation("DepartmentMembers")
+  responsables DepartmentResponsibility[]
+  services     Service[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Service {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  type        ServiceType
+  name        String
+  description String?
+
+  departmentId String     @db.ObjectId
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  members Employee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@unique([departmentId, type])
+}
+
+model Employee {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  firstName String
+  lastName  String
+  email     String @unique
+
+  matricule String? // PAS @unique (si tu as des null). Utilise un index unique partiel Mongo si besoin.
+  jobTitle  String?
+  password  String
+
+  role   EmployeeRole   @default(EMPLOYEE)
+  status EmployeeStatus @default(PENDING)
+
+  // Auto-relation (approbation) => NoAction obligatoire sur un côté
+  approvedById  String?   @db.ObjectId
+  approvedBy    Employee? @relation("EmployeeApprovals", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approvalsGiven Employee[] @relation("EmployeeApprovals")
+
+  departmentId String?     @db.ObjectId
+  department   Department? @relation("DepartmentMembers", fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  serviceId String?  @db.ObjectId
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  responsibilities DepartmentResponsibility[]
+
+  // Congés
+  leaveRequests   LeaveRequest[]  @relation("EmployeeLeaveRequests")
+  assignedLeaves  LeaveRequest[]  @relation("LeaveAssignee")
+  leaveDecisions  LeaveDecision[] @relation("LeaveActor")
+  receivedLeaveDecisions LeaveDecision[] @relation("LeaveDecisionTo") // ✅ champ inverse manquant
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([status])
+  @@index([departmentId])
+  @@index([serviceId])
+}
+
+model DepartmentResponsibility {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  departmentId String     @db.ObjectId
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  employeeId String   @db.ObjectId
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  role    ResponsibilityRole @default(RESPONSABLE)
+  startAt DateTime           @default(now())
+  endAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@index([employeeId])
+  @@unique([departmentId, employeeId, startAt])
+}
+
+model LeaveRequest {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  employeeId String   @db.ObjectId
+  employee   Employee @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  type      LeaveType
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+
+  status LeaveStatus @default(SUBMITTED)
+
+  currentAssigneeId String?   @db.ObjectId
+  currentAssignee   Employee? @relation("LeaveAssignee", fields: [currentAssigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  reachedCeoAt DateTime?
+
+  decisions LeaveDecision[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([currentAssigneeId])
+}
+
+model LeaveDecision {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  leaveRequestId String       @db.ObjectId
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  actorId String   @db.ObjectId
+  actor   Employee @relation("LeaveActor", fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  type    DecisionType
+  comment String?
+
+  toEmployeeId String?   @db.ObjectId
+  toEmployee   Employee? @relation("LeaveDecisionTo", fields: [toEmployeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt DateTime @default(now())
+
+  @@index([leaveRequestId])
+  @@index([actorId])
+  @@index([type])
+  @@index([toEmployeeId])
+}
