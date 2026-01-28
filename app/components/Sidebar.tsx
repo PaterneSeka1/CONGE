@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import type { SidebarIconKey, SidebarSection } from "./sidebar-types";
+import { getEmployee, logout } from "@/lib/auth-client";
 
 const sidebarIconMap: Record<SidebarIconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   home: Home,
@@ -28,23 +29,6 @@ const sidebarIconMap: Record<SidebarIconKey, React.ComponentType<React.SVGProps<
   user: User,
   shield: ShieldCheck,
 };
-
-function getEmployee() {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem("employee");
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as { firstName: string; lastName: string; role: string };
-  } catch {
-    return null;
-  }
-}
-
-function logout(router: ReturnType<typeof useRouter>) {
-  localStorage.removeItem("token");
-  localStorage.removeItem("employee");
-  router.replace("/login");
-}
 
 export function Sidebar({
   brandTitle = "CONGÉS",
@@ -233,8 +217,11 @@ export function Sidebar({
             </div>
           ))}
 
-          <button
-            onClick={() => logout(router)}
+            <button
+              onClick={() => {
+                logout();
+                router.replace("/login");
+              }}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-red-300 hover:bg-red-700/20 transition w-full font-semibold"
           >
             <LogOut className="w-5 h-5" />
@@ -301,7 +288,10 @@ export function Sidebar({
 
         <div className="p-3 border-t border-vdm-gold-800">
           <button
-            onClick={() => logout(router)}
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-vdm-gold-100 hover:bg-vdm-gold-800 transition w-full font-semibold"
           >
             <LogOut className="w-5 h-5" />

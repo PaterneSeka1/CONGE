@@ -1,26 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { EmployeeSession, getEmployee } from "@/lib/auth-client";
 
-type EmployeeSession = {
-  firstName?: string;
-  lastName?: string;
+type DsiEmployee = EmployeeSession & {
   leaveBalance?: number; // recommandé dans ton modèle
 };
 
-function getEmployee(): EmployeeSession | null {
-  if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem("employee");
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as EmployeeSession;
-  } catch {
-    return null;
-  }
-}
-
 export default function DsiDashboard() {
-  const employee = useMemo(() => getEmployee(), []);
+  const employee = useMemo(() => getEmployee() as DsiEmployee | null, []);
   const [balance, setBalance] = useState<number>(25);
 
   useEffect(() => {

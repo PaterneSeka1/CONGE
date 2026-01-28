@@ -6,14 +6,14 @@ import toast from "react-hot-toast";
 
 type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
 
-function routeForRole(role: EmployeeRole) {
+function routeForRole(role: EmployeeRole, isDsiAdmin = false) {
   switch (role) {
     case "CEO":
       return "/dashboard/ceo";
     case "ACCOUNTANT":
       return "/dashboard/accountant";
     case "DEPT_HEAD":
-      return "/dashboard/manager";
+      return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/manager";
     default:
       return "/dashboard/employee";
   }
@@ -70,7 +70,8 @@ export default function LoginPage() {
       toast.success("Connexion réussie", { id: loadingToast });
 
       const role = data?.employee?.role as EmployeeRole | undefined;
-      window.location.href = role ? routeForRole(role) : "/dashboard";
+      const isDsiAdmin = Boolean(data?.employee?.isDsiAdmin);
+      window.location.href = role ? routeForRole(role, isDsiAdmin) : "/dashboard";
     } catch {
       toast.error("Erreur réseau. Veuillez réessayer.", { id: loadingToast });
     } finally {

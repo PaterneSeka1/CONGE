@@ -11,6 +11,7 @@ export type EmployeeSession = {
   status: EmployeeStatus;
   departmentId?: string | null;
   serviceId?: string | null;
+  isDsiAdmin?: boolean;
 };
 
 export function getToken(): string | null {
@@ -35,14 +36,14 @@ export function logout() {
   localStorage.removeItem("employee");
 }
 
-export function routeForRole(role: EmployeeRole) {
+export function routeForRole(role: EmployeeRole, isDsiAdmin = false) {
   switch (role) {
     case "CEO":
       return "/dashboard/ceo";
     case "ACCOUNTANT":
       return "/dashboard/accountant";
     case "DEPT_HEAD":
-      return "/dashboard/manager";
+      return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/manager";
     default:
       return "/dashboard/employee";
   }

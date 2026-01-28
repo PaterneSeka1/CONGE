@@ -49,6 +49,18 @@ export async function POST(req: Request) {
     const secret = process.env.JWT_SECRET;
     if (!secret) return jsonError("JWT_SECRET manquant côté serveur", 500);
 
+    const dsiResponsibility = await prisma.departmentResponsibility.findFirst({
+      where: {
+        employeeId: employee.id,
+        endAt: null,
+        department: { type: "DSI" },
+        role: { in: ["RESPONSABLE", "CO_RESPONSABLE"] },
+      },
+      select: { id: true },
+    });
+
+    const isDsiAdmin = Boolean(dsiResponsibility);
+
     const token = jwt.sign(
       {
         sub: employee.id,
@@ -58,6 +70,7 @@ export async function POST(req: Request) {
         status: employee.status,
         departmentId: employee.departmentId ?? null,
         serviceId: employee.serviceId ?? null,
+        isDsiAdmin,
       },
       secret,
       { expiresIn: "7d" }
@@ -75,6 +88,7 @@ export async function POST(req: Request) {
         status: employee.status,
         departmentId: employee.departmentId,
         serviceId: employee.serviceId,
+        isDsiAdmin,
       },
     });
   } catch (e: any) {
