@@ -49,7 +49,11 @@ export function Sidebar({
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [isMounted, setIsMounted] = useState(false);
   const employee = useMemo(() => getEmployee(), []);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Optionnel (si tu veux un switch d’org plus tard)
   const organizations = [
@@ -156,8 +160,8 @@ export function Sidebar({
       {/* MOBILE TOPBAR */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-vdm-gold-900 shadow px-4 py-3 flex items-center justify-between border-b border-vdm-gold-800">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-vdm-gold-800 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-white" />
+          <div className="h-10 w-10 rounded-xl bg-vdm-gold-800 flex items-center justify-center overflow-hidden">
+            <img src="/logo.jpeg" alt="Logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="text-base font-bold text-vdm-gold-100 tracking-tight">{brandTitle}</div>
@@ -190,9 +194,9 @@ export function Sidebar({
         <div className="p-4 space-y-4">
           <div className="px-2">
             <div className="text-sm font-semibold text-vdm-gold-100">
-              {employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
+              {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">{employee?.role ?? ""}</div>
+            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role ?? "" : ""}</div>
           </div>
 
           <OrgButton />
@@ -246,8 +250,8 @@ export function Sidebar({
       <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-64 bg-vdm-gold-900 shadow-lg z-30">
         <div className="p-5 border-b border-vdm-gold-800">
           <div className="flex items-center gap-3 mb-4">
-            <div className="h-9 w-9 rounded-xl bg-vdm-gold-800 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-white" />
+            <div className="h-10 w-10 rounded-xl bg-vdm-gold-800 flex items-center justify-center overflow-hidden">
+              <img src="/logo.jpeg" alt="Logo" className="h-full w-full object-contain" />
             </div>
             <div>
               <div className="text-lg font-bold text-vdm-gold-100 tracking-tight">{brandTitle}</div>
@@ -257,9 +261,9 @@ export function Sidebar({
 
           <div className="px-1 mb-3">
             <div className="text-sm font-semibold text-vdm-gold-100">
-              {employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
+              {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">{employee?.role ?? ""}</div>
+            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role ?? "" : ""}</div>
           </div>
 
           <OrgButton />

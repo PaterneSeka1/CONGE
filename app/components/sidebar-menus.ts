@@ -63,6 +63,8 @@ export const ceoMenu: SidebarSection[] = [
     title: "Validation",
     links: [
       { label: "Demandes escaladées", icon: "clipboard", to: "/dashboard/ceo/inbox" },
+      { label: "Historique congés", icon: "clock", to: "/dashboard/ceo/leaves/history" },
+      { label: "Periodes bloquees", icon: "clock", to: "/dashboard/ceo/blackouts" },
       { label: "Vue globale", icon: "clock", to: "/dashboard/ceo/overview" },
     ],
   },
@@ -88,4 +90,6 @@ export const ceoMenu: SidebarSection[] = [
     links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }],
   },
 ];
+
+
 

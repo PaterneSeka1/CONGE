@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 type LeaveItem = {
   id: string;
@@ -52,16 +53,22 @@ export default function EmployeeRequests() {
   const cancelRequest = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      alert("Erreur lors de l'annulation.");
-      return;
+    const t = toast.loading("Annulation en cours...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        toast.error("Erreur lors de l'annulation.", { id: t });
+        return;
+      }
+      setItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: "CANCELLED" } : x)));
+      toast.success("Demande annulÃ©e.", { id: t });
+    } catch {
+      toast.error("Erreur rÃ©seau lors de l'annulation.", { id: t });
     }
-    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: "CANCELLED" } : x)));
   };
 
   const columns = useMemo<ColumnDef<LeaveItem>[]>(

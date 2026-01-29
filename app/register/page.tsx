@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, Mail, Lock, User, Badge, CheckCircle2 } from "lucide-react";
@@ -18,7 +18,7 @@ zxcvbnOptions.setOptions({
 });
 
 function strengthLabel(score: number) {
-  return ["très faible", "faible", "moyenne", "bonne", "très bonne"][score] ?? "—";
+  return ["tres faible", "faible", "moyenne", "bonne", "tres bonne"][score] ?? "-";
 }
 function strengthPercent(score: number) {
   return Math.round((Math.min(Math.max(score, 0), 4) / 4) * 100);
@@ -51,7 +51,7 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const validateEmail = (value: string) => /^[^\s@]+@[^^\s@]+\.[^\s@]+$/.test(value);
 
   const pw = useMemo(() => {
     const emailTrim = norm(email).toLowerCase();
@@ -85,7 +85,7 @@ export default function RegisterPage() {
     }
 
     if (password.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères.");
+      toast.error("Le mot de passe doit contenir au moins 6 caracteres.");
       return;
     }
 
@@ -95,7 +95,7 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
-    const t = toast.loading("Création du compte...");
+    const t = toast.loading("Creation du compte...");
 
     try {
       const regRes = await fetch("/api/auth/register", {
@@ -113,11 +113,11 @@ export default function RegisterPage() {
       const regData = await regRes.json().catch(() => ({}));
 
       if (!regRes.ok) {
-        toast.error(regData?.error ?? "Erreur lors de la création du compte.", { id: t });
+        toast.error(regData?.error ?? "Erreur lors de la creation du compte.", { id: t });
         return;
       }
 
-      toast.success("Compte créé. En attente de validation par l’admin.", { id: t });
+      toast.success("Compte cree. En attente de validation par l'admin.", { id: t });
 
       setFirstName("");
       setLastName("");
@@ -128,7 +128,7 @@ export default function RegisterPage() {
 
       window.location.href = "/login?pending=1";
     } catch {
-      toast.error("Erreur réseau. Vérifiez votre connexion.", { id: t });
+      toast.error("Erreur reseau. Verifiez votre connexion.", { id: t });
     } finally {
       setIsLoading(false);
     }
@@ -141,11 +141,14 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex">
       {/* LEFT SIDE */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-vdm-gold-500 to-vdm-gold-100 p-12 flex-col justify-center items-center text-white">
-        <div className="max-w-md">
-          <h1 className="text-5xl font-bold mb-6">Créer un compte</h1>
+      <div className="hidden lg:flex lg:w-1/2 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-gradient-to-br from-vdm-gold-500 to-vdm-gold-100 p-12 flex-col justify-center items-center text-white">
+        <div className="max-w-md text-center">
+          <div className="mb-8 h-28 w-28 flex items-center justify-center overflow-hidden mx-auto">
+            <img src="/logo.jpeg" alt="Logo" className="h-24 w-24 object-contain" />
+          </div>
+          <h1 className="text-5xl font-bold mb-6">Creer un compte</h1>
           <p className="text-xl opacity-90 leading-relaxed">
-            Inscrivez-vous pour accéder à votre espace et gérer vos informations.
+            Inscrivez-vous pour acceder a votre espace et gerer vos informations.
           </p>
 
           <div className="mt-12 space-y-4">
@@ -153,33 +156,36 @@ export default function RegisterPage() {
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <p className="text-lg">Création rapide</p>
+              <p className="text-lg">Creation rapide</p>
             </div>
 
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <p className="text-lg">Données sécurisées</p>
+              <p className="text-lg">Donnees securisees</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* RIGHT SIDE */}
-      <div className="flex-1 flex items-center justify-center p-2 bg-gray-50">
+      <div className="flex-1 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-2">
+              <div className="lg:hidden mx-auto mb-4 h-16 w-16 flex items-center justify-center overflow-hidden">
+                <img src="/logo.jpeg" alt="Logo" className="h-14 w-14 object-contain" />
+              </div>
               <h2 className="text-3xl font-bold text-vdm-gold-800 mb-2">Inscription</h2>
-              <p className="text-gray-600">Créez votre compte pour continuer</p>
+              <p className="text-gray-600">Creez votre compte pour continuer</p>
             </div>
 
             <div className="space-y-2">
               {/* First name */}
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Prénom(s)
+                  Prenom(s)
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -330,13 +336,16 @@ export default function RegisterPage() {
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-vdm-gold-500 to-vdm-gold-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50 mt-4"
               >
-                {isLoading ? "Création..." : "Créer mon compte"}
+                {isLoading ? "Creation..." : "Creer mon compte"}
               </button>
             </div>
 
             <p className="mt-6 text-center text-sm text-gray-600">
-              Déjà un compte ?{" "}
-              <a href="/login" className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline">
+              Deja un compte ?{" "}
+              <a
+                href="/login"
+                className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline"
+              >
                 Se connecter
               </a>
             </p>

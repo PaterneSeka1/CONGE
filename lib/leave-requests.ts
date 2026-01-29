@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, verifyJwt } from "@/lib/auth";
 
-type Auth = { id: string; role: string };
+type Auth = { id: string; role: string; departmentId?: string | null };
 
 export function requireAuth(req: Request) {
   const v = verifyJwt(req);
@@ -12,7 +12,8 @@ export function requireAuth(req: Request) {
   if (!id) return { ok: false as const, error: jsonError("Token invalide", 401) };
 
   const role = String(v.payload?.role ?? "");
-  return { ok: true as const, auth: { id, role } };
+  const departmentId = v.payload?.departmentId ?? null;
+  return { ok: true as const, auth: { id, role, departmentId } };
 }
 
 export function isFinalStatus(status: string) {

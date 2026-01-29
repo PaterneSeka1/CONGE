@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -12,7 +12,23 @@ type HistoryItem = {
   decision: "APPROVED" | "REJECTED" | "ESCALATED";
   decidedAt: string;
   target?: string;
+  days: number;
 };
+
+function toUtcDay(value: string | undefined) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+function daysBetweenInclusive(start: string, end: string) {
+  const s = toUtcDay(start);
+  const e = toUtcDay(end);
+  if (s == null || e == null) return 0;
+  if (e < s) return 0;
+  return Math.floor((e - s) / 86400000) + 1;
+}
 
 export default function AccountantHistory() {
   const [rows, setRows] = useState<HistoryItem[]>([]);
@@ -30,21 +46,26 @@ export default function AccountantHistory() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setRows(
-            (data?.decisions ?? []).map((d: any) => ({
-              id: d.id,
-              employeeName: `${d.leaveRequest?.employee?.firstName ?? ""} ${d.leaveRequest?.employee?.lastName ?? ""}`.trim(),
-              period: `${d.leaveRequest?.startDate?.slice(0, 10)} → ${d.leaveRequest?.endDate?.slice(0, 10)}`,
-              decision:
-                d.type === "APPROVE"
-                  ? "APPROVED"
-                  : d.type === "REJECT"
-                  ? "REJECTED"
-                  : d.type === "ESCALATE"
-                  ? "ESCALATED"
-                  : "CANCELLED",
-              decidedAt: d.createdAt?.slice(0, 10) ?? "",
-              target: d.toEmployee?.role ?? "—",
-            }))
+            (data?.decisions ?? []).map((d: any) => {
+              const start = d.leaveRequest?.startDate?.slice(0, 10) ?? "";
+              const end = d.leaveRequest?.endDate?.slice(0, 10) ?? "";
+              return {
+                id: d.id,
+                employeeName: `${d.leaveRequest?.employee?.firstName ?? ""} ${d.leaveRequest?.employee?.lastName ?? ""}`.trim(),
+                period: `${start} -> ${end}`,
+                decision:
+                  d.type === "APPROVE"
+                    ? "APPROVED"
+                    : d.type === "REJECT"
+                    ? "REJECTED"
+                    : d.type === "ESCALATE"
+                    ? "ESCALATED"
+                    : "CANCELLED",
+                decidedAt: d.createdAt?.slice(0, 10) ?? "",
+                target: d.toEmployee?.role ?? "-",
+                days: start && end ? daysBetweenInclusive(start, end) : 0,
+              };
+            })
           );
         }
       } finally {
@@ -56,13 +77,14 @@ export default function AccountantHistory() {
 
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
-      { header: "Employé", accessorKey: "employeeName" },
-      { header: "Période", accessorKey: "period" },
-      { header: "Décision", accessorKey: "decision" },
+      { header: "Employe", accessorKey: "employeeName" },
+      { header: "Periode", accessorKey: "period" },
+      { header: "Jours", accessorKey: "days" },
+      { header: "Decision", accessorKey: "decision" },
       {
         header: "Cible",
         accessorKey: "target",
-        cell: ({ row }) => row.original.target ?? "—",
+        cell: ({ row }) => row.original.target ?? "-",
       },
       { header: "Date", accessorKey: "decidedAt" },
     ],
@@ -71,10 +93,10 @@ export default function AccountantHistory() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des décisions</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité des validations et transmissions.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des decisions</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Traçabilite des validations et transmissions.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une décision..." />
+      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une decision..." />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
       ) : null}

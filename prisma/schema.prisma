@@ -72,6 +72,7 @@ model Department {
   members      Employee[]                  @relation("DepartmentMembers")
   responsables DepartmentResponsibility[]
   services     Service[]
+  leaveBlackouts LeaveBlackout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -107,6 +108,7 @@ model Employee {
 
   role   EmployeeRole   @default(EMPLOYEE)
   status EmployeeStatus @default(PENDING)
+  leaveBalance Int @default(25)
 
   // Auto-relation (approbation) => NoAction obligatoire sur un côté
   approvedById  String?   @db.ObjectId
@@ -126,6 +128,7 @@ model Employee {
   assignedLeaves  LeaveRequest[]  @relation("LeaveAssignee")
   leaveDecisions  LeaveDecision[] @relation("LeaveActor")
   receivedLeaveDecisions LeaveDecision[] @relation("LeaveDecisionTo") // ✅ champ inverse manquant
+  createdBlackouts LeaveBlackout[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -207,4 +210,26 @@ model LeaveDecision {
   @@index([actorId])
   @@index([type])
   @@index([toEmployeeId])
+}
+
+model LeaveBlackout {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  title String?
+  reason String?
+  startDate DateTime
+  endDate DateTime
+
+  departmentId String? @db.ObjectId
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdById String @db.ObjectId
+  createdBy Employee @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@index([startDate])
+  @@index([endDate])
 }

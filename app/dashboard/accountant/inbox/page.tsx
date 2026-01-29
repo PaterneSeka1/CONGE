@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 type Req = {
   id: string;
@@ -50,52 +51,64 @@ export default function AccountantInbox() {
   const approve = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/approve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+    const t = toast.loading("Validation en cours...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("CongÃ© validÃ©.", { id: t });
+      } else {
+        toast.error("Erreur lors de la validation.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur rÃ©seau lors de la validation.", { id: t });
     }
   };
 
   const reject = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/reject`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+    const t = toast.loading("Refus en cours...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("CongÃ© refusÃ©.", { id: t });
+      } else {
+        toast.error("Erreur lors du refus.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur rÃ©seau lors du refus.", { id: t });
     }
   };
 
-  const forwardToCeo = async (id: string) => {
-    const token = getToken();
-    if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/escalate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ toRole: "CEO" }),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
-    }
-  };
 
   const forwardToDeptHead = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/escalate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ toRole: "DEPT_HEAD" }),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+    const t = toast.loading("Transmission au responsable...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/escalate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ toRole: "DEPT_HEAD" }),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("Demande transmise au responsable.", { id: t });
+      } else {
+        toast.error("Erreur lors de la transmission.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur rÃ©seau lors de la transmission.", { id: t });
     }
   };
 
@@ -121,16 +134,6 @@ export default function AccountantInbox() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          if (row.original.origin === "DEPT_HEAD") {
-            return (
-              <button
-                onClick={() => forwardToCeo(row.original.id)}
-                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-              >
-                Transmettre au CEO
-              </button>
-            );
-          }
           return (
             <div className="flex flex-wrap gap-2">
               <button
@@ -151,18 +154,12 @@ export default function AccountantInbox() {
               >
                 Transmettre dÃ©partement
               </button>
-              <button
-                onClick={() => forwardToCeo(row.original.id)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Transmettre CEO
-              </button>
             </div>
           );
         },
       },
     ],
-    [approve, reject, forwardToCeo, forwardToDeptHead]
+    [approve, reject, forwardToDeptHead]
   );
 
   return (
@@ -180,5 +177,6 @@ export default function AccountantInbox() {
     </div>
   );
 }
+
 
 

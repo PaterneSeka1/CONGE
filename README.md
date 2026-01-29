@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# CONGES
 
-## Getting Started
+Application de gestion des conges (Next.js + Prisma + MongoDB) avec roles (CEO, Comptable, Responsable, Employe), workflows de validation et tableaux de bord.
 
-First, run the development server:
+## Fonctionnalites principales
+- Authentification par email ou matricule
+- Workflow des demandes de conge (soumission, validation, refus, transmission)
+- Dashboards par role (Employe, Responsable, DSI, Comptable, CEO)
+- Solde annuel de conges (base par defaut 25 jours, ajustable par le CEO)
+- Historique des demandes et decisions
 
+## Stack
+- Next.js (App Router)
+- React 19
+- Prisma + MongoDB
+- Tailwind CSS
+- react-hot-toast
+
+## Installation
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuration
+Creer un fichier `.env` a la racine et definir :
+```
+DATABASE_URL=
+JWT_SECRET=
+DEPT_HEAD_VALIDATION_DAYS=5
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# (Optionnel) comptes seed
+SEED_ADMIN_EMAIL=admin.dsi@local.test
+SEED_ADMIN_MATRICULE=DSI-ADMIN
+SEED_ADMIN_PASSWORD=Passw0rd!
+SEED_ACCOUNTANT_EMAIL=comptable@local.test
+SEED_ACCOUNTANT_MATRICULE=ACC-001
+SEED_ACCOUNTANT_PASSWORD=Passw0rd!
+SEED_CEO_EMAIL=pdg@local.test
+SEED_CEO_MATRICULE=CEO-001
+SEED_CEO_PASSWORD=Passw0rd!
+SEED_OPS_DIRECTOR_EMAIL=directeur.ops@local.test
+SEED_OPS_DIRECTOR_MATRICULE=OPS-DIR-001
+SEED_OPS_DIRECTOR_PASSWORD=Passw0rd!
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Prisma
+Appliquer le schema et regenerer le client :
+```bash
+npx prisma db push
+npx prisma generate
+```
 
-## Learn More
+## Seed (comptes de demarrage)
+```bash
+npm run seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+Comptes par defaut (si les variables SEED_* ne sont pas redefinies) :
+- Admin DSI (DEPT_HEAD) : admin.dsi@local.test / Passw0rd!
+- Comptable (ACCOUNTANT) : comptable@local.test / Passw0rd!
+- CEO : pdg@local.test / Passw0rd!
+- Directeur Operations (DEPT_HEAD) : directeur.ops@local.test / Passw0rd!
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Lancer le projet
+```bash
+npm run dev
+```
+Puis ouvrir http://localhost:3000
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes importantes
+- Le solde annuel par defaut est 25 jours.
+- Le CEO peut augmenter ou reinitialiser le solde d'un employe.
+- Le solde visible par l'employe = base annuelle - jours consommes (soumis + en attente + approuves).
+- Les demandes sont assignees automatiquement selon le role de l'employe.
 
-## Deploy on Vercel
+## Workflow (diagramme)
+```mermaid
+flowchart TD
+  A[Employe / Responsable / DSI] -->|Soumission| B{Assignee initial}
+  B -->|Employe ou DEPT_HEAD| C[Comptable]
+  B -->|Comptable| D[CEO]
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+  C -->|Valider| E[Approuve]
+  C -->|Refuser| F[Rejete]
+  C -->|Transmettre| D
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+  D -->|Valider| E
+  D -->|Refuser| F
+
+  subgraph Notes
+    N1[Le CEO peut agir si une demande a atteint le CEO]
+    N2[Le solde diminue a la soumission]
+  end
+```
+
+## Scripts utiles
+- `npm run dev` : serveur de dev
+- `npm run build` : build
+- `npm run start` : production
+- `npm run lint` : lint
+- `npm run seed` : seed base

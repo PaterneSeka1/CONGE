@@ -5,12 +5,14 @@ import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
 
-type LeaveItem = {
+type HistoryItem = {
   id: string;
+  employeeName: string;
+  employeeRole: string;
   type: string;
   startDate: string;
   endDate: string;
-  status: "APPROVED" | "REJECTED" | "CANCELLED";
+  status: string;
   decidedAt: string;
   days: number;
 };
@@ -30,8 +32,8 @@ function daysBetweenInclusive(start: string, end: string) {
   return Math.floor((e - s) / 86400000) + 1;
 }
 
-export default function EmployeeHistory() {
-  const [items, setItems] = useState<LeaveItem[]>([]);
+export default function CeoLeavesHistory() {
+  const [rows, setRows] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -40,17 +42,20 @@ export default function EmployeeHistory() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/history?mine=1", {
+        const res = await fetch("/api/leave-requests/history?scope=all", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          setItems(
+          setRows(
             (data?.leaves ?? []).map((x: any) => {
               const start = x.startDate?.slice(0, 10) ?? "";
               const end = x.endDate?.slice(0, 10) ?? "";
+              const emp = x.employee ?? {};
               return {
                 id: x.id,
+                employeeName: `${emp.firstName ?? ""} ${emp.lastName ?? ""}`.trim() || "—",
+                employeeRole: emp.role ?? "—",
                 type: x.type,
                 startDate: start,
                 endDate: end,
@@ -68,12 +73,22 @@ export default function EmployeeHistory() {
     load();
   }, []);
 
-  const columns = useMemo<ColumnDef<LeaveItem>[]>(
+  const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
+      {
+        header: "Employe",
+        accessorKey: "employeeName",
+        cell: ({ row }) => (
+          <div>
+            <div className="font-semibold">{row.original.employeeName}</div>
+            <div className="text-xs text-vdm-gold-700">{row.original.employeeRole}</div>
+          </div>
+        ),
+      },
       { header: "Type", accessorKey: "type" },
       {
         id: "period",
-        header: "Période",
+        header: "Periode",
         accessorFn: (row) => `${row.startDate} -> ${row.endDate}`,
         cell: ({ row }) => (
           <span>
@@ -83,17 +98,17 @@ export default function EmployeeHistory() {
       },
       { header: "Jours", accessorKey: "days" },
       { header: "Statut", accessorKey: "status" },
-      { header: "Décision", accessorKey: "decidedAt" },
+      { header: "Decision", accessorKey: "decidedAt" },
     ],
     []
   );
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Historique complet de vos demandes.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique global des conges</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Toutes les demandes traitees par l'entreprise.</div>
 
-      <DataTable data={items} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employe..." />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
       ) : null}

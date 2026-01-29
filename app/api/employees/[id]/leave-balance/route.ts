@@ -1,0 +1,67 @@
+export const runtime = "nodejs";
+
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { jsonError } from "@/lib/auth";
+import { requireAuth } from "@/lib/leave-requests";
+
+type Ctx = { params: { id: string } };
+
+const BASE_ALLOWANCE = 25;
+
+export async function POST(req: Request, ctx: Ctx) {
+  const authRes = requireAuth(req);
+  if (!authRes.ok) return authRes.error;
+
+  const { role } = authRes.auth;
+  if (role !== "CEO") return jsonError("Acces refuse", 403);
+
+  const { id } = await ctx.params;
+  if (!id) return jsonError("ID requis", 400);
+
+  const body = await req.json().catch(() => ({}));
+  const action = String(body?.action ?? "");
+  const rawAmount = body?.amount;
+  const amount =
+    typeof rawAmount === "string" ? Number(rawAmount.replace(",", ".").trim()) : Number(rawAmount ?? 0);
+
+  if (!action || !["RESET", "INCREASE", "SET"].includes(action)) {
+    return jsonError("Action invalide (RESET|INCREASE|SET)", 400);
+  }
+
+  if (action === "INCREASE" || action === "SET") {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return jsonError("Montant invalide", 400);
+    }
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    if (action === "RESET") {
+      return tx.employee.update({
+        where: { id },
+        data: { leaveBalance: BASE_ALLOWANCE },
+        select: { id: true, leaveBalance: true },
+      });
+    }
+
+    const employee = await tx.employee.findUnique({
+      where: { id },
+      select: { id: true, leaveBalance: true },
+    });
+
+    if (!employee) return null;
+
+    const current = Number(employee.leaveBalance ?? BASE_ALLOWANCE);
+    const next = action === "INCREASE" ? current + amount : amount;
+
+    return tx.employee.update({
+      where: { id },
+      data: { leaveBalance: next },
+      select: { id: true, leaveBalance: true },
+    });
+  });
+
+  if (!updated) return jsonError("Employe introuvable", 404);
+
+  return NextResponse.json({ employee: updated });
+}

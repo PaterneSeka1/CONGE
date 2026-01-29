@@ -9,6 +9,7 @@ export type EmployeeSession = {
   lastName: string;
   role: EmployeeRole;
   status: EmployeeStatus;
+  leaveBalance?: number;
   departmentId?: string | null;
   serviceId?: string | null;
   isDsiAdmin?: boolean;

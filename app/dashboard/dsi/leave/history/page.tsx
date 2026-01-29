@@ -12,7 +12,23 @@ type LeaveItem = {
   endDate: string;
   status: "SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   currentAssignee?: string;
+  days: number;
 };
+
+function toUtcDay(value: string | undefined) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+function daysBetweenInclusive(start: string, end: string) {
+  const s = toUtcDay(start);
+  const e = toUtcDay(end);
+  if (s == null || e == null) return 0;
+  if (e < s) return 0;
+  return Math.floor((e - s) / 86400000) + 1;
+}
 
 export default function DsiLeaveHistory() {
   const [items, setItems] = useState<LeaveItem[]>([]);
@@ -30,16 +46,21 @@ export default function DsiLeaveHistory() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setItems(
-            (data?.leaves ?? []).map((x: any) => ({
-              id: x.id,
-              type: x.type,
-              startDate: x.startDate?.slice(0, 10) ?? "",
-              endDate: x.endDate?.slice(0, 10) ?? "",
-              status: x.status,
-              currentAssignee: x.currentAssignee
-                ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
-                : "—",
-            }))
+            (data?.leaves ?? []).map((x: any) => {
+              const start = x.startDate?.slice(0, 10) ?? "";
+              const end = x.endDate?.slice(0, 10) ?? "";
+              return {
+                id: x.id,
+                type: x.type,
+                startDate: start,
+                endDate: end,
+                status: x.status,
+                currentAssignee: x.currentAssignee
+                  ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
+                  : "—",
+                days: start && end ? daysBetweenInclusive(start, end) : 0,
+              };
+            })
           );
         }
       } finally {
@@ -62,6 +83,7 @@ export default function DsiLeaveHistory() {
           </span>
         ),
       },
+      { header: "Jours", accessorKey: "days" },
       { header: "Statut", accessorKey: "status" },
       {
         header: "Assigné",

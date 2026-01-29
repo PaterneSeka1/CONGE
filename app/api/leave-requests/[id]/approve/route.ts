@@ -11,17 +11,20 @@ export async function POST(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
 
-  const { id: actorId } = authRes.auth;
+  const { id: actorId, role } = authRes.auth;
   const { id } = await ctx.params;
 
   const leave = await prisma.leaveRequest.findUnique({
     where: { id },
-    select: { id: true, employeeId: true, status: true, currentAssigneeId: true },
+    select: { id: true, employeeId: true, status: true, currentAssigneeId: true, reachedCeoAt: true },
   });
 
   if (!leave) return jsonError("Demande introuvable", 404);
   if (isFinalStatus(leave.status)) return jsonError("Demande dÃ©jÃ  traitÃ©e", 409);
-  if (leave.currentAssigneeId !== actorId) return jsonError("AccÃ¨s refusÃ©", 403);
+  if (leave.currentAssigneeId !== actorId) {
+    const ceoCanAct = role === "CEO" && !!leave.reachedCeoAt;
+    if (!ceoCanAct) return jsonError("AccÃ¨s refusÃ©", 403);
+  }
   if (leave.employeeId === actorId) return jsonError("Action interdite sur sa propre demande", 403);
 
   const body = await req.json().catch(() => ({}));

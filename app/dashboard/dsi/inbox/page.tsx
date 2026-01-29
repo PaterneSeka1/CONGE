@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 type Req = {
   id: string;
@@ -48,26 +49,42 @@ export default function DsiInbox() {
   const approve = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/approve`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+    const t = toast.loading("Validation en cours...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("CongÃ© validÃ©.", { id: t });
+      } else {
+        toast.error("Erreur lors de la validation.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur rÃ©seau lors de la validation.", { id: t });
     }
   };
 
   const reject = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leave-requests/${id}/reject`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({}),
-    });
-    if (res.ok) {
-      setRows((prev) => prev.filter((r) => r.id !== id));
+    const t = toast.loading("Refus en cours...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("CongÃ© refusÃ©.", { id: t });
+      } else {
+        toast.error("Erreur lors du refus.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur rÃ©seau lors du refus.", { id: t });
     }
   };
 

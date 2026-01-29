@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
@@ -37,7 +37,7 @@ export default function LoginPage() {
       toast("Compte en attente de validation par l'admin.", { icon: "⏳" });
     }
     if (searchParams.get("validated") === "1") {
-      toast.success("Votre compte est validé. Vous pouvez vous connecter.");
+      toast.success("Votre compte est valide. Vous pouvez vous connecter.");
     }
   }, [searchParams]);
 
@@ -63,10 +63,7 @@ export default function LoginPage() {
 
       if (!response.ok) {
         if (response.status === 403) {
-          toast.error(
-            data?.error || "Compte en attente de validation par l’admin.",
-            { id: loadingToast }
-          );
+          toast.error(data?.error || "Compte en attente de validation par l'admin.", { id: loadingToast });
           return;
         }
 
@@ -78,13 +75,13 @@ export default function LoginPage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("employee", JSON.stringify(data.employee));
 
-      toast.success("Connexion réussie", { id: loadingToast });
+      toast.success("Connexion reussie", { id: loadingToast });
 
       const role = data?.employee?.role as EmployeeRole | undefined;
       const isDsiAdmin = Boolean(data?.employee?.isDsiAdmin);
       window.location.href = role ? routeForRole(role, isDsiAdmin) : "/dashboard";
     } catch {
-      toast.error("Erreur réseau. Veuillez réessayer.", { id: loadingToast });
+      toast.error("Erreur reseau. Veuillez reessayer.", { id: loadingToast });
     } finally {
       setIsLoading(false);
     }
@@ -97,12 +94,13 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* LEFT */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-vdm-gold-500 to-vdm-gold-100 p-12 flex-col justify-center items-center text-white">
-        <div className="max-w-md">
+      <div className="hidden lg:flex lg:w-1/2 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-gradient-to-br from-vdm-gold-500 to-vdm-gold-100 p-12 flex-col justify-center items-center text-white">
+        <div className="max-w-md text-center">
+          <div className="mb-8 h-28 w-28 flex items-center justify-center overflow-hidden mx-auto">
+            <img src="/logo.jpeg" alt="Logo" className="h-24 w-24 object-contain" />
+          </div>
           <h1 className="text-5xl font-bold mb-6">Bienvenue</h1>
-          <p className="text-xl opacity-90">
-            Connectez-vous pour accéder à votre espace personnel.
-          </p>
+          <p className="text-xl opacity-90">Connectez-vous pour acceder a votre espace personnel.</p>
         </div>
       </div>
 
@@ -111,21 +109,22 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-8">
+              <div className="lg:hidden mx-auto mb-4 h-16 w-16 flex items-center justify-center overflow-hidden">
+                <img src="/logo.jpeg" alt="Logo" className="h-14 w-14 object-contain" />
+              </div>
               <h2 className="text-3xl font-bold text-vdm-gold-800 mb-2">Connexion</h2>
               <p className="text-gray-600">Entrez vos identifiants pour continuer</p>
               <p className="text-xs text-vdm-gold-700 mt-2">
                 {searchParams.get("pending") === "1"
-                  ? "Votre compte n'est pas encore validé, patientez quelques instants."
-                  : "Votre compte est validé. Connectez-vous pour continuer."}
+                  ? "Votre compte n'est pas encore valide, patientez quelques instants."
+                  : "Votre compte est valide. Connectez-vous pour continuer."}
               </p>
             </div>
 
             <div className="space-y-6">
               {/* Identifier */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email ou matricule
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email ou matricule</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
@@ -143,9 +142,7 @@ export default function LoginPage() {
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mot de passe
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
@@ -183,7 +180,7 @@ export default function LoginPage() {
             <p className="mt-8 text-center text-sm text-gray-600">
               Pas encore de compte ?{" "}
               <a href="/register" className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline">
-                Créer un compte
+                Creer un compte
               </a>
             </p>
           </div>

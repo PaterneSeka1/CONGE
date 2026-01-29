@@ -20,11 +20,19 @@ export async function GET(req: Request) {
     await autoApproveOverdueForDeptHead(actorId, getDeptHeadDelayDays());
   }
 
+  const where =
+    role === "CEO"
+      ? {
+          status: { in: ["SUBMITTED", "PENDING"] },
+          OR: [{ currentAssigneeId: actorId }, { reachedCeoAt: { not: null } }],
+        }
+      : {
+          currentAssigneeId: actorId,
+          status: { in: ["SUBMITTED", "PENDING"] },
+        };
+
   const leaves = await prisma.leaveRequest.findMany({
-    where: {
-      currentAssigneeId: actorId,
-      status: { in: ["SUBMITTED", "PENDING"] },
-    },
+    where,
     select: {
       id: true,
       type: true,
