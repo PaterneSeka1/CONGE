@@ -24,7 +24,7 @@ export default function EmployeeHistory() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves/history?mine=1", {
+        const res = await fetch("/api/leave-requests/history?mine=1", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));

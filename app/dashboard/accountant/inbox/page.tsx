@@ -11,7 +11,7 @@ type Req = {
   period: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   note?: string;
-  origin: "EMPLOYEE" | "MANAGER" | "OTHER";
+  origin: "EMPLOYEE" | "DEPT_HEAD" | "OTHER";
 };
 
 export default function AccountantInbox() {
@@ -24,7 +24,7 @@ export default function AccountantInbox() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves/inbox", {
+        const res = await fetch("/api/leave-requests/pending", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
@@ -36,7 +36,7 @@ export default function AccountantInbox() {
               period: `${x.startDate?.slice(0, 10)} → ${x.endDate?.slice(0, 10)}`,
               status: x.status,
               note: x.reason ?? "",
-              origin: x.employee?.role === "DEPT_HEAD" ? "MANAGER" : "EMPLOYEE",
+              origin: x.employee?.role === "DEPT_HEAD" ? "DEPT_HEAD" : "EMPLOYEE",
             }))
           );
         }
@@ -50,10 +50,10 @@ export default function AccountantInbox() {
   const approve = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "APPROVE" }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
@@ -63,10 +63,10 @@ export default function AccountantInbox() {
   const reject = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "REJECT" }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
@@ -76,23 +76,23 @@ export default function AccountantInbox() {
   const forwardToCeo = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/escalate`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "ESCALATE", toRole: "CEO" }),
+      body: JSON.stringify({ toRole: "CEO" }),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
     }
   };
 
-  const forwardToManager = async (id: string) => {
+  const forwardToDeptHead = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/escalate`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "ESCALATE", toRole: "MANAGER" }),
+      body: JSON.stringify({ toRole: "DEPT_HEAD" }),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
@@ -121,7 +121,7 @@ export default function AccountantInbox() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          if (row.original.origin === "MANAGER") {
+          if (row.original.origin === "DEPT_HEAD") {
             return (
               <button
                 onClick={() => forwardToCeo(row.original.id)}
@@ -146,10 +146,10 @@ export default function AccountantInbox() {
                 Refuser
               </button>
               <button
-                onClick={() => forwardToManager(row.original.id)}
+                onClick={() => forwardToDeptHead(row.original.id)}
                 className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
               >
-                Transmettre manager
+                Transmettre dÃ©partement
               </button>
               <button
                 onClick={() => forwardToCeo(row.original.id)}
@@ -162,14 +162,14 @@ export default function AccountantInbox() {
         },
       },
     ],
-    [approve, reject, forwardToCeo, forwardToManager]
+    [approve, reject, forwardToCeo, forwardToDeptHead]
   );
 
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Toutes les demandes de congé arrivent ici. Les demandes issues des managers doivent être
+        Toutes les demandes de congé arrivent ici. Les demandes issues des responsables doivent être
         transmises au CEO.
       </div>
 
@@ -180,3 +180,5 @@ export default function AccountantInbox() {
     </div>
   );
 }
+
+

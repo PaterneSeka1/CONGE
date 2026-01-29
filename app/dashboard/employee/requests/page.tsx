@@ -10,7 +10,7 @@ type LeaveItem = {
   type: string;
   startDate: string;
   endDate: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  status: "SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   currentAssignee?: string;
 };
 
@@ -24,7 +24,7 @@ export default function EmployeeRequests() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves?mine=1", {
+        const res = await fetch("/api/leave-requests/my", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
@@ -52,10 +52,10 @@ export default function EmployeeRequests() {
   const cancelRequest = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/cancel`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "CANCEL" }),
+      body: JSON.stringify({}),
     });
     if (!res.ok) {
       alert("Erreur lors de l'annulation.");
@@ -87,7 +87,7 @@ export default function EmployeeRequests() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          if (row.original.status !== "PENDING") return "—";
+          if (!["SUBMITTED", "PENDING"].includes(row.original.status)) return "—";
           return (
             <button
               onClick={() => cancelRequest(row.original.id)}

@@ -23,7 +23,7 @@ export default function DsiInbox() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves/inbox", {
+        const res = await fetch("/api/leave-requests/pending", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
@@ -48,10 +48,10 @@ export default function DsiInbox() {
   const approve = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "APPROVE" }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
@@ -61,10 +61,10 @@ export default function DsiInbox() {
   const reject = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "REJECT" }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));

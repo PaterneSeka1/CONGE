@@ -24,7 +24,7 @@ export default function AccountantHistory() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves/history?scope=actor", {
+        const res = await fetch("/api/leave-requests/history?scope=actor", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));

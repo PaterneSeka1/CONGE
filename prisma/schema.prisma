@@ -173,6 +173,7 @@ model LeaveRequest {
   currentAssigneeId String?   @db.ObjectId
   currentAssignee   Employee? @relation("LeaveAssignee", fields: [currentAssigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  deptHeadAssignedAt DateTime?
   reachedCeoAt DateTime?
 
   decisions LeaveDecision[]

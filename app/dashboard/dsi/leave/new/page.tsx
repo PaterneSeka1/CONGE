@@ -8,7 +8,6 @@ export default function DsiLeaveNew() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
-  const [remainingTasks, setRemainingTasks] = useState("");
 
   const submit = async () => {
     if (!startDate || !endDate) {
@@ -17,7 +16,7 @@ export default function DsiLeaveNew() {
     }
     const token = getToken();
     if (!token) return;
-    const res = await fetch("/api/leaves", {
+    const res = await fetch("/api/leave-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -25,7 +24,6 @@ export default function DsiLeaveNew() {
         startDate,
         endDate,
         reason,
-        remainingTasks,
       }),
     });
     if (res.ok) {
@@ -33,7 +31,6 @@ export default function DsiLeaveNew() {
       setStartDate("");
       setEndDate("");
       setReason("");
-      setRemainingTasks("");
       setType("ANNUAL");
     } else {
       alert("Erreur lors de l'envoi.");
@@ -93,17 +90,6 @@ export default function DsiLeaveNew() {
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Tâches restantes</label>
-          <textarea
-            value={remainingTasks}
-            onChange={(e) => setRemainingTasks(e.target.value)}
-            className="w-full border border-vdm-gold-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            rows={3}
-            placeholder="Listez les tâches à terminer ou à passer à un collègue..."
-          />
-        </div>
-
-        <div className="md:col-span-2">
           <button
             onClick={submit}
             className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800"
@@ -115,3 +101,4 @@ export default function DsiLeaveNew() {
     </div>
   );
 }
+

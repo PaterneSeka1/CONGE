@@ -10,7 +10,7 @@ type LeaveItem = {
   type: string;
   startDate: string;
   endDate: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  status: "SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
   currentAssignee?: string;
 };
 
@@ -24,7 +24,7 @@ export default function DsiLeaveHistory() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves?mine=1", {
+        const res = await fetch("/api/leave-requests/my", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));

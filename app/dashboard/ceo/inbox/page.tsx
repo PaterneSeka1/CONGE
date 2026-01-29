@@ -9,7 +9,7 @@ type Req = {
   id: string;
   employeeName: string;
   period: string;
-  origin: "MANAGER" | "ACCOUNTANT";
+  origin: "DEPT_HEAD" | "ACCOUNTANT";
   note?: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
 };
@@ -24,7 +24,7 @@ export default function CeoInbox() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leaves/inbox", {
+        const res = await fetch("/api/leave-requests/pending", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
@@ -34,7 +34,7 @@ export default function CeoInbox() {
               id: x.id,
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
               period: `${x.startDate?.slice(0, 10)} → ${x.endDate?.slice(0, 10)}`,
-              origin: "ACCOUNTANT",
+              origin: x.employee?.role === "DEPT_HEAD" ? "DEPT_HEAD" : "ACCOUNTANT",
               note: x.reason ?? "",
               status: x.status,
             }))
@@ -50,10 +50,10 @@ export default function CeoInbox() {
   const approve = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "APPROVE" }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
@@ -63,10 +63,10 @@ export default function CeoInbox() {
   const reject = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const res = await fetch(`/api/leaves/${id}/decide`, {
+    const res = await fetch(`/api/leave-requests/${id}/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: "REJECT" }),
+      body: JSON.stringify({}),
     });
     if (res.ok) {
       setRows((prev) => prev.filter((r) => r.id !== id));
@@ -116,7 +116,7 @@ export default function CeoInbox() {
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Demandes transmises</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Décision finale sur les demandes transmises par la comptable ou les managers.
+        Décision finale sur les demandes transmises par la comptable ou les responsables.
       </div>
 
       <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une demande..." />
@@ -126,3 +126,4 @@ export default function CeoInbox() {
     </div>
   );
 }
+
