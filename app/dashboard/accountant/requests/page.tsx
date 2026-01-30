@@ -16,7 +16,7 @@ type LeaveItem = {
   currentAssignee?: string;
 };
 
-export default function EmployeeRequests() {
+export default function AccountantRequests() {
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -112,7 +112,7 @@ export default function EmployeeRequests() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes (Comptable)</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
         Suivez l'état de vos demandes en cours.
       </div>

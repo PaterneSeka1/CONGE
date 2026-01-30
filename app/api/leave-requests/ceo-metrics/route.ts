@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   if (!authRes.ok) return authRes.error;
 
   const { id: actorId, role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const now = new Date();
   const from = startOfMonth(now);

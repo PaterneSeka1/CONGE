@@ -36,10 +36,10 @@ export function Sidebar({
   sections,
   showOrgSwitcher = false,
 }: {
-  brandTitle?: string;
-  brandSubtitle?: string;
+  brandTitle: string;
+  brandSubtitle: string;
   sections: SidebarSection[];
-  showOrgSwitcher?: boolean;
+  showOrgSwitcher: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -124,7 +124,7 @@ export function Sidebar({
                       setIsOpen(false);
                     }}
                     className={`w-full text-left px-3 py-2 hover:bg-vdm-gold-50 transition text-sm font-medium text-vdm-gold-900 ${
-                      i !== organizations.length - 1 ? "border-b" : ""
+                      i !== organizations.length - 1 ? "border-b border-vdm-gold-100" : ""
                     }`}
                   >
                     {org.name}
@@ -196,7 +196,7 @@ export function Sidebar({
             <div className="text-sm font-semibold text-vdm-gold-100">
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role ?? "" : ""}</div>
+            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role || "" : ""}</div>
           </div>
 
           <OrgButton />
@@ -263,7 +263,7 @@ export function Sidebar({
             <div className="text-sm font-semibold text-vdm-gold-100">
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role ?? "" : ""}</div>
+            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role || "" : ""}</div>
           </div>
 
           <OrgButton />
@@ -318,4 +318,3 @@ export function Sidebar({
     </>
   );
 }
-

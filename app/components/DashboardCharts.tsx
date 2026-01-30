@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   Line,
   LineChart,
@@ -25,11 +26,15 @@ export default function DashboardCharts({
   pieData,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle: string;
   barData: SeriesPoint[];
   lineData: SeriesPoint[];
   pieData: SeriesPoint[];
 }) {
+  const lineColor = "#2f6690";
+  const pieColors = ["#f4b942", "#6aa84f", "#e06666", "#8e7cc3", "#76a5af"];
+  const barColors = ["#f6b26b", "#93c47d", "#76a5af", "#8e7cc3", "#c27ba0"];
+
   return (
     <section className="mt-6">
       <div className="mb-4">
@@ -45,9 +50,16 @@ export default function DashboardCharts({
               <CartesianGrid strokeDasharray="3 3" stroke="#f3e8c8" />
               <XAxis dataKey="name" stroke="#8a6a2f" />
               <YAxis stroke="#8a6a2f" />
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#e8d7b0" }} />
               <Legend />
-              <Line type="monotone" dataKey="value" stroke="#b8892e" strokeWidth={3} />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={lineColor}
+                strokeWidth={3}
+                dot={{ r: 4, fill: lineColor }}
+                activeDot={{ r: 6 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -56,7 +68,7 @@ export default function DashboardCharts({
           <div className="text-sm text-vdm-gold-700 mb-2">Répartition</div>
           <ResponsiveContainer width="100%" height="85%">
             <PieChart>
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#e8d7b0" }} />
               <Legend />
               <Pie
                 data={pieData}
@@ -64,8 +76,12 @@ export default function DashboardCharts({
                 nameKey="name"
                 innerRadius={40}
                 outerRadius={75}
-                fill="#b8892e"
-              />
+                paddingAngle={2}
+              >
+                {pieData.map((_, i) => (
+                  <Cell key={`pie-${i}`} fill={pieColors[i % pieColors.length]} />
+                ))}
+              </Pie>
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -77,9 +93,13 @@ export default function DashboardCharts({
               <CartesianGrid strokeDasharray="3 3" stroke="#f3e8c8" />
               <XAxis dataKey="name" stroke="#8a6a2f" />
               <YAxis stroke="#8a6a2f" />
-              <Tooltip />
+              <Tooltip contentStyle={{ borderRadius: 8, borderColor: "#e8d7b0" }} />
               <Legend />
-              <Bar dataKey="value" fill="#d8b35a" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {barData.map((_, i) => (
+                  <Cell key={`bar-${i}`} fill={barColors[i % barColors.length]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

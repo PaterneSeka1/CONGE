@@ -1,4 +1,5 @@
 "use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -40,23 +41,25 @@ export default function EmployeeHistory() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/history?mine=1", {
+        const res = await fetch("/api/leave-requests/history-mine=1", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setItems(
             (data?.leaves ?? []).map((x: any) => {
-              const start = x.startDate?.slice(0, 10) ?? "";
-              const end = x.endDate?.slice(0, 10) ?? "";
+              const startRaw = x.startDate ?? "";
+              const endRaw = x.endDate ?? "";
+              const start = formatDateDMY(startRaw);
+              const end = formatDateDMY(endRaw);
               return {
                 id: x.id,
                 type: x.type,
                 startDate: start,
                 endDate: end,
                 status: x.status,
-                decidedAt: x.decisions?.[0]?.createdAt?.slice(0, 10) ?? "—",
-                days: start && end ? daysBetweenInclusive(start, end) : 0,
+                decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
+                days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
               };
             })
           );
@@ -74,10 +77,10 @@ export default function EmployeeHistory() {
       {
         id: "period",
         header: "Période",
-        accessorFn: (row) => `${row.startDate} -> ${row.endDate}`,
+        accessorFn: (row) => `${row.startDate} - ${row.endDate}`,
         cell: ({ row }) => (
           <span>
-            {row.original.startDate} → {row.original.endDate}
+            {row.original.startDate} - {row.original.endDate}
           </span>
         ),
       },

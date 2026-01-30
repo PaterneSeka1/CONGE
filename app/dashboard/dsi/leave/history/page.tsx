@@ -1,4 +1,5 @@
 "use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -47,8 +48,10 @@ export default function DsiLeaveHistory() {
         if (res.ok) {
           setItems(
             (data?.leaves ?? []).map((x: any) => {
-              const start = x.startDate?.slice(0, 10) ?? "";
-              const end = x.endDate?.slice(0, 10) ?? "";
+              const startRaw = x.startDate ?? "";
+              const endRaw = x.endDate ?? "";
+              const start = formatDateDMY(startRaw);
+              const end = formatDateDMY(endRaw);
               return {
                 id: x.id,
                 type: x.type,
@@ -58,7 +61,7 @@ export default function DsiLeaveHistory() {
                 currentAssignee: x.currentAssignee
                   ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
                   : "—",
-                days: start && end ? daysBetweenInclusive(start, end) : 0,
+                days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
               };
             })
           );
@@ -76,10 +79,10 @@ export default function DsiLeaveHistory() {
       {
         id: "period",
         header: "Période",
-        accessorFn: (row) => `${row.startDate} -> ${row.endDate}`,
+        accessorFn: (row) => `${row.startDate} - ${row.endDate}`,
         cell: ({ row }) => (
           <span>
-            {row.original.startDate} → {row.original.endDate}
+            {row.original.startDate} - {row.original.endDate}
           </span>
         ),
       },

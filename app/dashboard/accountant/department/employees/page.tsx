@@ -76,12 +76,12 @@ export default function AccountantDepartmentEmployees() {
 
       const depMap: Record<string, string> = {};
       (depData?.departments ?? []).forEach((d: any) => {
-        depMap[d.id] = d.type ?? d.name ?? d.id;
+        depMap[d.id] = d.name ?? d.type ?? d.id;
       });
 
       const svcMap: Record<string, string> = {};
       (svcData?.services ?? []).forEach((s: any) => {
-        svcMap[s.id] = s.type ?? s.name ?? s.id;
+        svcMap[s.id] = s.name ?? s.type ?? s.id;
       });
 
       setDepartments(depMap);

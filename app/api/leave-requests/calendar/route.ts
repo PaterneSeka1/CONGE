@@ -9,32 +9,36 @@ export async function GET(req: Request) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
 
-  const { role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  const { role, departmentId } = authRes.auth;
 
-  const [leaves, blackouts] = await Promise.all([
-    prisma.leaveRequest.findMany({
-      where: { status: "APPROVED" },
-      select: {
-        id: true,
-        startDate: true,
-        endDate: true,
-        employee: {
-          select: {
-            firstName: true,
-            lastName: true,
-            matricule: true,
-            department: { select: { type: true, name: true } },
-          },
+  const blackoutWhere = departmentId ? { OR: [{ departmentId }, { departmentId: null }] } : {};
+  const blackouts = await prisma.leaveBlackout.findMany({
+    where: blackoutWhere,
+    select: { id: true, startDate: true, endDate: true, departmentId: true },
+    orderBy: { startDate: "asc" },
+  });
+
+  if (role !== "CEO") {
+    return NextResponse.json({ leaves: [], blackouts });
+  }
+
+  const leaves = await prisma.leaveRequest.findMany({
+    where: { status: "APPROVED" },
+    select: {
+      id: true,
+      startDate: true,
+      endDate: true,
+      employee: {
+        select: {
+          firstName: true,
+          lastName: true,
+          matricule: true,
+          department: { select: { type: true, name: true } },
         },
       },
-      orderBy: { startDate: "asc" },
-    }),
-    prisma.leaveBlackout.findMany({
-      select: { id: true, startDate: true, endDate: true, departmentId: true },
-      orderBy: { startDate: "asc" },
-    }),
-  ]);
+    },
+    orderBy: { startDate: "asc" },
+  });
 
   return NextResponse.json({ leaves, blackouts });
 }

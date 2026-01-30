@@ -1,4 +1,5 @@
 "use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -34,7 +35,7 @@ export default function CeoInbox() {
             (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
-              period: `${x.startDate?.slice(0, 10)} → ${x.endDate?.slice(0, 10)}`,
+              period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               origin: x.employee?.role === "DEPT_HEAD" ? "DEPT_HEAD" : "ACCOUNTANT",
               note: x.reason ?? "",
               status: x.status,
@@ -60,12 +61,12 @@ export default function CeoInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("CongÃ© validÃ©.", { id: t });
+        toast.success("Congé validé.", { id: t });
       } else {
         toast.error("Erreur lors de la validation.", { id: t });
       }
     } catch {
-      toast.error("Erreur rÃ©seau lors de la validation.", { id: t });
+      toast.error("Erreur réseau lors de la validation.", { id: t });
     }
   };
 
@@ -81,12 +82,12 @@ export default function CeoInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("CongÃ© refusÃ©.", { id: t });
+        toast.success("Congé refusé.", { id: t });
       } else {
         toast.error("Erreur lors du refus.", { id: t });
       }
     } catch {
-      toast.error("Erreur rÃ©seau lors du refus.", { id: t });
+      toast.error("Erreur réseau lors du refus.", { id: t });
     }
   };
 
@@ -143,4 +144,3 @@ export default function CeoInbox() {
     </div>
   );
 }
-

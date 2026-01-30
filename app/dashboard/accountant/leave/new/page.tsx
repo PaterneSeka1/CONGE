@@ -110,7 +110,7 @@ function toDateValueForDay(year: number, month: number, day: number) {
   return toLocalDateInputValue(new Date(year, month, day));
 }
 
-export default function EmployeeLeaveNew() {
+export default function AccountantLeaveNew() {
   const [type, setType] = useState("ANNUAL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -299,8 +299,8 @@ export default function EmployeeLeaveNew() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Nouvelle demande</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de conge.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Nouvelle demande (Comptable)</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de conge (validation CEO).</div>
 
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4 grid gap-3 md:grid-cols-2">
         {isExhausted ? (

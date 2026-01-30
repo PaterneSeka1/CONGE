@@ -38,8 +38,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const updated = await prisma.department.update({
       where: { id },
       data: {
-        name: body?.name ?? undefined,
-        description: body?.description ?? undefined,
+        name: body?.name ? body.name : undefined,
+        description: body?.description ? body.description : undefined,
       },
     });
 

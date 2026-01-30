@@ -13,7 +13,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
   if (!authRes.ok) return authRes.error;
 
   const { id: actorId, role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const { id } = await ctx.params;
   if (!id) return jsonError("ID requis", 400);
@@ -29,7 +29,7 @@ export async function PUT(req: Request, ctx: Ctx) {
   if (!authRes.ok) return authRes.error;
 
   const { role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const { id } = await ctx.params;
   if (!id) return jsonError("ID requis", 400);
@@ -83,7 +83,7 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
 
   if (Object.keys(data).length === 0) {
-    return jsonError("Aucun champ a modifier", 400);
+    return jsonError("Aucun champ à modifier", 400);
   }
 
   const updated = await prisma.employee.update({

@@ -77,7 +77,9 @@ export async function POST(req: Request) {
   } catch (e: any) {
     // Prisma unique constraint
     if (e?.code === "P2002") {
-      const target = Array.isArray(e?.meta?.target) ? e.meta.target.join(",") : String(e?.meta?.target ?? "");
+      const target = Array.isArray(e?.meta?.target)
+      ? e.meta.target.join(",")
+      : String(e?.meta?.target ?? "");
       return jsonError("Email ou matricule déjà utilisé", 409, { target });
     }
 

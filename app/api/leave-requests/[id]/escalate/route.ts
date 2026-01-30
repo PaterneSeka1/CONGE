@@ -26,8 +26,8 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   if (!leave) return jsonError("Demande introuvable", 404);
-  if (isFinalStatus(leave.status)) return jsonError("Demande dÃ©jÃ  traitÃ©e", 409);
-  if (leave.currentAssigneeId !== actorId) return jsonError("AccÃ¨s refusÃ©", 403);
+  if (isFinalStatus(leave.status)) return jsonError("Demande déjà traitée", 409);
+  if (leave.currentAssigneeId !== actorId) return jsonError("Accès refusé", 403);
   if (leave.employeeId === actorId) return jsonError("Action interdite sur sa propre demande", 403);
 
   const body = await req.json().catch(() => ({}));
@@ -51,7 +51,7 @@ export async function POST(req: Request, ctx: Ctx) {
     }
     target = await findActiveEmployeeByRole("CEO");
   } else {
-    return jsonError("AccÃ¨s refusÃ©", 403);
+    return jsonError("Accès refusé", 403);
   }
 
   if (!target) {

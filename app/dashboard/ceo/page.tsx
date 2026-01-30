@@ -1,4 +1,5 @@
-﻿"use client";
+"use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import DashboardCharts from "@/app/components/DashboardCharts";
@@ -76,9 +77,7 @@ export default function CeoHome() {
 
   const [current, setCurrent] = useState(() => new Date());
   const { year, month, cells } = useMemo(() => buildMonth(current), [current]);
-  const monthLabel = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(
-    current
-  );
+  const monthLabel = formatDateDMY(new Date(current.getFullYear(), current.getMonth(), 1));
 
   const [approvedLeaves, setApprovedLeaves] = useState<CalendarLeave[]>([]);
   const [blackouts, setBlackouts] = useState<CalendarBlackout[]>([]);
@@ -147,11 +146,7 @@ export default function CeoHome() {
     day && blackouts.some((b) => inRange(day, month, year, b.startDate, b.endDate));
 
   const selectedDateLabel =
-    selectedDay != null
-      ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "full" }).format(
-          new Date(year, month, selectedDay)
-        )
-      : "";
+    selectedDay != null ? formatDateDMY(new Date(year, month, selectedDay)) : "";
 
   const details = useMemo(() => {
     if (selectedDay == null) return { leaves: [], blackouts: [] };
@@ -261,7 +256,7 @@ export default function CeoHome() {
           <div className="mt-3 flex items-center gap-3 text-xs text-gray-600">
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-vdm-gold-700" />
-              Conges approuves
+              Congés approuvés
             </div>
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-red-500" />
@@ -283,7 +278,7 @@ export default function CeoHome() {
                 <div className="text-sm font-semibold text-vdm-gold-800">Conges approuves</div>
                 <div className="text-xs text-gray-500">Demandeurs: {details.leaves.length}</div>
                 {details.leaves.length === 0 ? (
-                  <div className="text-sm text-gray-500 mt-1">Aucun conge approuve.</div>
+                  <div className="text-sm text-gray-500 mt-1">Aucun congé approuvé.</div>
                 ) : (
                   <ul className="mt-2 text-sm text-gray-700 space-y-2">
                     {details.leaves.map((l, i) => (
@@ -294,7 +289,7 @@ export default function CeoHome() {
                         <div className="text-xs text-gray-500">
                           {(l.employee?.matricule ?? "—") + " · "}
                           {(l.employee?.department?.type ?? l.employee?.department?.name ?? "—") + " · "}
-                          {l.startDate?.slice(0, 10)} → {l.endDate?.slice(0, 10)}
+                          {formatDateDMY(l.startDate)} - {formatDateDMY(l.endDate)}
                         </div>
                       </li>
                     ))}
@@ -305,10 +300,10 @@ export default function CeoHome() {
                     <table className="min-w-full text-xs text-left border border-vdm-gold-100 rounded-lg overflow-hidden">
                       <thead className="bg-vdm-gold-50 text-vdm-gold-900">
                         <tr>
-                          <th className="px-2 py-1 border-b border-vdm-gold-100">Nom & prenoms</th>
+                          <th className="px-2 py-1 border-b border-vdm-gold-100">Nom & prénoms</th>
                           <th className="px-2 py-1 border-b border-vdm-gold-100">Matricule</th>
-                          <th className="px-2 py-1 border-b border-vdm-gold-100">Departement</th>
-                          <th className="px-2 py-1 border-b border-vdm-gold-100">Periode</th>
+                          <th className="px-2 py-1 border-b border-vdm-gold-100">Département</th>
+                          <th className="px-2 py-1 border-b border-vdm-gold-100">Période</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -322,7 +317,7 @@ export default function CeoHome() {
                               {l.employee?.department?.type ?? l.employee?.department?.name ?? "—"}
                             </td>
                             <td className="px-2 py-1 border-b border-vdm-gold-100">
-                              {l.startDate?.slice(0, 10)} → {l.endDate?.slice(0, 10)}
+                              {formatDateDMY(l.startDate)} - {formatDateDMY(l.endDate)}
                             </td>
                           </tr>
                         ))}
@@ -340,7 +335,7 @@ export default function CeoHome() {
                   <ul className="mt-2 text-sm text-gray-700 space-y-1">
                     {details.blackouts.map((b, i) => (
                       <li key={`${b.startDate}-${b.endDate}-${i}`}>
-                        {b.startDate?.slice(0, 10)} → {b.endDate?.slice(0, 10)}
+                        {formatDateDMY(b.startDate)} - {formatDateDMY(b.endDate)}
                       </li>
                     ))}
                   </ul>

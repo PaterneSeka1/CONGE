@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { Eye, EyeOff, Mail, Lock, User, Badge, CheckCircle2 } from "lucide-react";
@@ -113,11 +113,11 @@ export default function RegisterPage() {
       const regData = await regRes.json().catch(() => ({}));
 
       if (!regRes.ok) {
-        toast.error(regData?.error ?? "Erreur lors de la creation du compte.", { id: t });
+        toast.error(regData?.error ?? "Erreur lors de la création du compte.", { id: t });
         return;
       }
 
-      toast.success("Compte cree. En attente de validation par l'admin.", { id: t });
+      toast.success("Compte créé. En attente de validation par l'admin.", { id: t });
 
       setFirstName("");
       setLastName("");
@@ -128,7 +128,7 @@ export default function RegisterPage() {
 
       window.location.href = "/login?pending=1";
     } catch {
-      toast.error("Erreur reseau. Verifiez votre connexion.", { id: t });
+      toast.error("Erreur réseau. Vérifiez votre connexion.", { id: t });
     } finally {
       setIsLoading(false);
     }
@@ -341,7 +341,7 @@ export default function RegisterPage() {
             </div>
 
             <p className="mt-6 text-center text-sm text-gray-600">
-              Deja un compte ?{" "}
+              Deja un compte -{" "}
               <a
                 href="/login"
                 className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline"

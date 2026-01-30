@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   if (startDate > endDate) {
-    return jsonError("startDate doit Ãªtre avant endDate", 400);
+    return jsonError("startDate doit être avant endDate", 400);
   }
 
   const accountant = await prisma.employee.findFirst({

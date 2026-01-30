@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
@@ -21,7 +21,7 @@ function routeForRole(role: EmployeeRole, isDsiAdmin = false) {
 }
 
 function normIdentifier(v: string) {
-  const s = (v ?? "").trim();
+  const s = v.trim();
   return s.includes("@") ? s.toLowerCase() : s; // email => lowercase, matricule => intact
 }
 
@@ -63,11 +63,11 @@ export default function LoginPage() {
 
       if (!response.ok) {
         if (response.status === 403) {
-          toast.error(data?.error || "Compte en attente de validation par l'admin.", { id: loadingToast });
+          toast.error(data.error || "Compte en attente de validation par l'admin.", { id: loadingToast });
           return;
         }
 
-        toast.error(data?.error || "Identifiants incorrects", { id: loadingToast });
+        toast.error(data.error || "Identifiants incorrects", { id: loadingToast });
         return;
       }
 
@@ -77,8 +77,8 @@ export default function LoginPage() {
 
       toast.success("Connexion reussie", { id: loadingToast });
 
-      const role = data?.employee?.role as EmployeeRole | undefined;
-      const isDsiAdmin = Boolean(data?.employee?.isDsiAdmin);
+      const role = data.employee.role as EmployeeRole | undefined;
+      const isDsiAdmin = Boolean(data.employee.isDsiAdmin);
       window.location.href = role ? routeForRole(role, isDsiAdmin) : "/dashboard";
     } catch {
       toast.error("Erreur reseau. Veuillez reessayer.", { id: loadingToast });
@@ -178,7 +178,7 @@ export default function LoginPage() {
             </div>
 
             <p className="mt-8 text-center text-sm text-gray-600">
-              Pas encore de compte ?{" "}
+              Pas encore de compte -{" "}
               <a href="/register" className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline">
                 Creer un compte
               </a>

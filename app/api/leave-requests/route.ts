@@ -1,4 +1,4 @@
-﻿export const runtime = "nodejs";
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const { id: actorId, role, departmentId } = authRes.auth;
 
   if (role === "CEO") {
-    return jsonError("Le CEO ne peut pas creer de demande", 403);
+    return jsonError("Le CEO ne peut pas créer de demande", 403);
   }
 
   const body = await req.json().catch(() => ({}));
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   if (startDate > endDate) {
-    return jsonError("startDate doit etre avant endDate", 400);
+    return jsonError("startDate doit être avant endDate", 400);
   }
 
   const blackouts = await prisma.leaveBlackout.findMany({
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     select: { id: true },
   });
   if (blackouts.length > 0) {
-    return jsonError("Periode bloquee par la direction", 409);
+    return jsonError("Période bloquée par la direction", 409);
   }
 
   let assignee = null;

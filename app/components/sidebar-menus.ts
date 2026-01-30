@@ -16,10 +16,16 @@ export const employeeMenu: SidebarSection[] = [
 export const accountantMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/accountant" }] },
   {
+    title: "Conges",
+    links: [
+      { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/accountant/leave/new" },
+      { label: "Mes demandes", icon: "clock", to: "/dashboard/accountant/requests" },
+    ],
+  },
+  {
     title: "Demandes",
     links: [
-      { label: "Inbox (? traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
-      { label: "Historique", icon: "clock", to: "/dashboard/accountant/history" },
+      { label: "Inbox (- traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
     ],
   },
   {
@@ -90,6 +96,4 @@ export const ceoMenu: SidebarSection[] = [
     links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }],
   },
 ];
-
-
 

@@ -102,13 +102,12 @@ export default function ProfileView() {
     const payload: Record<string, unknown> = {
       firstName: draft.firstName,
       lastName: draft.lastName,
-      email: draft.email,
       jobTitle: draft.jobTitle ?? null,
     };
     if (password) payload.password = password;
 
-    const res = await fetch(`/api/employees/${draft.id}`, {
-      method: "PATCH",
+    const res = await fetch(`/api/auth/me`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
@@ -181,15 +180,7 @@ export default function ProfileView() {
         </div>
         <div>
           <div className="text-xs text-vdm-gold-600">Email</div>
-          {isEditing ? (
-            <input
-              value={draft.email}
-              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.email}</div>
-          )}
+          <div className="text-sm text-vdm-gold-900 font-medium">{draft.email}</div>
         </div>
         <div>
           <div className="text-xs text-vdm-gold-600">Matricule</div>
@@ -230,7 +221,9 @@ export default function ProfileView() {
         <div>
           <div className="text-xs text-vdm-gold-600">Département</div>
           <div className="text-sm text-vdm-gold-900 font-medium">
-            {draft.departmentId ? departmentNames[draft.departmentId] ?? draft.departmentId : "—"}
+            {draft.departmentId
+              ? departmentNames[draft.departmentId] ?? draft.departmentId
+              : "—"}
           </div>
         </div>
         <div>

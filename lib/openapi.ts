@@ -494,5 +494,3 @@ export const openapiSpec = {
   },
 } as const;
 
-
-

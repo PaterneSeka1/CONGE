@@ -14,7 +14,7 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!authRes.ok) return authRes.error;
 
   const { role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const { id } = await ctx.params;
   if (!id) return jsonError("ID requis", 400);
@@ -23,7 +23,9 @@ export async function POST(req: Request, ctx: Ctx) {
   const action = String(body?.action ?? "");
   const rawAmount = body?.amount;
   const amount =
-    typeof rawAmount === "string" ? Number(rawAmount.replace(",", ".").trim()) : Number(rawAmount ?? 0);
+    typeof rawAmount === "string"
+      ? Number(rawAmount.replace(",", ".").trim())
+      : Number(rawAmount ?? 0);
 
   if (!action || !["RESET", "INCREASE", "SET"].includes(action)) {
     return jsonError("Action invalide (RESET|INCREASE|SET)", 400);
@@ -61,7 +63,7 @@ export async function POST(req: Request, ctx: Ctx) {
     });
   });
 
-  if (!updated) return jsonError("Employe introuvable", 404);
+  if (!updated) return jsonError("Employé introuvable", 404);
 
   return NextResponse.json({ employee: updated });
 }

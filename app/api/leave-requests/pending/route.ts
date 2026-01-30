@@ -40,7 +40,16 @@ export async function GET(req: Request) {
       endDate: true,
       reason: true,
       status: true,
-      employee: { select: { id: true, firstName: true, lastName: true, role: true, departmentId: true } },
+      employee: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          departmentId: true,
+          department: { select: { type: true, name: true } },
+        },
+      },
       currentAssigneeId: true,
       createdAt: true,
     },

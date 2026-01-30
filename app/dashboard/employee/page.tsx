@@ -1,4 +1,5 @@
-﻿"use client";
+"use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import RequireAuth from "@/app/components/RequireAuth";
@@ -73,8 +74,8 @@ export default function EmployeeDashboard() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return;
-    setLeaves(data?.leaves ?? []);
-    const base = Number(data?.employee?.leaveBalance ?? BASE_ALLOWANCE);
+    setLeaves(data.leaves || []);
+    const base = Number(data.employee?.leaveBalance || BASE_ALLOWANCE);
     setBaseAllowance(Number.isFinite(base) ? base : BASE_ALLOWANCE);
   }, []);
 
@@ -145,8 +146,8 @@ export default function EmployeeDashboard() {
     ];
 
     const last = leaves[0];
-    const lastLabel = last
-      ? `${statusLabel(last.status)} • ${last.startDate?.slice(0, 10)} -> ${last.endDate?.slice(0, 10)}`
+        const lastLabel = last
+      ? `${statusLabel(last.status)} - ${formatDateDMY(last.startDate)} - ${formatDateDMY(last.endDate)}`
       : "Aucune";
 
     return { balance, pendingCount, lastLabel, lineData, pieData, barData };

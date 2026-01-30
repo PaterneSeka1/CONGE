@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   if (!authRes.ok) return authRes.error;
 
   const { role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const items = await prisma.leaveBlackout.findMany({
     select: {
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   if (!authRes.ok) return authRes.error;
 
   const { id: actorId, role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const body = await req.json().catch(() => ({}));
   const title = norm(body?.title) || null;
@@ -48,12 +48,12 @@ export async function POST(req: Request) {
     return jsonError("Champs requis: startDate, endDate", 400);
   }
   if (startDate > endDate) {
-    return jsonError("startDate doit etre avant endDate", 400);
+    return jsonError("startDate doit être avant endDate", 400);
   }
 
   if (departmentId) {
     const dept = await prisma.department.findUnique({ where: { id: departmentId }, select: { id: true } });
-    if (!dept) return jsonError("Departement invalide", 400);
+    if (!dept) return jsonError("Département invalide", 400);
   }
 
   const created = await prisma.leaveBlackout.create({

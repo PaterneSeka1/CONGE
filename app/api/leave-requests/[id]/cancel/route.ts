@@ -20,7 +20,7 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   if (!leave) return jsonError("Demande introuvable", 404);
-  if (leave.employeeId !== actorId) return jsonError("AccÃ¨s refusÃ©", 403);
+  if (leave.employeeId !== actorId) return jsonError("Accès refusé", 403);
   if (!["SUBMITTED", "PENDING"].includes(leave.status)) {
     return jsonError("Annulation impossible (statut final)", 409);
   }

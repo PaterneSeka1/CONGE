@@ -1,4 +1,5 @@
 "use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -25,7 +26,7 @@ export default function CeoBlackouts() {
   const [departmentId, setDepartmentId] = useState("ALL");
 
   const deptOptions = useMemo(
-    () => [{ id: "ALL", type: "ALL", name: "Tous les departements" }, ...departments],
+    () => [{ id: "ALL", type: "ALL", name: "Tous les départements" }, ...departments],
     [departments]
   );
 
@@ -54,12 +55,12 @@ export default function CeoBlackouts() {
 
   const createBlackout = async () => {
     if (!startDate || !endDate) {
-      toast.error("Veuillez renseigner la date de debut et la date de fin.");
+      toast.error("Veuillez renseigner la date de début et la date de fin.");
       return;
     }
     const token = getToken();
     if (!token) return;
-    const t = toast.loading("Creation de la periode...");
+    const t = toast.loading("Création de la période...");
     const res = await fetch("/api/leave-blackouts", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -72,7 +73,7 @@ export default function CeoBlackouts() {
       }),
     });
     if (res.ok) {
-      toast.success("Periode bloquee creee.", { id: t });
+      toast.success("Période bloquée créée.", { id: t });
       setTitle("");
       setReason("");
       setStartDate("");
@@ -186,7 +187,7 @@ export default function CeoBlackouts() {
                 <div>
                   <div className="font-semibold text-vdm-gold-900">{b.title || "Periode bloquee"}</div>
                   <div className="text-xs text-vdm-gold-700">
-                    {b.startDate?.slice(0, 10)} → {b.endDate?.slice(0, 10)}
+                    {formatDateDMY(b.startDate)} - {formatDateDMY(b.endDate)}
                   </div>
                   <div className="text-xs text-gray-600">
                     {b.department?.type ?? "ALL"} {b.reason ? `• ${b.reason}` : ""}

@@ -26,7 +26,7 @@ export default function ManagerTeamPage() {
     async (id: string) => {
       const target = rows.find((r) => r.id === id);
       if (!target) return;
-      const ok = window.confirm(`Supprimer ${target.firstName} ${target.lastName} du service ?`);
+      const ok = window.confirm(`Supprimer ${target.firstName} ${target.lastName} du service -`);
       if (!ok) return;
 
       setRows((prev) => prev.filter((r) => r.id !== id));

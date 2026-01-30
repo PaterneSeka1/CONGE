@@ -58,13 +58,13 @@ export default function DsiAccountsPending() {
           setDepartments(
             (depData?.departments ?? []).map((d: any) => ({
               id: d.id,
-              label: d.type ?? d.name ?? d.id,
+              label: d.name ?? d.type ?? d.id,
             }))
           );
           setServices(
             (svcData?.services ?? []).map((s: any) => ({
               id: s.id,
-              label: s.type ?? s.name ?? s.id,
+              label: s.name ?? s.type ?? s.id,
               departmentId: s.departmentId,
             }))
           );

@@ -1,4 +1,5 @@
 "use client";
+import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -49,8 +50,10 @@ export default function CeoLeavesHistory() {
         if (res.ok) {
           setRows(
             (data?.leaves ?? []).map((x: any) => {
-              const start = x.startDate?.slice(0, 10) ?? "";
-              const end = x.endDate?.slice(0, 10) ?? "";
+              const startRaw = x.startDate ?? "";
+              const endRaw = x.endDate ?? "";
+              const start = formatDateDMY(startRaw);
+              const end = formatDateDMY(endRaw);
               const emp = x.employee ?? {};
               return {
                 id: x.id,
@@ -60,8 +63,8 @@ export default function CeoLeavesHistory() {
                 startDate: start,
                 endDate: end,
                 status: x.status,
-                decidedAt: x.decisions?.[0]?.createdAt?.slice(0, 10) ?? "—",
-                days: start && end ? daysBetweenInclusive(start, end) : 0,
+                decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
+                days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
               };
             })
           );
@@ -76,7 +79,7 @@ export default function CeoLeavesHistory() {
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
       {
-        header: "Employe",
+        header: "Employé",
         accessorKey: "employeeName",
         cell: ({ row }) => (
           <div>
@@ -88,27 +91,27 @@ export default function CeoLeavesHistory() {
       { header: "Type", accessorKey: "type" },
       {
         id: "period",
-        header: "Periode",
-        accessorFn: (row) => `${row.startDate} -> ${row.endDate}`,
+        header: "Période",
+        accessorFn: (row) => `${row.startDate} - ${row.endDate}`,
         cell: ({ row }) => (
           <span>
-            {row.original.startDate} → {row.original.endDate}
+            {row.original.startDate} - {row.original.endDate}
           </span>
         ),
       },
       { header: "Jours", accessorKey: "days" },
       { header: "Statut", accessorKey: "status" },
-      { header: "Decision", accessorKey: "decidedAt" },
+      { header: "Décision", accessorKey: "decidedAt" },
     ],
     []
   );
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique global des conges</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Toutes les demandes traitees par l'entreprise.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique global des congés</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Toutes les demandes traitées par l'entreprise.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employe..." />
+      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
       ) : null}

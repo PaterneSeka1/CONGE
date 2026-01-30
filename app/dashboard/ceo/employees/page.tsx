@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -46,7 +46,10 @@ export default function CeoEmployees() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [serviceFilter, setServiceFilter] = useState("ALL");
   const selectedDeptType = useMemo(
-    () => (editForm.departmentId ? String(departments[editForm.departmentId] ?? "") : ""),
+    () =>
+      editForm.departmentId
+        ? String(departments[editForm.departmentId] ?? "")
+        : "",
     [editForm.departmentId, departments]
   );
   const showServiceField = selectedDeptType === "OPERATIONS";
@@ -55,7 +58,7 @@ export default function CeoEmployees() {
     async (id: string, action: "RESET" | "INCREASE", amount?: number) => {
       const token = getToken();
       if (!token) return;
-      const t = toast.loading("Mise a jour du solde...");
+      const t = toast.loading("Mise à jour du solde...");
       try {
         const res = await fetch(`/api/employees/${id}/leave-balance`, {
           method: "POST",
@@ -66,14 +69,16 @@ export default function CeoEmployees() {
         if (res.ok) {
           const next = data?.employee?.leaveBalance;
           setRows((prev) =>
-            prev.map((r) => (r.id === id ? { ...r, leaveBalance: next ?? r.leaveBalance } : r))
+            prev.map((r) =>
+              r.id === id ? { ...r, leaveBalance: next ?? r.leaveBalance } : r
+            )
           );
-          toast.success("Solde mis a jour.", { id: t });
+          toast.success("Solde mis à jour.", { id: t });
         } else {
-          toast.error(data?.error || "Erreur lors de la mise a jour.", { id: t });
+          toast.error(data?.error || "Erreur lors de la mise à jour.", { id: t });
         }
       } catch {
-        toast.error("Erreur reseau.", { id: t });
+        toast.error("Erreur réseau.", { id: t });
       }
     },
     []
@@ -168,7 +173,7 @@ export default function CeoEmployees() {
         return;
       }
       const ok = window.confirm(
-        `Supprimer ${employee.firstName} ${employee.lastName} ? Cette action est irreversible.`
+        `Supprimer ${employee.firstName} ${employee.lastName} - Cette action est irreversible.`
       );
       if (!ok) return;
       const token = getToken();
@@ -288,12 +293,12 @@ export default function CeoEmployees() {
 
       const depMap: Record<string, string> = {};
       (depData?.departments ?? []).forEach((d: any) => {
-        depMap[d.id] = d.type ?? d.name ?? d.id;
+        depMap[d.id] = d.name ?? d.type ?? d.id;
       });
 
       const svcMap: Record<string, string> = {};
       (svcData?.services ?? []).forEach((s: any) => {
-        svcMap[s.id] = s.type ?? s.name ?? s.id;
+        svcMap[s.id] = s.name ?? s.type ?? s.id;
       });
 
       setDepartments(depMap);
@@ -438,7 +443,7 @@ export default function CeoEmployees() {
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Prenom</label>
+                <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Prénom</label>
                 <input
                   value={editForm.firstName}
                   onChange={(e) => setEditForm((p) => ({ ...p, firstName: e.target.value }))}

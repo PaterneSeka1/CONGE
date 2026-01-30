@@ -20,10 +20,10 @@ export async function POST(req: Request, ctx: Ctx) {
   });
 
   if (!leave) return jsonError("Demande introuvable", 404);
-  if (isFinalStatus(leave.status)) return jsonError("Demande dÃ©jÃ  traitÃ©e", 409);
+  if (isFinalStatus(leave.status)) return jsonError("Demande déjà traitée", 409);
   if (leave.currentAssigneeId !== actorId) {
     const ceoCanAct = role === "CEO" && !!leave.reachedCeoAt;
-    if (!ceoCanAct) return jsonError("AccÃ¨s refusÃ©", 403);
+    if (!ceoCanAct) return jsonError("Accès refusé", 403);
   }
   if (leave.employeeId === actorId) return jsonError("Action interdite sur sa propre demande", 403);
 

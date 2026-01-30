@@ -227,7 +227,7 @@ export default function DsiLeaveNew() {
         <div className="md:col-span-2">
           <div className="text-xs text-vdm-gold-700">
             {daysRequested > 0
-              ? `Duree selectionnee: ${daysRequested} jour${daysRequested > 1 ? "s" : ""}`
+              ? `Durée sélectionnée: ${daysRequested} jour${daysRequested > 1 ? "s" : ""}`
               : "Selectionnez des dates pour calculer la duree."}
           </div>
         </div>

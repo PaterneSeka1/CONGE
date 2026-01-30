@@ -12,7 +12,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
   if (!authRes.ok) return authRes.error;
 
   const { role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Acces refuse", 403);
+  if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const { id } = await ctx.params;
   if (!id) return jsonError("ID requis", 400);
