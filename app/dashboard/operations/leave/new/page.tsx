@@ -110,7 +110,7 @@ function toDateValueForDay(year: number, month: number, day: number) {
   return toLocalDateInputValue(new Date(year, month, day));
 }
 
-export default function DsiLeaveNew() {
+export default function OperationsLeaveNew() {
   const [type, setType] = useState("ANNUAL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -192,6 +192,25 @@ export default function DsiLeaveNew() {
   const hasBlackout = (day: number | null) =>
     day && blackouts.some((b) => inRange(day, month, year, b.startDate, b.endDate));
 
+  const leaveStatusForDay = useCallback(
+    (day: number | null) => {
+      if (!day) return null;
+      const dateValue = toDateValueForDay(year, month, day);
+      const priority = ["APPROVED", "PENDING", "SUBMITTED", "REJECTED"] as const;
+      let best: (typeof priority)[number] | null = null;
+      for (const leave of leaves) {
+        if (!rangesOverlap(dateValue, dateValue, leave.startDate, leave.endDate)) continue;
+        const status = leave.status;
+        if (!priority.includes(status as any)) continue;
+        if (best == null || priority.indexOf(status as any) < priority.indexOf(best)) {
+          best = status as any;
+        }
+      }
+      return best;
+    },
+    [leaves, month, year]
+  );
+
   const selectedDateLabel =
     selectedDay != null ? formatDateDMY(new Date(year, month, selectedDay)) : "";
 
@@ -211,25 +230,6 @@ export default function DsiLeaveNew() {
       return Date.UTC(year, month, day) < todayUtc;
     },
     [month, todayUtc, year]
-  );
-
-  const leaveStatusForDay = useCallback(
-    (day: number | null) => {
-      if (!day) return null;
-      const dateValue = toDateValueForDay(year, month, day);
-      const priority = ["APPROVED", "PENDING", "SUBMITTED", "REJECTED"] as const;
-      let best: (typeof priority)[number] | null = null;
-      for (const leave of leaves) {
-        if (!rangesOverlap(dateValue, dateValue, leave.startDate, leave.endDate)) continue;
-        const status = leave.status;
-        if (!priority.includes(status as any)) continue;
-        if (best == null || priority.indexOf(status as any) < priority.indexOf(best)) {
-          best = status as any;
-        }
-      }
-      return best;
-    },
-    [leaves, month, year]
   );
 
   const handleCalendarSelect = useCallback(
@@ -320,8 +320,8 @@ export default function DsiLeaveNew() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Demander un conge</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Nouvelle demande</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de conge.</div>
 
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4 grid gap-3 md:grid-cols-2">
         {isExhausted ? (

@@ -83,6 +83,7 @@ export function Sidebar({
 
   const isDashboardRoot = (to: string) =>
     to === "/dashboard/dsi" ||
+    to === "/dashboard/operations" ||
     to === "/dashboard/manager" ||
     to === "/dashboard/employee" ||
     to === "/dashboard/accountant" ||

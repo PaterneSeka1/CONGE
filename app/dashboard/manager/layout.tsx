@@ -1,16 +1,16 @@
 "use client";
 
 import { Sidebar } from "../../components/Sidebar";
-import { managerMenu } from "../../components/sidebar-menus";
-import RequireRole from "../../components/RequireRole";
+import { operationsMenu } from "../../components/sidebar-menus-operations";
+import RequireManagerDeptHead from "../../components/RequireManagerDeptHead";
 
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RequireRole allow={["DEPT_HEAD"]}>
+    <RequireManagerDeptHead>
       <div className="min-h-screen bg-gray-50">
-        <Sidebar brandTitle="CONGÉS" brandSubtitle="Espace Responsable" sections={managerMenu} />
+        <Sidebar brandTitle="CONGES" brandSubtitle="Direction des operations" sections={operationsMenu} />
         <div className="lg:pl-64 pt-[72px] lg:pt-0">{children}</div>
       </div>
-    </RequireRole>
+    </RequireManagerDeptHead>
   );
 }

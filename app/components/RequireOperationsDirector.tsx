@@ -4,17 +4,16 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { EmployeeSession, getEmployee, getToken, routeForRole } from "@/lib/auth-client";
 
-type DsiSession = EmployeeSession & {
-  // recommandé: stocker ça au login
-  departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string;
+type OpsSession = EmployeeSession & {
+  departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
 };
 
-export default function RequireDsiAdmin({ children }: { children: React.ReactNode }) {
+export default function RequireOperationsDirector({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
     const token = getToken();
-    const emp = getEmployee() as DsiSession | null;
+    const emp = getEmployee() as OpsSession | null;
 
     if (!token || !emp) {
       router.replace("/login");
@@ -31,14 +30,13 @@ export default function RequireDsiAdmin({ children }: { children: React.ReactNod
       return;
     }
 
-    if (emp.isDsiAdmin === false) {
-      router.replace("/dashboard/manager");
+    if (emp.isDsiAdmin) {
+      router.replace("/dashboard/dsi");
       return;
     }
 
-    // Check DSI: strict si tu veux. En dev, tu peux tolérer si departmentType manquant.
-    if (emp.isDsiAdmin == null && emp.departmentType && emp.departmentType !== "DSI") {
-      router.replace("/dashboard/manager");
+    if (emp.departmentType && emp.departmentType !== "OPERATIONS") {
+      router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
   }, [router]);

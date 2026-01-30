@@ -13,6 +13,7 @@ export type EmployeeSession = {
   departmentId?: string | null;
   serviceId?: string | null;
   isDsiAdmin?: boolean;
+  departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
 };
 
 export function getToken(): string | null {
@@ -37,7 +38,11 @@ export function logout() {
   localStorage.removeItem("employee");
 }
 
-export function routeForRole(role: EmployeeRole, isDsiAdmin = false) {
+export function routeForRole(
+  role: EmployeeRole,
+  isDsiAdmin = false,
+  departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null
+) {
   switch (role) {
     case "CEO":
       return "/dashboard/ceo";

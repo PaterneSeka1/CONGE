@@ -2,15 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { EmployeeRole, getEmployee, getToken, routeForRole } from "@/lib/auth-client";
+import { getEmployee, getToken, routeForRole } from "@/lib/auth-client";
 
-export default function RequireRole({
-  allow,
-  children,
-}: {
-  allow: EmployeeRole[];
-  children: React.ReactNode;
-}) {
+export default function RequireManagerDeptHead({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
@@ -27,11 +21,16 @@ export default function RequireRole({
       return;
     }
 
-    if (!allow.includes(emp.role)) {
+    if (emp.role !== "DEPT_HEAD") {
       router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
-  }, [allow, router]);
+
+    if (emp.isDsiAdmin) {
+      router.replace("/dashboard/dsi");
+      return;
+    }
+  }, [router]);
 
   return <>{children}</>;
 }

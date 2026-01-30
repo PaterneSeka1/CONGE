@@ -115,6 +115,7 @@ export default function AccountantLeaveNew() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
+  const [leaves, setLeaves] = useState<LeaveItem[]>([]);
   const [baseAllowance, setBaseAllowance] = useState<number>(BASE_ALLOWANCE);
   const [balance, setBalance] = useState<number>(BASE_ALLOWANCE);
   const today = useMemo(() => toLocalDateInputValue(new Date()), []);
@@ -138,10 +139,11 @@ export default function AccountantLeaveNew() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return;
-    const leaves = (data?.leaves ?? []) as LeaveItem[];
+    const nextLeaves = (data?.leaves ?? []) as LeaveItem[];
+    setLeaves(nextLeaves);
     const base = Number(data?.employee?.leaveBalance ?? BASE_ALLOWANCE);
     const year = new Date().getFullYear();
-    const consumedDays = consumedDaysForYear(leaves, year);
+    const consumedDays = consumedDaysForYear(nextLeaves, year);
     setBaseAllowance(base);
     setBalance(Math.max(0, base - consumedDays));
   }, []);
@@ -209,6 +211,25 @@ export default function AccountantLeaveNew() {
       return Date.UTC(year, month, day) < todayUtc;
     },
     [month, todayUtc, year]
+  );
+
+  const leaveStatusForDay = useCallback(
+    (day: number | null) => {
+      if (!day) return null;
+      const dateValue = toDateValueForDay(year, month, day);
+      const priority = ["APPROVED", "PENDING", "SUBMITTED", "REJECTED"] as const;
+      let best: (typeof priority)[number] | null = null;
+      for (const leave of leaves) {
+        if (!rangesOverlap(dateValue, dateValue, leave.startDate, leave.endDate)) continue;
+        const status = leave.status;
+        if (!priority.includes(status as any)) continue;
+        if (best == null || priority.indexOf(status as any) < priority.indexOf(best)) {
+          best = status as any;
+        }
+      }
+      return best;
+    },
+    [leaves, month, year]
   );
 
   const handleCalendarSelect = useCallback(
@@ -375,7 +396,7 @@ export default function AccountantLeaveNew() {
         <div className="md:col-span-2">
           <div className="text-xs text-vdm-gold-700">
             {daysRequested > 0
-              ? `Durée sélectionnée: ${daysRequested} jour${daysRequested > 1 ? "s" : ""}`
+              ? `Duree selectionnee: ${daysRequested} jour${daysRequested > 1 ? "s" : ""}`
               : "Selectionnez des dates pour calculer la duree."}
           </div>
         </div>
@@ -449,6 +470,15 @@ export default function AccountantLeaveNew() {
                 !!startDate &&
                 !!endDate &&
                 rangesOverlap(dateValue, dateValue, startDate, endDate);
+              const leaveStatus = leaveStatusForDay(day);
+              const leaveClass =
+                leaveStatus === "APPROVED"
+                  ? "bg-emerald-200 text-emerald-900"
+                  : leaveStatus === "REJECTED"
+                    ? "bg-red-200 text-red-900"
+                    : leaveStatus
+                      ? "bg-amber-200 text-amber-900"
+                      : "";
               return (
                 <button
                   key={`${day ?? "x"}-${idx}`}
@@ -461,14 +491,14 @@ export default function AccountantLeaveNew() {
                       ? "bg-vdm-gold-700 text-white font-semibold"
                       : inSelectedRange
                         ? "bg-vdm-gold-100"
-                        : isToday(day)
-                          ? "bg-vdm-gold-200 font-semibold"
-                          : "hover:bg-vdm-gold-50"
+                        : leaveClass
+                          ? leaveClass
+                          : isToday(day)
+                            ? "bg-vdm-gold-200 font-semibold"
+                            : "hover:bg-vdm-gold-50"
                   } ${blackout ? "bg-gray-200 text-gray-500" : ""} ${
                     past ? "bg-vdm-gold-50/70 text-vdm-gold-400" : ""
-                  } ${
-                    day && !blackout && !past ? "cursor-pointer" : "cursor-not-allowed"
-                  }`}
+                  } ${day && !blackout && !past ? "cursor-pointer" : "cursor-not-allowed"}`}
                 >
                   <div className="leading-none">{day ?? "-"}</div>
                   <div className="mt-1 flex gap-1">
@@ -479,22 +509,33 @@ export default function AccountantLeaveNew() {
             })}
           </div>
 
-          <div className="mt-3 flex items-center gap-3 text-xs text-gray-600">
+          <div className="mt-3 flex items-center gap-3 text-xs text-gray-600 flex-wrap">
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-red-500" />
-              Périodes bloquées
+              Periodes bloquees
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              Jours valides
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              Jours demandes
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-red-500" />
+              Jours refuses
             </div>
             {selectedDay != null ? (
-              <div className="text-vdm-gold-700">Sélection: {selectedDateLabel}</div>
+              <div className="text-vdm-gold-700">Selection: {selectedDateLabel}</div>
             ) : (
-              <div className="text-vdm-gold-700">Cliquez sur un jour pour voir le détail.</div>
+              <div className="text-vdm-gold-700">Cliquez sur un jour pour voir le detail.</div>
             )}
           </div>
           <div className="mt-1 text-xs text-vdm-gold-700">
-            Choisissez un jour pour le début, puis un autre pour la fin.
+            Choisissez un jour pour le debut, puis un autre pour la fin.
             <span className="ml-2">
-              Période: {startDate ? formatDateDMY(startDate) : "-"} {" - "}{" "}
-              {endDate ? formatDateDMY(endDate) : "-"}
+              Periode: {startDate ? formatDateDMY(startDate) : "-"} {" - "} {endDate ? formatDateDMY(endDate) : "-"}
             </span>
           </div>
 
@@ -514,7 +555,6 @@ export default function AccountantLeaveNew() {
             </div>
           ) : null}
         </div>
-
       </div>
     </div>
   );

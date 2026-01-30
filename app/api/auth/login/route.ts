@@ -32,6 +32,7 @@ export async function POST(req: Request) {
         leaveBalance: true,
         departmentId: true,
         serviceId: true,
+        department: { select: { type: true } },
       },
     });
 
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
     });
 
     const isDsiAdmin = Boolean(dsiResponsibility);
+    const departmentType = employee.department?.type ?? null;
 
     const token = jwt.sign(
       {
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
         departmentId: employee.departmentId ?? null,
         serviceId: employee.serviceId ?? null,
         isDsiAdmin,
+        departmentType,
       },
       secret,
       { expiresIn: "7d" }
@@ -91,6 +94,7 @@ export async function POST(req: Request) {
         departmentId: employee.departmentId,
         serviceId: employee.serviceId,
         isDsiAdmin,
+        departmentType,
       },
     });
   } catch (e: any) {

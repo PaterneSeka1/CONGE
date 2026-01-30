@@ -54,6 +54,18 @@ export default function CeoEmployees() {
   );
   const showServiceField = selectedDeptType === "OPERATIONS";
 
+  useEffect(() => {
+    if (!selectedEmployee) return;
+    const next = rows.find((row) => row.id === selectedEmployee.id);
+    if (!next) {
+      setSelectedEmployee(null);
+      setIsEditModalOpen(false);
+      setIsBalanceModalOpen(false);
+      return;
+    }
+    setSelectedEmployee(next);
+  }, [rows, selectedEmployee, setIsEditModalOpen, setIsBalanceModalOpen]);
+
   const updateLeaveBalance = useCallback(
     async (id: string, action: "RESET" | "INCREASE", amount?: number) => {
       const token = getToken();
@@ -157,7 +169,6 @@ export default function CeoEmployees() {
           prev.map((r) => (r.id === selectedEmployee.id ? { ...r, ...data.employee } : r))
         );
         toast.success("Utilisateur modifie.", { id: t });
-        closeEditModal();
       } else {
         toast.error(data?.error || "Erreur lors de la mise a jour.", { id: t });
       }
@@ -239,7 +250,11 @@ export default function CeoEmployees() {
         accessorFn: (row) => services[row.serviceId ?? ""] ?? "-",
         cell: ({ row }) => services[row.original.serviceId ?? ""] ?? "-",
       },
-      { header: "Solde", accessorKey: "leaveBalance" },
+      {
+        header: "Solde restant",
+        accessorKey: "leaveBalance",
+        cell: ({ row }) => row.original.leaveBalance ?? "—",
+      },
       {
         id: "actions",
         header: "Actions",

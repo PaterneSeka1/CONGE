@@ -6,8 +6,9 @@ import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
 
 type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+type DepartmentType = "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string;
 
-function routeForRole(role: EmployeeRole, isDsiAdmin = false) {
+function routeForRole(role: EmployeeRole, isDsiAdmin = false, departmentType?: DepartmentType | null) {
   switch (role) {
     case "CEO":
       return "/dashboard/ceo";
@@ -34,7 +35,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (searchParams.get("pending") === "1") {
-      toast("Compte en attente de validation par l'admin.", { icon: "⏳" });
+      toast("Compte en attente de validation par l'admin.");
     }
     if (searchParams.get("validated") === "1") {
       toast.success("Votre compte est valide. Vous pouvez vous connecter.");
@@ -79,7 +80,8 @@ export default function LoginPage() {
 
       const role = data.employee.role as EmployeeRole | undefined;
       const isDsiAdmin = Boolean(data.employee.isDsiAdmin);
-      window.location.href = role ? routeForRole(role, isDsiAdmin) : "/dashboard";
+      const departmentType = (data.employee.departmentType ?? null) as DepartmentType | null;
+      window.location.href = role ? routeForRole(role, isDsiAdmin, departmentType) : "/dashboard";
     } catch {
       toast.error("Erreur reseau. Veuillez reessayer.", { id: loadingToast });
     } finally {
@@ -147,7 +149,7 @@ export default function LoginPage() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder="********"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={handleKeyDown}

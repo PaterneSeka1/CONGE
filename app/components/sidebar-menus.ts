@@ -7,7 +7,6 @@ export const employeeMenu: SidebarSection[] = [
     links: [
       { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/employee/new" },
       { label: "Mes demandes", icon: "clock", to: "/dashboard/employee/requests" },
-      { label: "Historique", icon: "clock", to: "/dashboard/employee/history" },
     ],
   },
   { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/employee/profile" }] },

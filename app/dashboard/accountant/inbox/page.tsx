@@ -17,7 +17,6 @@ type Req = {
   origin: "EMPLOYEE" | "DEPT_HEAD" | "OTHER";
 };
 
-
 type HistoryItem = {
   id: string;
   employeeName: string;
@@ -27,7 +26,6 @@ type HistoryItem = {
   target?: string;
   days: number;
 };
-
 
 function toUtcDay(value: string | undefined) {
   if (!value) return null;
@@ -67,8 +65,7 @@ export default function AccountantInbox() {
             (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
-              department:
-                x.employee?.department?.type ?? x.employee?.department?.name ?? "",
+              department: x.employee?.department?.type ?? x.employee?.department?.name ?? "",
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               status: x.status,
               note: x.reason ?? "",
@@ -123,11 +120,6 @@ export default function AccountantInbox() {
     loadHistory();
   }, []);
 
-
-
-
-
-
   const departments = useMemo(
     () =>
       Array.from(
@@ -153,12 +145,12 @@ export default function AccountantInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Congé validé.", { id: t });
+        toast.success("Conge valide.", { id: t });
       } else {
         toast.error("Erreur lors de la validation.", { id: t });
       }
     } catch {
-      toast.error("Erreur réseau lors de la validation.", { id: t });
+      toast.error("Erreur reseau lors de la validation.", { id: t });
     }
   };
 
@@ -174,15 +166,14 @@ export default function AccountantInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Congé refusé.", { id: t });
+        toast.success("Conge refuse.", { id: t });
       } else {
         toast.error("Erreur lors du refus.", { id: t });
       }
     } catch {
-      toast.error("Erreur réseau lors du refus.", { id: t });
+      toast.error("Erreur reseau lors du refus.", { id: t });
     }
   };
-
 
   const forwardToDeptHead = async (id: string) => {
     const token = getToken();
@@ -201,16 +192,37 @@ export default function AccountantInbox() {
         toast.error("Erreur lors de la transmission.", { id: t });
       }
     } catch {
-      toast.error("Erreur réseau lors de la transmission.", { id: t });
+      toast.error("Erreur reseau lors de la transmission.", { id: t });
+    }
+  };
+
+  const forwardToCeo = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    const t = toast.loading("Transmission au CEO...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/escalate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ toRole: "CEO" }),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("Demande transmise au CEO.", { id: t });
+      } else {
+        toast.error("Erreur lors de la transmission.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur reseau lors de la transmission.", { id: t });
     }
   };
 
   const historyColumns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
-      { header: "Employé", accessorKey: "employeeName" },
-      { header: "Période", accessorKey: "period" },
+      { header: "Employe", accessorKey: "employeeName" },
+      { header: "Periode", accessorKey: "period" },
       { header: "Jours", accessorKey: "days" },
-      { header: "Décision", accessorKey: "decision" },
+      { header: "Decision", accessorKey: "decision" },
       { header: "Cible", accessorKey: "target", cell: ({ row }) => row.original.target ?? "-" },
       { header: "Date", accessorKey: "decidedAt" },
     ],
@@ -220,7 +232,7 @@ export default function AccountantInbox() {
   const columns = useMemo<ColumnDef<Req>[]>(
     () => [
       {
-        header: "Employé",
+        header: "Employe",
         accessorKey: "employeeName",
         cell: ({ row }) => (
           <div>
@@ -229,8 +241,8 @@ export default function AccountantInbox() {
           </div>
         ),
       },
-      { header: "Département", accessorKey: "department", enableSorting: true },
-      { header: "Période", accessorKey: "period" },
+      { header: "Departement", accessorKey: "department", enableSorting: true },
+      { header: "Periode", accessorKey: "period" },
       { header: "Statut", accessorKey: "status" },
       {
         header: "Origine",
@@ -240,50 +252,63 @@ export default function AccountantInbox() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
+          const isDirector = row.original.origin === "DEPT_HEAD";
           return (
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => approve(row.original.id)}
-                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-              >
-                Valider
-              </button>
-              <button
-                onClick={() => reject(row.original.id)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Refuser
-              </button>
-              <button
-                onClick={() => forwardToDeptHead(row.original.id)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Transmettre département
-              </button>
+              {isDirector ? (
+                <span className="text-xs text-vdm-gold-700">Transmission automatique au CEO</span>
+              ) : (
+                <>
+                  <button
+                    onClick={() => approve(row.original.id)}
+                    className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
+                  >
+                    Valider
+                  </button>
+                  <button
+                    onClick={() => reject(row.original.id)}
+                    className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+                  >
+                    Refuser
+                  </button>
+                  <button
+                    onClick={() => forwardToDeptHead(row.original.id)}
+                    className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+                  >
+                    Transmettre departement
+                  </button>
+                  <button
+                    onClick={() => forwardToCeo(row.original.id)}
+                    className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+                  >
+                    Transmettre CEO
+                  </button>
+                </>
+              )}
             </div>
           );
         },
       },
     ],
-    [approve, reject, forwardToDeptHead]
+    [approve, reject, forwardToDeptHead, forwardToCeo]
   );
 
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Toutes les demandes de congé arrivent ici. Les demandes issues des responsables doivent être
+        La comptable peut valider/refuser les demandes des employes. Les demandes des directeurs sont
         transmises au CEO.
       </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-vdm-gold-700">Filtrer par département</div>
+        <div className="text-xs text-vdm-gold-700">Filtrer par departement</div>
         <select
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className="w-full sm:max-w-xs rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
-          <option value="">Tous les départements</option>
+          <option value="">Tous les departements</option>
           {departments.map((dept) => (
             <option key={dept} value={dept}>
               {dept}
@@ -297,13 +322,12 @@ export default function AccountantInbox() {
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}
 
-
       <div className="mt-8">
-        <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique des décisions</div>
+        <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique des decisions</div>
         <div className="text-sm text-vdm-gold-700 mb-4">
-          Traçabilité des validations et transmissions.
+          Tracabilite des validations et transmissions.
         </div>
-        <DataTable data={historyRows} columns={historyColumns} searchPlaceholder="Rechercher une décision..." />
+        <DataTable data={historyRows} columns={historyColumns} searchPlaceholder="Rechercher une decision..." />
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
         ) : null}
@@ -311,4 +335,3 @@ export default function AccountantInbox() {
     </div>
   );
 }
-

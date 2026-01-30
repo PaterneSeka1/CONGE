@@ -18,7 +18,7 @@ export default function RoleGate({
     if (!employee) return;
 
     if (!allow.includes(employee.role)) {
-      router.replace(routeForRole(employee.role, employee.isDsiAdmin));
+      router.replace(routeForRole(employee.role, employee.isDsiAdmin, employee.departmentType ?? null));
     }
   }, [allow, router]);
 

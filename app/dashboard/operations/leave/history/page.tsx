@@ -41,11 +41,13 @@ function daysBetweenInclusive(start: string, end: string) {
   return Math.floor((e - s) / 86400000) + 1;
 }
 
-export default function EmployeeRequests() {
+export default function OperationsLeaveHistory() {
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
 
   useEffect(() => {
     const token = getToken();
@@ -115,6 +117,16 @@ export default function EmployeeRequests() {
     [items]
   );
 
+  const filteredActiveItems = useMemo(() => {
+    if (activeStatusFilter === "ALL") return activeItems;
+    return activeItems.filter((item) => item.status === activeStatusFilter);
+  }, [activeItems, activeStatusFilter]);
+
+  const filteredHistoryItems = useMemo(() => {
+    if (historyStatusFilter === "ALL") return historyItems;
+    return historyItems.filter((item) => item.status === historyStatusFilter);
+  }, [historyItems, historyStatusFilter]);
+
   const cancelRequest = async (id: string) => {
     const token = getToken();
     if (!token) return;
@@ -130,9 +142,9 @@ export default function EmployeeRequests() {
         return;
       }
       setItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: "CANCELLED" } : x)));
-      toast.success("Demande annulée.", { id: t });
+      toast.success("Demande annulee.", { id: t });
     } catch {
-      toast.error("Erreur réseau lors de l'annulation.", { id: t });
+      toast.error("Erreur reseau lors de l'annulation.", { id: t });
     }
   };
 
@@ -141,7 +153,7 @@ export default function EmployeeRequests() {
       { header: "Type", accessorKey: "type" },
       {
         id: "period",
-        header: "Période",
+        header: "Periode",
         accessorFn: (row) => `${row.startDate} - ${row.endDate}`,
         cell: ({ row }) => (
           <span>
@@ -151,7 +163,7 @@ export default function EmployeeRequests() {
       },
       { header: "Statut", accessorKey: "status" },
       {
-        header: "Assigné",
+        header: "Assigne",
         accessorFn: (row) => row.currentAssignee ?? "-",
         cell: ({ row }) => row.original.currentAssignee ?? "-",
       },
@@ -159,7 +171,7 @@ export default function EmployeeRequests() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          if (!["SUBMITTED", "PENDING"].includes(row.original.status)) return "—";
+          if (!["SUBMITTED", "PENDING"].includes(row.original.status)) return "-";
           return (
             <button
               onClick={() => cancelRequest(row.original.id)}
@@ -179,7 +191,7 @@ export default function EmployeeRequests() {
       { header: "Type", accessorKey: "type" },
       {
         id: "period",
-        header: "Période",
+        header: "Periode",
         accessorFn: (row) => `${row.startDate} - ${row.endDate}`,
         cell: ({ row }) => (
           <span>
@@ -189,7 +201,7 @@ export default function EmployeeRequests() {
       },
       { header: "Jours", accessorKey: "days" },
       { header: "Statut", accessorKey: "status" },
-      { header: "Décision", accessorKey: "decidedAt" },
+      { header: "Decision", accessorKey: "decidedAt" },
     ],
     []
   );
@@ -198,10 +210,23 @@ export default function EmployeeRequests() {
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Suivez l'état de vos demandes en cours de traitement.
+        Suivez l'etat de vos demandes en cours de traitement.
       </div>
 
-      <DataTable data={activeItems} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-xs text-vdm-gold-700">Filtrer par statut</div>
+        <select
+          value={activeStatusFilter}
+          onChange={(e) => setActiveStatusFilter(e.target.value)}
+          className="w-full sm:w-56 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+        >
+          <option value="ALL">Tous</option>
+          <option value="SUBMITTED">SUBMITTED</option>
+          <option value="PENDING">PENDING</option>
+        </select>
+      </div>
+
+      <DataTable data={filteredActiveItems} columns={columns} searchPlaceholder="Rechercher une demande..." />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}
@@ -210,7 +235,21 @@ export default function EmployeeRequests() {
         <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique</div>
         <div className="text-sm text-vdm-gold-700 mb-4">Historique complet de vos demandes.</div>
 
-        <DataTable data={historyItems} columns={historyColumns} searchPlaceholder="Rechercher une demande..." />
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-vdm-gold-700">Filtrer par statut</div>
+          <select
+            value={historyStatusFilter}
+            onChange={(e) => setHistoryStatusFilter(e.target.value)}
+            className="w-full sm:w-56 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+          >
+            <option value="ALL">Tous</option>
+            <option value="APPROVED">APPROVED</option>
+            <option value="REJECTED">REJECTED</option>
+            <option value="CANCELLED">CANCELLED</option>
+          </select>
+        </div>
+
+        <DataTable data={filteredHistoryItems} columns={historyColumns} searchPlaceholder="Rechercher une demande..." />
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
         ) : null}
