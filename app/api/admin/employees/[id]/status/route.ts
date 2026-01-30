@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyJwt, jsonError } from "@/lib/auth";
 import { isDsiAdmin } from "@/lib/dsiAdmin";
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);

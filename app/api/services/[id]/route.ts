@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwt, jsonError } from "@/lib/auth";
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
@@ -60,3 +60,4 @@ export async function DELETE(req: Request, ctx: Ctx) {
     return jsonError("Erreur serveur", 500, { code: e?.code, details: e?.message });
   }
 }
+

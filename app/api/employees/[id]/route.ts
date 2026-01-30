@@ -6,7 +6,7 @@ import { jsonError } from "@/lib/auth";
 import { requireAuth } from "@/lib/leave-requests";
 import { norm } from "@/lib/validators";
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 export async function DELETE(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);
@@ -106,3 +106,4 @@ export async function PUT(req: Request, ctx: Ctx) {
 
   return NextResponse.json({ employee: updated });
 }
+

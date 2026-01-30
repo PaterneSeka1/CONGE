@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/auth";
 import { requireAuth, isFinalStatus, findActiveEmployeeByRole } from "@/lib/leave-requests";
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);

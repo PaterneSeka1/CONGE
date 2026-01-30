@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwt, jsonError } from "@/lib/auth";
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 async function findTargetByRole(role: string, departmentId?: string | null) {
   if (role === "CEO") {
@@ -150,3 +150,4 @@ export async function POST(req: Request, ctx: Ctx) {
 
   return NextResponse.json({ leave: updated });
 }
+

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/auth";
 import { requireAuth } from "@/lib/leave-requests";
 
-type Ctx = { params: { id: string } };
+type Ctx = { params: Promise<{ id: string }> };
 
 const BASE_ALLOWANCE = 25;
 
@@ -67,3 +67,4 @@ export async function POST(req: Request, ctx: Ctx) {
 
   return NextResponse.json({ employee: updated });
 }
+

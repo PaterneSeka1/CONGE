@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwt, jsonError } from "@/lib/auth";
 
-type Ctx = { params: { id: string; rid: string } };
+type Ctx = { params: Promise<{ id: string; rid: string }> };
 
 export async function PATCH(req: Request, ctx: Ctx) {
   const v = verifyJwt(req);
