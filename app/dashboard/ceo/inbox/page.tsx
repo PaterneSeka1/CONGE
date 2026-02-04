@@ -11,10 +11,22 @@ type Req = {
   id: string;
   employeeName: string;
   period: string;
-  origin: "DEPT_HEAD" | "ACCOUNTANT";
+  origin: "DEPT_HEAD" | "SERVICE_HEAD" | "ACCOUNTANT";
   note?: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
 };
+
+function statusLabel(status: Req["status"]) {
+  if (status === "APPROVED") return "Validée";
+  if (status === "REJECTED") return "Refusée";
+  return "En attente";
+}
+
+function statusClass(status: Req["status"]) {
+  if (status === "APPROVED") return "text-emerald-700";
+  if (status === "REJECTED") return "text-red-600";
+  return "text-amber-700";
+}
 
 export default function CeoInbox() {
   const [rows, setRows] = useState<Req[]>([]);
@@ -36,7 +48,12 @@ export default function CeoInbox() {
               id: x.id,
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
-              origin: x.employee?.role === "DEPT_HEAD" ? "DEPT_HEAD" : "ACCOUNTANT",
+              origin:
+                x.employee?.role === "DEPT_HEAD"
+                  ? "DEPT_HEAD"
+                  : x.employee?.role === "SERVICE_HEAD"
+                    ? "SERVICE_HEAD"
+                    : "ACCOUNTANT",
               note: x.reason ?? "",
               status: x.status,
             }))
@@ -105,7 +122,15 @@ export default function CeoInbox() {
       },
       { header: "Période", accessorKey: "period" },
       { header: "Origine", accessorKey: "origin" },
-      { header: "Statut", accessorKey: "status" },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>
+            {statusLabel(row.original.status)}
+          </span>
+        ),
+      },
       {
         id: "actions",
         header: "Actions",

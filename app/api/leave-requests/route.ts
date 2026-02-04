@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   let reachedCeoAt: Date | null = null;
   if (role === "EMPLOYEE") {
     assignee = await findActiveEmployeeByRole("ACCOUNTANT");
-  } else if (role === "DEPT_HEAD") {
+  } else if (role === "DEPT_HEAD" || role === "SERVICE_HEAD") {
     assignee = await findActiveEmployeeByRole("ACCOUNTANT");
     autoCeo = await findActiveEmployeeByRole("CEO");
     if (autoCeo) reachedCeoAt = new Date();
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       reason,
       status: "PENDING",
       currentAssigneeId: assignee.id,
-      deptHeadAssignedAt: assignee.role === "DEPT_HEAD" ? new Date() : null,
+      deptHeadAssignedAt: assignee.role === "DEPT_HEAD" || assignee.role === "SERVICE_HEAD" ? new Date() : null,
       reachedCeoAt: assignee.role === "CEO" ? new Date() : reachedCeoAt,
     },
     select: {
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         actorId,
         type: "ESCALATE",
         toEmployeeId: autoCeo.id,
-        comment: "Auto-escalation CEO (DEPT_HEAD).",
+        comment: "Auto-escalation CEO (DEPT_HEAD/SERVICE_HEAD).",
       },
     });
   }

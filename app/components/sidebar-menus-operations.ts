@@ -13,6 +13,13 @@ export const operationsMenu: SidebarSection[] = [
     ],
   },
   {
+    title: "Achats",
+    links: [
+      { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/manager/purchases/new" },
+      { label: "Mes demandes", icon: "clock", to: "/dashboard/manager/purchases" },
+    ],
+  },
+  {
     title: "Direction des operations",
     links: [
       { label: "Employes (actuels)", icon: "users", to: "/dashboard/manager/department/employees" },

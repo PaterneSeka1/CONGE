@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const { id: actorId, role } = authRes.auth;
 
-  if (role === "DEPT_HEAD") {
+  if (role === "DEPT_HEAD" || role === "SERVICE_HEAD") {
     await autoApproveOverdueForDeptHead(actorId, getDeptHeadDelayDays());
   }
 

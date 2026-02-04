@@ -31,6 +31,21 @@ function daysBetweenInclusive(start: string, end: string) {
   return Math.floor((e - s) / 86400000) + 1;
 }
 
+function statusLabel(status: LeaveItem["status"]) {
+  if (status === "APPROVED") return "Validée";
+  if (status === "REJECTED") return "Refusée";
+  if (status === "CANCELLED") return "Annulée";
+  if (status === "SUBMITTED") return "Soumise";
+  return "En attente";
+}
+
+function statusClass(status: LeaveItem["status"]) {
+  if (status === "APPROVED") return "text-emerald-700";
+  if (status === "REJECTED") return "text-red-600";
+  if (status === "CANCELLED") return "text-gray-500";
+  return "text-amber-700";
+}
+
 export default function DsiLeaveHistory() {
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +102,15 @@ export default function DsiLeaveHistory() {
         ),
       },
       { header: "Jours", accessorKey: "days" },
-      { header: "Statut", accessorKey: "status" },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>
+            {statusLabel(row.original.status)}
+          </span>
+        ),
+      },
       {
         header: "Assigné",
         accessorFn: (row) => row.currentAssignee ?? "—",

@@ -218,6 +218,14 @@
     const opsDirectorEmail = envOr("SEED_OPS_DIRECTOR_EMAIL", "directeur.ops@local.test");
     const opsDirectorMat = envOr("SEED_OPS_DIRECTOR_MATRICULE", "OPS-DIR-001");
     const opsDirectorPass = envOr("SEED_OPS_DIRECTOR_PASSWORD", "Passw0rd!");
+    // Responsables de service (SERVICE_HEAD) + ACTIVE
+    const infoHeadEmail = envOr("SEED_INFO_HEAD_EMAIL", "responsable.info@local.test");
+    const infoHeadMat = envOr("SEED_INFO_HEAD_MATRICULE", "OPS-INF-RESP-001");
+    const infoHeadPass = envOr("SEED_INFO_HEAD_PASSWORD", "Passw0rd!");
+
+    const repHeadEmail = envOr("SEED_REP_HEAD_EMAIL", "responsable.rep@local.test");
+    const repHeadMat = envOr("SEED_REP_HEAD_MATRICULE", "OPS-REP-RESP-001");
+    const repHeadPass = envOr("SEED_REP_HEAD_PASSWORD", "Passw0rd!");
 
 
     // Admin DSI (role=DEPT_HEAD) + ACTIVE
@@ -270,6 +278,33 @@
       jobTitle: "Directeur des opérations",
     });
 
+    // Responsables de service (SERVICE_HEAD) + ACTIVE
+    const infoHead = await ensureEmployee({
+      email: infoHeadEmail,
+      matricule: infoHeadMat,
+      firstName: "Responsable",
+      lastName: "Information",
+      passwordPlain: infoHeadPass,
+      role: "SERVICE_HEAD",
+      status: "ACTIVE",
+      departmentId: ops.id,
+      serviceId: infoSvc.id,
+      jobTitle: "Responsable Service Information",
+    });
+
+    const repHead = await ensureEmployee({
+      email: repHeadEmail,
+      matricule: repHeadMat,
+      firstName: "Responsable",
+      lastName: "Réputation",
+      passwordPlain: repHeadPass,
+      role: "SERVICE_HEAD",
+      status: "ACTIVE",
+      departmentId: ops.id,
+      serviceId: repSvc.id,
+      jobTitle: "Responsable Service Réputation",
+    });
+
     // 4) Responsabilité active DSI pour l’admin
     await ensureActiveDsiResponsibility(dsi.id, admin.id);
 
@@ -291,6 +326,8 @@
     console.log(" - Comptable:", { email: accountantEmail, matricule: accountantMat, role: "ACCOUNTANT" });
     console.log(" - PDG:", { email: ceoEmail, matricule: ceoMat, role: "CEO" });
     console.log(" - Directeur des opérations:", { email: opsDirectorEmail, matricule: opsDirectorMat, role: "DEPT_HEAD" });
+    console.log(" - Responsable service Information:", { email: infoHeadEmail, matricule: infoHeadMat, role: "SERVICE_HEAD" });
+    console.log(" - Responsable service Réputation:", { email: repHeadEmail, matricule: repHeadMat, role: "SERVICE_HEAD" });
     // console.log(" - Employés génériques: 100 x", { emailPattern: "<email_prefix>.user<id>@local.test" });
   }
 

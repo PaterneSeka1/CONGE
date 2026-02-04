@@ -21,7 +21,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
     select: { id: true, role: true, departmentId: true, serviceId: true },
   });
 
-  if (!manager || manager.role !== "DEPT_HEAD") {
+  if (!manager || (manager.role !== "DEPT_HEAD" && manager.role !== "SERVICE_HEAD")) {
     return jsonError("Accès refusé", 403);
   }
 

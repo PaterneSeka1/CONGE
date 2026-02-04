@@ -21,9 +21,11 @@ export function isFinalStatus(status: string) {
 }
 
 export async function findActiveEmployeeByRole(role: string, departmentId?: string | null) {
+  const roleFilter =
+    role === "DEPT_HEAD" ? { in: ["DEPT_HEAD", "SERVICE_HEAD"] } : (role as any);
   return prisma.employee.findFirst({
     where: {
-      role: role as any,
+      role: roleFilter as any,
       status: "ACTIVE",
       ...(departmentId ? { departmentId } : {}),
     },
@@ -62,7 +64,7 @@ export async function autoApproveOverdueForDeptHead(deptHeadId: string, days: nu
         leaveRequestId: leave.id,
         actorId: deptHeadId,
         type: "APPROVE",
-        comment: "Auto-approval after DEPT_HEAD validation delay",
+        comment: "Auto-approval after DEPT_HEAD/SERVICE_HEAD validation delay",
       },
     }),
   ]);

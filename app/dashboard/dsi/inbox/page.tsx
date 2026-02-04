@@ -15,6 +15,18 @@ type Req = {
   note?: string;
 };
 
+function statusLabel(status: Req["status"]) {
+  if (status === "APPROVED") return "Validée";
+  if (status === "REJECTED") return "Refusée";
+  return "En attente";
+}
+
+function statusClass(status: Req["status"]) {
+  if (status === "APPROVED") return "text-emerald-700";
+  if (status === "REJECTED") return "text-red-600";
+  return "text-amber-700";
+}
+
 export default function DsiInbox() {
   const [rows, setRows] = useState<Req[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,7 +114,15 @@ export default function DsiInbox() {
         ),
       },
       { header: "Période", accessorKey: "period" },
-      { header: "Statut", accessorKey: "status" },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>
+            {statusLabel(row.original.status)}
+          </span>
+        ),
+      },
       {
         id: "actions",
         header: "Actions",

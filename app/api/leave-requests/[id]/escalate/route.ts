@@ -37,15 +37,17 @@ export async function POST(req: Request, ctx: Ctx) {
   let target = null;
 
   if (role === "ACCOUNTANT") {
-    if (toRole !== "DEPT_HEAD" && toRole !== "CEO") {
-      return jsonError("toRole requis (DEPT_HEAD|CEO)", 400);
+    if (toRole !== "DEPT_HEAD" && toRole !== "SERVICE_HEAD" && toRole !== "CEO") {
+      return jsonError("toRole requis (DEPT_HEAD|SERVICE_HEAD|CEO)", 400);
     }
     if (toRole === "DEPT_HEAD") {
       target = await findActiveEmployeeByRole("DEPT_HEAD", leave.employee?.departmentId ?? null);
+    } else if (toRole === "SERVICE_HEAD") {
+      target = await findActiveEmployeeByRole("SERVICE_HEAD", leave.employee?.departmentId ?? null);
     } else {
       target = await findActiveEmployeeByRole("CEO");
     }
-  } else if (role === "DEPT_HEAD") {
+  } else if (role === "DEPT_HEAD" || role === "SERVICE_HEAD") {
     if (toRole && toRole !== "CEO") {
       return jsonError("toRole invalide (CEO uniquement)", 400);
     }
@@ -67,7 +69,7 @@ export async function POST(req: Request, ctx: Ctx) {
       data: {
         status: "PENDING",
         currentAssigneeId: target.id,
-        deptHeadAssignedAt: target.role === "DEPT_HEAD" ? new Date() : null,
+        deptHeadAssignedAt: target.role === "DEPT_HEAD" || target.role === "SERVICE_HEAD" ? new Date() : null,
         reachedCeoAt: target.role === "CEO" ? new Date() : null,
       },
       select: { id: true, status: true, currentAssigneeId: true },

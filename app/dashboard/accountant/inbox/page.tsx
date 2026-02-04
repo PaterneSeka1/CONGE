@@ -14,7 +14,7 @@ type Req = {
   period: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   note?: string;
-  origin: "EMPLOYEE" | "DEPT_HEAD" | "OTHER";
+  origin: "EMPLOYEE" | "DEPT_HEAD" | "SERVICE_HEAD" | "OTHER";
 };
 
 type HistoryItem = {
@@ -26,6 +26,32 @@ type HistoryItem = {
   target?: string;
   days: number;
 };
+
+function statusLabel(status: Req["status"]) {
+  if (status === "APPROVED") return "Validée";
+  if (status === "REJECTED") return "Refusée";
+  return "En attente";
+}
+
+function statusClass(status: Req["status"]) {
+  if (status === "APPROVED") return "text-emerald-700";
+  if (status === "REJECTED") return "text-red-600";
+  return "text-amber-700";
+}
+
+function decisionLabel(decision: HistoryItem["decision"]) {
+  if (decision === "APPROVED") return "Validée";
+  if (decision === "REJECTED") return "Refusée";
+  if (decision === "CANCELLED") return "Annulée";
+  return "Transmise";
+}
+
+function decisionClass(decision: HistoryItem["decision"]) {
+  if (decision === "APPROVED") return "text-emerald-700";
+  if (decision === "REJECTED") return "text-red-600";
+  if (decision === "CANCELLED") return "text-gray-500";
+  return "text-amber-700";
+}
 
 function toUtcDay(value: string | undefined) {
   if (!value) return null;
@@ -69,7 +95,12 @@ export default function AccountantInbox() {
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               status: x.status,
               note: x.reason ?? "",
-              origin: x.employee?.role === "DEPT_HEAD" ? "DEPT_HEAD" : "EMPLOYEE",
+              origin:
+                x.employee?.role === "DEPT_HEAD"
+                  ? "DEPT_HEAD"
+                  : x.employee?.role === "SERVICE_HEAD"
+                    ? "SERVICE_HEAD"
+                    : "EMPLOYEE",
             }))
           );
         }
@@ -222,7 +253,15 @@ export default function AccountantInbox() {
       { header: "Employe", accessorKey: "employeeName" },
       { header: "Periode", accessorKey: "period" },
       { header: "Jours", accessorKey: "days" },
-      { header: "Decision", accessorKey: "decision" },
+      {
+        header: "Decision",
+        accessorKey: "decision",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${decisionClass(row.original.decision)}`}>
+            {decisionLabel(row.original.decision)}
+          </span>
+        ),
+      },
       { header: "Cible", accessorKey: "target", cell: ({ row }) => row.original.target ?? "-" },
       { header: "Date", accessorKey: "decidedAt" },
     ],
@@ -243,7 +282,15 @@ export default function AccountantInbox() {
       },
       { header: "Departement", accessorKey: "department", enableSorting: true },
       { header: "Periode", accessorKey: "period" },
-      { header: "Statut", accessorKey: "status" },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>
+            {statusLabel(row.original.status)}
+          </span>
+        ),
+      },
       {
         header: "Origine",
         accessorKey: "origin",
@@ -252,7 +299,7 @@ export default function AccountantInbox() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          const isDirector = row.original.origin === "DEPT_HEAD";
+          const isDirector = row.original.origin === "DEPT_HEAD" || row.original.origin === "SERVICE_HEAD";
           return (
             <div className="flex flex-wrap gap-2">
               {isDirector ? (

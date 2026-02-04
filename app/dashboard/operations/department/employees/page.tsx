@@ -12,7 +12,7 @@ type EmployeeRow = {
   email: string;
   matricule?: string | null;
   jobTitle?: string | null;
-  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
@@ -106,6 +106,20 @@ export default function OperationsDepartmentEmployees() {
       })) as EmployeeRow[];
 
       const currentDeptId = currentEmployee?.departmentId ?? null;
+      const currentServiceId = currentEmployee?.serviceId ?? null;
+      const isServiceHead = currentEmployee?.role === "SERVICE_HEAD";
+
+      if (isServiceHead && currentServiceId) {
+        const byService = employees.filter(
+          (e) =>
+            e.service === currentServiceId &&
+            e.id !== currentEmployee?.id &&
+            e.role !== "DEPT_HEAD"
+        );
+        setRows(byService);
+        return;
+      }
+
       const byDeptId = currentDeptId
         ? employees.filter((e) => e.department === currentDeptId && e.id !== currentEmployee?.id)
         : [];

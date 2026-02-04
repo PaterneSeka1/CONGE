@@ -13,7 +13,7 @@ type EmployeeRow = {
   email: string;
   matricule?: string | null;
   jobTitle?: string | null;
-  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   leaveBalance?: number;
   departmentId?: string | null;
@@ -369,6 +369,7 @@ export default function CeoEmployees() {
           <option value="ALL">Tous les roles</option>
           <option value="EMPLOYEE">EMPLOYEE</option>
           <option value="DEPT_HEAD">DEPT_HEAD</option>
+          <option value="SERVICE_HEAD">SERVICE_HEAD</option>
           <option value="ACCOUNTANT">ACCOUNTANT</option>
           <option value="CEO">CEO</option>
         </select>
@@ -507,6 +508,7 @@ export default function CeoEmployees() {
                 >
                   <option value="EMPLOYEE">EMPLOYEE</option>
                   <option value="DEPT_HEAD">DEPT_HEAD</option>
+                  <option value="SERVICE_HEAD">SERVICE_HEAD</option>
                   <option value="ACCOUNTANT">ACCOUNTANT</option>
                   <option value="CEO">CEO</option>
                 </select>

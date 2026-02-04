@@ -41,6 +41,21 @@ function daysBetweenInclusive(start: string, end: string) {
   return Math.floor((e - s) / 86400000) + 1;
 }
 
+function statusLabel(status: LeaveItem["status"] | HistoryItem["status"]) {
+  if (status === "APPROVED") return "Validée";
+  if (status === "REJECTED") return "Refusée";
+  if (status === "CANCELLED") return "Annulée";
+  if (status === "SUBMITTED") return "Soumise";
+  return "En attente";
+}
+
+function statusClass(status: LeaveItem["status"] | HistoryItem["status"]) {
+  if (status === "APPROVED") return "text-emerald-700";
+  if (status === "REJECTED") return "text-red-600";
+  if (status === "CANCELLED") return "text-gray-500";
+  return "text-amber-700";
+}
+
 export default function OperationsLeaveHistory() {
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
@@ -161,7 +176,15 @@ export default function OperationsLeaveHistory() {
           </span>
         ),
       },
-      { header: "Statut", accessorKey: "status" },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>
+            {statusLabel(row.original.status)}
+          </span>
+        ),
+      },
       {
         header: "Assigne",
         accessorFn: (row) => row.currentAssignee ?? "-",
@@ -200,7 +223,15 @@ export default function OperationsLeaveHistory() {
         ),
       },
       { header: "Jours", accessorKey: "days" },
-      { header: "Statut", accessorKey: "status" },
+      {
+        header: "Statut",
+        accessorKey: "status",
+        cell: ({ row }) => (
+          <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>
+            {statusLabel(row.original.status)}
+          </span>
+        ),
+      },
       { header: "Decision", accessorKey: "decidedAt" },
     ],
     []
@@ -221,8 +252,8 @@ export default function OperationsLeaveHistory() {
           className="w-full sm:w-56 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
           <option value="ALL">Tous</option>
-          <option value="SUBMITTED">SUBMITTED</option>
-          <option value="PENDING">PENDING</option>
+          <option value="SUBMITTED">Soumise</option>
+          <option value="PENDING">En attente</option>
         </select>
       </div>
 
@@ -243,9 +274,9 @@ export default function OperationsLeaveHistory() {
             className="w-full sm:w-56 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           >
             <option value="ALL">Tous</option>
-            <option value="APPROVED">APPROVED</option>
-            <option value="REJECTED">REJECTED</option>
-            <option value="CANCELLED">CANCELLED</option>
+            <option value="APPROVED">Validée</option>
+            <option value="REJECTED">Refusée</option>
+            <option value="CANCELLED">Annulée</option>
           </select>
         </div>
 

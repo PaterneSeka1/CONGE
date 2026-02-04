@@ -1,4 +1,4 @@
-export type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+export type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
 export type EmployeeStatus = "PENDING" | "ACTIVE" | "REJECTED";
 
 export type EmployeeSession = {
@@ -49,6 +49,7 @@ export function routeForRole(
     case "ACCOUNTANT":
       return "/dashboard/accountant";
     case "DEPT_HEAD":
+    case "SERVICE_HEAD":
       return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/manager";
     default:
       return "/dashboard/employee";

@@ -5,7 +5,7 @@ import { Eye, EyeOff, User, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
 
-type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
 type DepartmentType = "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string;
 
 function routeForRole(role: EmployeeRole, isDsiAdmin = false, departmentType?: DepartmentType | null) {
@@ -15,6 +15,7 @@ function routeForRole(role: EmployeeRole, isDsiAdmin = false, departmentType?: D
     case "ACCOUNTANT":
       return "/dashboard/accountant";
     case "DEPT_HEAD":
+    case "SERVICE_HEAD":
       return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/manager";
     default:
       return "/dashboard/employee";
@@ -96,7 +97,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* LEFT */}
-      <div className="hidden lg:flex lg:w-1/2 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-gradient-to-br from-vdm-gold-500 to-vdm-gold-100 p-12 flex-col justify-center items-center text-white">
+      <div className="hidden lg:flex lg:w-1/2 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden bg-gradient-to-br from-vdm-gold-600 via-vdm-gold-500 to-vdm-gold-200 p-12 flex-col justify-center items-center text-white">
         <div className="max-w-md text-center">
           <div className="mb-8 h-28 w-28 flex items-center justify-center overflow-hidden mx-auto">
             <img src="/logo.jpeg" alt="Logo" className="h-24 w-24 object-contain" />

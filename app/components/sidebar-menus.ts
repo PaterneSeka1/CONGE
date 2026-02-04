@@ -40,6 +40,13 @@ export const accountantMenu: SidebarSection[] = [
   },
 
   {
+    title: "Achats",
+    links: [
+      { label: "Inbox", icon: "clipboard", to: "/dashboard/accountant/purchases/inbox" },
+      { label: "Historique", icon: "clock", to: "/dashboard/accountant/purchases/history" },
+    ],
+  },
+  {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/accountant/profile" }],
   },
@@ -56,6 +63,13 @@ export const managerMenu: SidebarSection[] = [
     ],
   },
 
+  {
+    title: "Achats",
+    links: [
+      { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/manager/purchases/new" },
+      { label: "Mes demandes", icon: "clock", to: "/dashboard/manager/purchases" },
+    ],
+  },
   {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/manager/profile" }],
@@ -88,6 +102,13 @@ export const ceoMenu: SidebarSection[] = [
         icon: "users",
         to: "/dashboard/ceo/department/others/employees-history",
       },
+    ],
+  },
+  {
+    title: "Achats",
+    links: [
+      { label: "Inbox", icon: "clipboard", to: "/dashboard/ceo/purchases/inbox" },
+      { label: "Historique", icon: "clock", to: "/dashboard/ceo/purchases/history" },
     ],
   },
   {

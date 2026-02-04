@@ -61,7 +61,7 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   if (Object.prototype.hasOwnProperty.call(body, "role")) {
     const v = String(body?.role ?? "");
-    if (!["CEO", "ACCOUNTANT", "DEPT_HEAD", "EMPLOYEE"].includes(v)) {
+    if (!["CEO", "ACCOUNTANT", "DEPT_HEAD", "SERVICE_HEAD", "EMPLOYEE"].includes(v)) {
       return jsonError("role invalide", 400);
     }
     data.role = v;

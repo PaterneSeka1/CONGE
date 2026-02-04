@@ -400,7 +400,7 @@ export const openapiSpec = {
               schema: {
                 type: "object",
                 properties: {
-                  toRole: { type: "string", enum: ["DEPT_HEAD", "CEO"] },
+                  toRole: { type: "string", enum: ["DEPT_HEAD", "SERVICE_HEAD", "CEO"] },
                   comment: { type: "string" },
                 },
               },

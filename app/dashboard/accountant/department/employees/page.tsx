@@ -12,7 +12,7 @@ type EmployeeRow = {
   email: string;
   matricule?: string | null;
   jobTitle?: string | null;
-  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "EMPLOYEE";
+  role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;

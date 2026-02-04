@@ -55,6 +55,15 @@ export function Sidebar({
     setIsMounted(true);
   }, []);
 
+  const roleLabel = (role?: string | null) => {
+    if (!role) return "";
+    if (role === "SERVICE_HEAD") return "Responsable de service";
+    if (role === "DEPT_HEAD") return "Directeur des opérations";
+    if (role === "ACCOUNTANT") return "Comptable";
+    if (role === "CEO") return "PDG";
+    return role;
+  };
+
   // Optionnel (si tu veux un switch d’org plus tard)
   const organizations = [
     { id: "1", name: "Organisation A" },
@@ -89,10 +98,26 @@ export function Sidebar({
     to === "/dashboard/accountant" ||
     to === "/dashboard/ceo";
 
-  const isActiveLink = (path: string, to: string) => {
-    if (isDashboardRoot(to)) return path === to;
-    return path === to || path.startsWith(`${to}/`);
+  const normalizeOpsPath = (path: string, to: string) => {
+    if (to.startsWith("/dashboard/manager") && path.startsWith("/dashboard/operations")) {
+      return `/dashboard/manager${path.slice("/dashboard/operations".length)}`;
+    }
+    return path;
   };
+
+  const flatLinks = useMemo(() => sections.flatMap((section) => section.links), [sections]);
+
+  const getBestActiveLink = (path: string) => {
+    const candidates = flatLinks.filter((link) => {
+      const normalizedPath = normalizeOpsPath(path, link.to);
+      if (isDashboardRoot(link.to)) return normalizedPath === link.to;
+      return normalizedPath === link.to || normalizedPath.startsWith(`${link.to}/`);
+    });
+    if (candidates.length === 0) return null;
+    return candidates.reduce((best, cur) => (cur.to.length > best.to.length ? cur : best), candidates[0]);
+  };
+
+  const activeLink = useMemo(() => getBestActiveLink(pathname), [pathname, flatLinks]);
 
   const OrgButton = () => {
     if (!showOrgSwitcher) return null;
@@ -197,7 +222,9 @@ export function Sidebar({
             <div className="text-sm font-semibold text-vdm-gold-100">
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role || "" : ""}</div>
+            <div className="text-xs text-vdm-gold-200">
+              {isMounted ? roleLabel(employee?.role) : ""}
+            </div>
           </div>
 
           <OrgButton />
@@ -213,7 +240,7 @@ export function Sidebar({
               )}
 
               {section.links.map((link) => {
-                const isActive = isActiveLink(pathname, link.to);
+                const isActive = activeLink?.to === link.to;
                 const Icon = sidebarIconMap[link.icon];
                 return (
                   <Link
@@ -264,7 +291,9 @@ export function Sidebar({
             <div className="text-sm font-semibold text-vdm-gold-100">
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">{isMounted ? employee?.role || "" : ""}</div>
+            <div className="text-xs text-vdm-gold-200">
+              {isMounted ? roleLabel(employee?.role) : ""}
+            </div>
           </div>
 
           <OrgButton />
@@ -282,7 +311,7 @@ export function Sidebar({
               )}
 
               {section.links.map((link) => {
-                const isActive = isActiveLink(pathname, link.to);
+                const isActive = activeLink?.to === link.to;
                 const Icon = sidebarIconMap[link.icon];
                 return (
                   <Link

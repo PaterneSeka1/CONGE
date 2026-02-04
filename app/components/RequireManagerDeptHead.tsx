@@ -21,7 +21,7 @@ export default function RequireManagerDeptHead({ children }: { children: React.R
       return;
     }
 
-    if (emp.role !== "DEPT_HEAD") {
+    if (emp.role !== "DEPT_HEAD" && emp.role !== "SERVICE_HEAD") {
       router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }

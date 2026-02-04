@@ -30,6 +30,7 @@ enum EmployeeRole {
   CEO
   ACCOUNTANT
   DEPT_HEAD
+  SERVICE_HEAD
   EMPLOYEE
 }
 
@@ -45,6 +46,12 @@ enum LeaveStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum PurchaseStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum LeaveType {
@@ -129,6 +136,12 @@ model Employee {
   leaveDecisions  LeaveDecision[] @relation("LeaveActor")
   receivedLeaveDecisions LeaveDecision[] @relation("LeaveDecisionTo") // ✅ champ inverse manquant
   createdBlackouts LeaveBlackout[]
+
+  // Achats / Notes de frais
+  purchaseRequests PurchaseRequest[] @relation("EmployeePurchaseRequests")
+  assignedPurchases PurchaseRequest[] @relation("PurchaseAssignee")
+  purchaseDecisions PurchaseDecision[] @relation("PurchaseActor")
+  receivedPurchaseDecisions PurchaseDecision[] @relation("PurchaseDecisionTo")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -232,4 +245,70 @@ model LeaveBlackout {
   @@index([departmentId])
   @@index([startDate])
   @@index([endDate])
+}
+
+model PurchaseRequest {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name   String
+  amount Float
+  date   DateTime
+
+  status PurchaseStatus @default(PENDING)
+
+  employeeId String   @db.ObjectId
+  employee   Employee @relation("EmployeePurchaseRequests", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  currentAssigneeId String?   @db.ObjectId
+  currentAssignee   Employee? @relation("PurchaseAssignee", fields: [currentAssigneeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  reachedCeoAt DateTime?
+
+  items PurchaseItem[]
+  decisions PurchaseDecision[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([status])
+  @@index([currentAssigneeId])
+}
+
+model PurchaseItem {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name   String
+  amount Float
+
+  purchaseRequestId String          @db.ObjectId
+  purchaseRequest   PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([purchaseRequestId])
+}
+
+model PurchaseDecision {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  purchaseRequestId String          @db.ObjectId
+  purchaseRequest   PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  actorId String   @db.ObjectId
+  actor   Employee @relation("PurchaseActor", fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  type    DecisionType
+  comment String?
+
+  toEmployeeId String?   @db.ObjectId
+  toEmployee   Employee? @relation("PurchaseDecisionTo", fields: [toEmployeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt DateTime @default(now())
+
+  @@index([purchaseRequestId])
+  @@index([actorId])
+  @@index([type])
+  @@index([toEmployeeId])
 }
