@@ -185,10 +185,15 @@ export default function CeoPurchaseInbox() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d'achat</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d'achats futurs</div>
       <div className="text-sm text-vdm-gold-700 mb-4">Validation finale par le CEO.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={load}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}

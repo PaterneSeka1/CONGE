@@ -226,7 +226,7 @@ export default function AccountantPurchaseInbox() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d'achat</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d'achats futurs</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
         La comptable peut valider, refuser ou transmettre au CEO.
       </div>
@@ -247,7 +247,12 @@ export default function AccountantPurchaseInbox() {
         </select>
       </div>
 
-      <DataTable data={filteredRows} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={filteredRows}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={load}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}

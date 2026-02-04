@@ -104,10 +104,15 @@ export default function OperationsPurchases() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes d'achat</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Suivi de vos demandes d'achat.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes d'achats futurs</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Suivi de vos demandes d'achats futurs.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={load}
+      />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
     </div>
   );

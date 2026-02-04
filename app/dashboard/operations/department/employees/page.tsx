@@ -306,7 +306,13 @@ export default function OperationsDepartmentEmployees() {
         Liste des employes de la direction des operations. Cliquez sur modifier pour editer.
       </div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employe..." pageSize={6} />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employe..."
+        pageSize={6}
+        onRefresh={loadEmployees}
+      />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employes...</div> : null}
     </div>
   );

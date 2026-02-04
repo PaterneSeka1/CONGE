@@ -140,10 +140,16 @@ export default function AccountantRequests() {
         Suivez l'état de vos demandes en cours.
       </div>
 
-      <DataTable data={items} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}
     </div>
   );
 }
+  

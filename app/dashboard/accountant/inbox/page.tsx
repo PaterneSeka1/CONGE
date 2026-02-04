@@ -364,7 +364,12 @@ export default function AccountantInbox() {
         </select>
       </div>
 
-      <DataTable data={filteredRows} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={filteredRows}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}
@@ -374,7 +379,12 @@ export default function AccountantInbox() {
         <div className="text-sm text-vdm-gold-700 mb-4">
           Tracabilite des validations et transmissions.
         </div>
-        <DataTable data={historyRows} columns={historyColumns} searchPlaceholder="Rechercher une decision..." />
+        <DataTable
+          data={historyRows}
+          columns={historyColumns}
+          searchPlaceholder="Rechercher une decision..."
+          onRefresh={() => window.location.reload()}
+        />
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
         ) : null}

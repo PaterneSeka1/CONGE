@@ -135,7 +135,12 @@ export default function CeoLeavesHistory() {
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique global des congés</div>
       <div className="text-sm text-vdm-gold-700 mb-4">Toutes les demandes traitées par l'entreprise.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employ?..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
       ) : null}

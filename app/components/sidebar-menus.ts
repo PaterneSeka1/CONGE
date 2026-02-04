@@ -15,7 +15,7 @@ export const employeeMenu: SidebarSection[] = [
 export const accountantMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/accountant" }] },
   {
-    title: "Conges",
+    title: "Congés",
     links: [
       { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/accountant/leave/new" },
       { label: "Mes demandes", icon: "clock", to: "/dashboard/accountant/requests" },
@@ -24,7 +24,7 @@ export const accountantMenu: SidebarSection[] = [
   {
     title: "Demandes",
     links: [
-      { label: "Inbox (- traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
+      { label: "Inbox (à traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
     ],
   },
   {
@@ -83,7 +83,7 @@ export const ceoMenu: SidebarSection[] = [
     links: [
       { label: "Demandes escaladées", icon: "clipboard", to: "/dashboard/ceo/inbox" },
       { label: "Historique congés", icon: "clock", to: "/dashboard/ceo/leaves/history" },
-      { label: "Periodes bloquees", icon: "clock", to: "/dashboard/ceo/blackouts" },
+      { label: "Périodes bloquées", icon: "clock", to: "/dashboard/ceo/blackouts" },
       { label: "Vue globale", icon: "clock", to: "/dashboard/ceo/overview" },
     ],
   },

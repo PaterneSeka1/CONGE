@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import type { SidebarIconKey, SidebarSection } from "./sidebar-types";
+import type { EmployeeSession } from "@/lib/auth-client";
 import { getEmployee, logout } from "@/lib/auth-client";
 
 const sidebarIconMap: Record<SidebarIconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
@@ -55,13 +56,16 @@ export function Sidebar({
     setIsMounted(true);
   }, []);
 
-  const roleLabel = (role?: string | null) => {
-    if (!role) return "";
-    if (role === "SERVICE_HEAD") return "Responsable de service";
-    if (role === "DEPT_HEAD") return "Directeur des opérations";
-    if (role === "ACCOUNTANT") return "Comptable";
-    if (role === "CEO") return "PDG";
-    return role;
+  const roleLabel = (emp?: EmployeeSession | null) => {
+    if (!emp) return "";
+    if (emp.isDsiAdmin || emp.departmentType === "DSI") {
+      return "Directeur du service informatique";
+    }
+    if (emp.role === "SERVICE_HEAD") return "Responsable de service";
+    if (emp.role === "DEPT_HEAD") return "Directeur des opérations";
+    if (emp.role === "ACCOUNTANT") return "Comptable";
+    if (emp.role === "CEO") return "PDG";
+    return emp.role;
   };
 
   // Optionnel (si tu veux un switch d’org plus tard)
@@ -223,7 +227,7 @@ export function Sidebar({
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
             <div className="text-xs text-vdm-gold-200">
-              {isMounted ? roleLabel(employee?.role) : ""}
+              {isMounted ? roleLabel(employee) : ""}
             </div>
           </div>
 
@@ -292,7 +296,7 @@ export function Sidebar({
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
             <div className="text-xs text-vdm-gold-200">
-              {isMounted ? roleLabel(employee?.role) : ""}
+              {isMounted ? roleLabel(employee) : ""}
             </div>
           </div>
 

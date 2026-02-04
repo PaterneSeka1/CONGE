@@ -131,7 +131,12 @@ export default function ManagerTeamPage() {
         Liste des employés de votre service. Vous pouvez retirer un employé de votre service.
       </div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employ?..."
+        onRefresh={loadTeam}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'équipe...</div>
       ) : null}

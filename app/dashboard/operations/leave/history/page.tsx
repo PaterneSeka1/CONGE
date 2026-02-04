@@ -257,7 +257,12 @@ export default function OperationsLeaveHistory() {
         </select>
       </div>
 
-      <DataTable data={filteredActiveItems} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={filteredActiveItems}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}
@@ -280,7 +285,12 @@ export default function OperationsLeaveHistory() {
           </select>
         </div>
 
-        <DataTable data={filteredHistoryItems} columns={historyColumns} searchPlaceholder="Rechercher une demande..." />
+        <DataTable
+          data={filteredHistoryItems}
+          columns={historyColumns}
+          searchPlaceholder="Rechercher une demande..."
+          onRefresh={() => window.location.reload()}
+        />
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
         ) : null}

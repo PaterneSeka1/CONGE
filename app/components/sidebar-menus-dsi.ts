@@ -13,6 +13,13 @@ export const dsiMenu: SidebarSection[] = [
     ],
   },
   {
+    title: "Achats",
+    links: [
+      { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/dsi/purchases/new" },
+      { label: "Mes demandes", icon: "clock", to: "/dashboard/dsi/purchases" },
+    ],
+  },
+{
     title: "Département Informatique",
     links: [
       { label: "Employés (actuels)", icon: "users", to: "/dashboard/dsi/department/employees" },

@@ -242,9 +242,11 @@ export default function DsiAccountsPending() {
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employé..."
+        searchPlaceholder="Rechercher un employe..."
         pageSize={8}
+        onRefresh={() => window.location.reload()}
       />
+
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des comptes...</div>
       ) : null}

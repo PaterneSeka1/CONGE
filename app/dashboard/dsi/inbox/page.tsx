@@ -154,7 +154,12 @@ export default function DsiInbox() {
         Demandes provenant de la comptable pour décision.
       </div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}

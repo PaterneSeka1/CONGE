@@ -34,7 +34,12 @@ export default function OperationsDeptEmployeesHistory() {
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique - Employes Operations</div>
       <div className="text-sm text-vdm-gold-700 mb-4">Entrees / sorties du departement.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employe..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employe..."
+        onRefresh={() => window.location.reload()}
+      />
     </div>
   );
 }

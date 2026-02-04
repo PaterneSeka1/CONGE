@@ -397,7 +397,12 @@ export default function CeoEmployees() {
         </select>
       </div>
 
-      <DataTable data={filteredRows} columns={columns} searchPlaceholder="Rechercher un employe..." />
+      <DataTable
+        data={filteredRows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employe..."
+        onRefresh={loadEmployees}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employes...</div>
       ) : null}

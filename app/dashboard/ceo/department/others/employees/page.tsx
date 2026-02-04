@@ -299,7 +299,13 @@ export default function CeoOthersEmployees() {
         Gestion des employés du département OTHERS.
       </div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." pageSize={6} />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employ?..."
+        pageSize={6}
+        onRefresh={loadEmployees}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
       ) : null}

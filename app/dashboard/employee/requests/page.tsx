@@ -232,7 +232,12 @@ export default function EmployeeRequests() {
         Suivez l'état de vos demandes en cours de traitement.
       </div>
 
-      <DataTable data={activeItems} columns={columns} searchPlaceholder="Rechercher une demande..." />
+      <DataTable
+        data={activeItems}
+        columns={columns}
+        searchPlaceholder="Rechercher une demande..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}
@@ -241,7 +246,12 @@ export default function EmployeeRequests() {
         <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique</div>
         <div className="text-sm text-vdm-gold-700 mb-4">Historique complet de vos demandes.</div>
 
-        <DataTable data={historyItems} columns={historyColumns} searchPlaceholder="Rechercher une demande..." />
+        <DataTable
+          data={historyItems}
+          columns={historyColumns}
+          searchPlaceholder="Rechercher une demande..."
+          onRefresh={() => window.location.reload()}
+        />
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
         ) : null}

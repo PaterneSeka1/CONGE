@@ -125,7 +125,12 @@ export default function DsiLeaveHistory() {
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique de mes congés</div>
       <div className="text-sm text-vdm-gold-700 mb-4">Statuts : validé, refusé, en attente.</div>
 
-      <DataTable data={items} columns={columns} searchPlaceholder="Rechercher un congé..." />
+      <DataTable
+        data={items}
+        columns={columns}
+        searchPlaceholder="Rechercher un cong?..."
+        onRefresh={() => window.location.reload()}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
       ) : null}

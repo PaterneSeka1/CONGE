@@ -33,6 +33,11 @@ export async function POST(req: Request) {
   if (!name || !date || normalizedItems.length === 0 || amount <= 0) {
     return jsonError("Champs requis: name, items[], date", 400);
   }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) {
+    return jsonError("La date d'achat doit etre aujourd'hui ou future", 400);
+  }
 
   const assignee = await findActiveEmployeeByRole("ACCOUNTANT");
   if (!assignee) return jsonError("Aucun assignataire actif disponible", 409);

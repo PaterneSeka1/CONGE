@@ -36,7 +36,12 @@ export default function CeoOthersEmployeesHistory() {
       </div>
       <div className="text-sm text-vdm-gold-700 mb-4">Entrées / sorties du département.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employ?..."
+        onRefresh={() => window.location.reload()}
+      />
     </div>
   );
 }

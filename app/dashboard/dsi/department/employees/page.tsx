@@ -282,7 +282,13 @@ export default function DsiDepartmentEmployees() {
         Liste des employés du service avec toutes les informations. Cliquez sur modifier pour éditer.
       </div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher un employé..." pageSize={6} />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher un employ?..."
+        pageSize={6}
+        onRefresh={loadEmployees}
+      />
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
       ) : null}

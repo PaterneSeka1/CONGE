@@ -132,13 +132,13 @@ export default function AccountantHome() {
     <div className="p-6">
       <div className="text-xl font-semibold text-vdm-gold-800">Dashboard Comptable</div>
       <div className="text-sm text-vdm-gold-700 mt-1">
-        Gestion des demandes de conge (validation, refus, transmission).
+        Gestion des demandes de congé.
       </div>
 
       <div className="grid gap-4 mt-6 md:grid-cols-3">
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm text-vdm-gold-700">Demandes recues</div>
+            <div className="text-sm text-vdm-gold-700">Demandes reçues</div>
             <button
               type="button"
               onClick={refreshData}
@@ -164,7 +164,7 @@ export default function AccountantHome() {
 
       <DashboardCharts
         title="Vue Comptable"
-        subtitle={isLoading ? "Mise a jour des donnees..." : "Demandes recues et decisions."}
+        subtitle={isLoading ? "Mise a jour des données..." : "Demandes reçues et décisions."}
         lineData={stats.lineData}
         pieData={stats.pieData}
         barData={stats.barData}

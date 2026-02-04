@@ -109,10 +109,15 @@ export default function CeoPurchaseHistory() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des achats</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des achats futurs</div>
       <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité de vos décisions.</div>
 
-      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une decision..." />
+      <DataTable
+        data={rows}
+        columns={columns}
+        searchPlaceholder="Rechercher une decision..."
+        onRefresh={load}
+      />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement...</div> : null}
     </div>
   );

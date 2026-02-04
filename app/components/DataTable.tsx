@@ -17,11 +17,13 @@ export default function DataTable<TData>({
   columns,
   searchPlaceholder = "Rechercher...",
   pageSize = 8,
+  onRefresh,
 }: {
   data: TData[];
   columns: ColumnDef<TData, any>[];
   searchPlaceholder?: string;
   pageSize?: number;
+  onRefresh?: () => void;
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -52,6 +54,14 @@ export default function DataTable<TData>({
   const pageCount = table.getPageCount();
 
   const emptyState = useMemo(() => totalRows === 0, [totalRows]);
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+      return;
+    }
+    if (typeof window !== "undefined") window.location.reload();
+  };
+
 
   return (
     <div className="bg-white border border-vdm-gold-200 rounded-xl overflow-hidden">
@@ -62,9 +72,19 @@ export default function DataTable<TData>({
           placeholder={searchPlaceholder}
           className="w-full sm:max-w-xs rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         />
-        <div className="text-xs text-vdm-gold-700">
-          {totalRows} résultat{totalRows > 1 ? "s" : ""}
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-vdm-gold-700">
+            {totalRows} résultat{totalRows > 1 ? "s" : ""}
+          </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className="px-2 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+          >
+            Rafraichir
+          </button>
         </div>
+
       </div>
 
       <div className="overflow-x-auto">
