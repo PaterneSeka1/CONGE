@@ -22,7 +22,6 @@ export async function GET(req: Request) {
       firstName: true,
       lastName: true,
       jobTitle: true,
-      isCeo: true,
       departmentId: true,
       serviceId: true,
       createdAt: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
@@ -27,7 +27,7 @@ function normIdentifier(v: string) {
   return s.includes("@") ? s.toLowerCase() : s; // email => lowercase, matricule => intact
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const [identifier, setIdentifier] = useState(""); // email OU matricule
   const [password, setPassword] = useState("");
@@ -190,5 +190,15 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

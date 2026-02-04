@@ -21,8 +21,12 @@ export async function POST(req: Request) {
   const reason = norm(body?.reason) || null;
   const startDate = parseDate(body?.startDate);
   const endDate = parseDate(body?.endDate);
+  const allowedTypes = ["ANNUAL", "SICK", "UNPAID", "OTHER"] as const;
+  const leaveType = allowedTypes.includes(type as any)
+    ? (type as (typeof allowedTypes)[number])
+    : null;
 
-  if (!type || !startDate || !endDate) {
+  if (!leaveType || !startDate || !endDate) {
     return jsonError("Champs requis: type, startDate, endDate", 400);
   }
 
@@ -62,7 +66,7 @@ export async function POST(req: Request) {
   const created = await prisma.leaveRequest.create({
     data: {
       employeeId: actorId,
-      type,
+      type: leaveType,
       startDate,
       endDate,
       reason,

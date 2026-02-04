@@ -1,7 +1,7 @@
 "use client";
 import { formatDateDMY } from "@/lib/date-format";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
@@ -39,39 +39,38 @@ export default function CeoPurchaseInbox() {
   const [rows, setRows] = useState<Req[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/purchase-requests/pending", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          setRows(
-            (data?.requests ?? []).map((x: any) => ({
-              id: x.id,
-              employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
-              department: x.employee?.department?.type ?? x.employee?.department?.name ?? "",
-              name: x.name,
-              amount: x.amount,
-              date: x.date,
-              status: x.status,
-              origin: x.employee?.role === "SERVICE_HEAD" ? "SERVICE_HEAD" : "DEPT_HEAD",
-              items: x.items ?? [],
-            }))
-          );
-        }
-      } finally {
-        setIsLoading(false);
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/purchase-requests/pending", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setRows(
+          (data?.requests ?? []).map((x: any) => ({
+            id: x.id,
+            employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+            department: x.employee?.department?.type ?? x.employee?.department?.name ?? "",
+            name: x.name,
+            amount: x.amount,
+            date: x.date,
+            status: x.status,
+            origin: x.employee?.role === "SERVICE_HEAD" ? "SERVICE_HEAD" : "DEPT_HEAD",
+            items: x.items ?? [],
+          }))
+        );
       }
-    };
-
-    load();
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const approve = async (id: string) => {
     const token = getToken();

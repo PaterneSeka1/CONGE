@@ -1,7 +1,7 @@
 "use client";
 import { formatDateDMY } from "@/lib/date-format";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import { getToken } from "@/lib/auth-client";
@@ -38,38 +38,39 @@ export default function AccountantPurchaseHistory() {
   const [rows, setRows] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/purchase-requests/history?scope=actor", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          setRows(
-            (data?.decisions ?? []).map((d: any) => ({
-              id: d.id,
-              employeeName: `${d.purchaseRequest?.employee?.firstName ?? ""} ${d.purchaseRequest?.employee?.lastName ?? ""}`.trim(),
-              name: d.purchaseRequest?.name ?? "",
-              amount: d.purchaseRequest?.amount ?? 0,
-              date: d.purchaseRequest?.date ?? "",
-              items: d.purchaseRequest?.items ?? [],
-              decision:
-                d.type === "APPROVE" ? "APPROVED" : d.type === "REJECT" ? "REJECTED" : "ESCALATED",
-              decidedAt: formatDateDMY(d.createdAt),
-              target: d.toEmployee?.role ?? "-",
-            }))
-          );
-        }
-      } finally {
-        setIsLoading(false);
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/purchase-requests/history?scope=actor", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setRows(
+          (data?.decisions ?? []).map((d: any) => ({
+            id: d.id,
+            employeeName: `${d.purchaseRequest?.employee?.firstName ?? ""} ${d.purchaseRequest?.employee?.lastName ?? ""}`.trim(),
+            name: d.purchaseRequest?.name ?? "",
+            amount: d.purchaseRequest?.amount ?? 0,
+            date: d.purchaseRequest?.date ?? "",
+            items: d.purchaseRequest?.items ?? [],
+            decision:
+              d.type === "APPROVE" ? "APPROVED" : d.type === "REJECT" ? "REJECTED" : "ESCALATED",
+            decidedAt: formatDateDMY(d.createdAt),
+            target: d.toEmployee?.role ?? "-",
+          }))
+        );
       }
-    };
-    load();
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [

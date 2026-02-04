@@ -40,7 +40,7 @@ export function Sidebar({
   brandTitle: string;
   brandSubtitle: string;
   sections: SidebarSection[];
-  showOrgSwitcher: boolean;
+  showOrgSwitcher?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();

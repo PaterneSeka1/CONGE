@@ -23,12 +23,12 @@ export async function GET(req: Request) {
   const where =
     role === "CEO"
       ? {
-          status: { in: ["SUBMITTED", "PENDING"] },
+          status: { in: ["SUBMITTED", "PENDING"] as any },
           OR: [{ currentAssigneeId: actorId }, { reachedCeoAt: { not: null } }],
         }
       : {
           currentAssigneeId: actorId,
-          status: { in: ["SUBMITTED", "PENDING"] },
+          status: { in: ["SUBMITTED", "PENDING"] as any },
         };
 
   const leaves = await prisma.leaveRequest.findMany({

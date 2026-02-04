@@ -53,11 +53,15 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const body = await req.json().catch(() => ({}));
   const type = body?.type as string | undefined;
+  const decisionTypes = ["APPROVE", "REJECT", "ESCALATE", "CANCEL"] as const;
+  const decisionType = decisionTypes.includes(type as any)
+    ? (type as (typeof decisionTypes)[number])
+    : null;
   const comment = body?.comment ?? null;
   const toEmployeeId = body?.toEmployeeId ?? null;
   const toRole = body?.toRole ?? null;
 
-  if (!type || !["APPROVE", "REJECT", "ESCALATE", "CANCEL"].includes(type)) {
+  if (!decisionType) {
     return jsonError("type invalide", 400);
   }
 
@@ -74,7 +78,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
   if (!leave) return jsonError("Demande introuvable", 404);
 
-  if (type === "CANCEL") {
+  if (decisionType === "CANCEL") {
     if (leave.employeeId !== actorId) {
       return jsonError("Accès refusé", 403);
     }
@@ -85,7 +89,7 @@ export async function POST(req: Request, ctx: Ctx) {
   let nextAssigneeId: string | null = null;
   let nextAssigneeRole: string | null = null;
 
-  if (type === "ESCALATE") {
+  if (decisionType === "ESCALATE") {
     if (toEmployeeId) {
       const target = await prisma.employee.findUnique({
         where: { id: toEmployeeId },
@@ -105,19 +109,19 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const updates: any = {};
-  if (type === "APPROVE") {
+  if (decisionType === "APPROVE") {
     updates.status = "APPROVED";
     updates.currentAssigneeId = null;
   }
-  if (type === "REJECT") {
+  if (decisionType === "REJECT") {
     updates.status = "REJECTED";
     updates.currentAssigneeId = null;
   }
-  if (type === "CANCEL") {
+  if (decisionType === "CANCEL") {
     updates.status = "CANCELLED";
     updates.currentAssigneeId = null;
   }
-  if (type === "ESCALATE") {
+  if (decisionType === "ESCALATE") {
     updates.status = "PENDING";
     updates.currentAssigneeId = nextAssigneeId;
     if (nextAssigneeRole === "CEO") updates.reachedCeoAt = new Date();
@@ -139,7 +143,7 @@ export async function POST(req: Request, ctx: Ctx) {
       data: {
         leaveRequestId: id,
         actorId,
-        type,
+        type: decisionType,
         comment,
         toEmployeeId: nextAssigneeId,
       },

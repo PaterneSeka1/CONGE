@@ -7,11 +7,10 @@ import { adjacencyGraphs, dictionary as commonDictionary } from "@zxcvbn-ts/lang
 import { dictionary as frDictionary } from "@zxcvbn-ts/language-fr";
 
 zxcvbnOptions.setOptions({
-  translations: frDictionary.translations,
   graphs: adjacencyGraphs,
   dictionary: {
     ...commonDictionary,
-    ...frDictionary.dictionary,
+    ...frDictionary,
   },
 });
 

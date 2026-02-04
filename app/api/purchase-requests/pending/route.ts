@@ -13,11 +13,11 @@ export async function GET(req: Request) {
   const where =
     role === "CEO"
       ? {
-          status: "PENDING",
+          status: "PENDING" as any,
           OR: [{ currentAssigneeId: actorId }, { reachedCeoAt: { not: null } }],
         }
       : role === "ACCOUNTANT"
-        ? { currentAssigneeId: actorId, status: "PENDING" }
+        ? { currentAssigneeId: actorId, status: "PENDING" as any }
         : null;
 
   if (!where) return NextResponse.json({ requests: [] });
