@@ -17,7 +17,7 @@ export async function GET(req: Request, ctx: Ctx) {
     where: { id },
     include: {
       services: true,
-      responsables: { where: { endAt: null }, include: { employee: true } },
+      responsables: { where: { endAt: null }, include: { employee: true, supervisor: true } },
     },
   });
 

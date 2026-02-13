@@ -6,6 +6,27 @@ import { jsonError } from "@/lib/auth";
 import { parseDate, requireAuth, findActiveEmployeeByRole } from "@/lib/leave-requests";
 import { norm } from "@/lib/validators";
 
+function supportsLeaveBlackoutEmployeeIds() {
+  const client = prisma as unknown as {
+    _runtimeDataModel?: {
+      models?: Record<string, { fields?: Array<{ name?: string }> }>;
+    };
+  };
+  const fields = client._runtimeDataModel?.models?.LeaveBlackout?.fields;
+  if (!Array.isArray(fields)) return false;
+  return fields.some((f: { name?: string }) => f?.name === "employeeIds");
+}
+
+function appliesToEmployee(
+  blackout: { departmentId?: string | null; employeeIds?: string[] | null },
+  employee: { id: string; departmentId?: string | null }
+) {
+  const targetIds = Array.isArray(blackout.employeeIds) ? blackout.employeeIds : [];
+  if (targetIds.includes(employee.id)) return true;
+  if (blackout.departmentId && employee.departmentId && blackout.departmentId === employee.departmentId) return true;
+  return !blackout.departmentId && targetIds.length === 0;
+}
+
 export async function POST(req: Request) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
@@ -21,10 +42,11 @@ export async function POST(req: Request) {
   const reason = norm(body?.reason) || null;
   const startDate = parseDate(body?.startDate);
   const endDate = parseDate(body?.endDate);
-  const allowedTypes = ["ANNUAL", "SICK", "UNPAID", "OTHER"] as const;
-  const leaveType = allowedTypes.includes(type as any)
-    ? (type as (typeof allowedTypes)[number])
-    : null;
+  const allowedTypes = new Set(["ANNUAL", "SICK", "UNPAID", "OTHER"] as const);
+  const leaveType =
+    type && allowedTypes.has(type as "ANNUAL" | "SICK" | "UNPAID" | "OTHER")
+      ? (type as "ANNUAL" | "SICK" | "UNPAID" | "OTHER")
+      : null;
 
   if (!leaveType || !startDate || !endDate) {
     return jsonError("Champs requis: type, startDate, endDate", 400);
@@ -34,15 +56,22 @@ export async function POST(req: Request) {
     return jsonError("startDate doit être avant endDate", 400);
   }
 
-  const blackouts = await prisma.leaveBlackout.findMany({
+  const supportsEmployeeIds = supportsLeaveBlackoutEmployeeIds();
+  const overlappingBlackouts = await prisma.leaveBlackout.findMany({
     where: {
       startDate: { lte: endDate },
       endDate: { gte: startDate },
-      OR: [{ departmentId: null }, departmentId ? { departmentId } : { departmentId: null }],
     },
-    select: { id: true },
+    select: {
+      id: true,
+      departmentId: true,
+      ...(supportsEmployeeIds ? { employeeIds: true } : {}),
+    },
   });
-  if (blackouts.length > 0) {
+  const hasBlockedRange = overlappingBlackouts.some((b) =>
+    appliesToEmployee(b, { id: actorId, departmentId })
+  );
+  if (hasBlockedRange) {
     return jsonError("Période bloquée par la direction", 409);
   }
 

@@ -4,12 +4,16 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
-import { getToken } from "@/lib/auth-client";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
+import { getEmployee, getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type Req = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   period: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   note?: string;
@@ -28,6 +32,7 @@ function statusClass(status: Req["status"]) {
 }
 
 export default function OperationsInbox() {
+  const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<Req[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -45,7 +50,10 @@ export default function OperationsInbox() {
           setRows(
             (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
+              firstName: x.employee?.firstName ?? "",
+              lastName: x.employee?.lastName ?? "",
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+              profilePhotoUrl: x.employee?.profilePhotoUrl ?? null,
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               status: x.status,
               note: x.reason ?? "",
@@ -101,15 +109,64 @@ export default function OperationsInbox() {
     }
   };
 
+  const forwardToServiceHead = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    const t = toast.loading("Transmission au Directeur Adjoint...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/escalate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ toRole: "SERVICE_HEAD" }),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("Demande transmise au Directeur Adjoint.", { id: t });
+      } else {
+        toast.error("Erreur lors de la transmission.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur réseau lors de la transmission.", { id: t });
+    }
+  };
+
+  const forwardToCeo = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+    const t = toast.loading("Transmission au CEO...");
+    try {
+      const res = await fetch(`/api/leave-requests/${id}/escalate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ toRole: "CEO" }),
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        toast.success("Demande transmise au CEO.", { id: t });
+      } else {
+        toast.error("Erreur lors de la transmission.", { id: t });
+      }
+    } catch {
+      toast.error("Erreur réseau lors de la transmission.", { id: t });
+    }
+  };
+
   const columns = useMemo<ColumnDef<Req>[]>(
     () => [
       {
         header: "Employé",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+            </div>
           </div>
         ),
       },
@@ -126,25 +183,42 @@ export default function OperationsInbox() {
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => (
-          <div className="flex gap-2">
-            <button
-              onClick={() => approve(row.original.id)}
-              className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-            >
-              Valider
-            </button>
-            <button
-              onClick={() => reject(row.original.id)}
-              className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-            >
-              Refuser
-            </button>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const isDeptHead = currentEmployee?.role === "DEPT_HEAD";
+          return (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => approve(row.original.id)}
+                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
+              >
+                Valider
+              </button>
+              <button
+                onClick={() => reject(row.original.id)}
+                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+              >
+                Refuser
+              </button>
+              {isDeptHead ? (
+                <button
+                  onClick={() => forwardToServiceHead(row.original.id)}
+                  className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+                >
+                  Transmettre au Directeur Adjoint
+                </button>
+              ) : null}
+              <button
+                onClick={() => forwardToCeo(row.original.id)}
+                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+              >
+                Transmettre au CEO
+              </button>
+            </div>
+          );
+        },
       },
     ],
-    [approve, reject]
+    [approve, reject, forwardToServiceHead, forwardToCeo, currentEmployee?.role]
   );
 
   return (

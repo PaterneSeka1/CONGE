@@ -27,14 +27,14 @@ export default function ForgotPasswordPage() {
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        toast.error(data.error || "Erreur reseau. Veuillez reessayer.", { id: loadingToast });
+        toast.error(data.error || "Erreur réseau. Veuillez réessayer.", { id: loadingToast });
         return;
       }
 
-      toast.success("Si un compte existe, un lien a ete envoye.", { id: loadingToast });
+      toast.success("Si un compte existe, un lien a été envoyé.", { id: loadingToast });
       setIdentifier("");
     } catch {
-      toast.error("Erreur reseau. Veuillez reessayer.", { id: loadingToast });
+      toast.error("Erreur réseau. Veuillez réessayer.", { id: loadingToast });
     } finally {
       setIsLoading(false);
     }
@@ -52,8 +52,10 @@ export default function ForgotPasswordPage() {
           <div className="mb-8 h-28 w-28 flex items-center justify-center overflow-hidden mx-auto">
             <img src="/logo.jpeg" alt="Logo" className="h-24 w-24 object-contain" />
           </div>
-          <h1 className="text-5xl font-bold mb-6">Mot de passe oublie</h1>
-          <p className="text-xl opacity-90">Recevez un lien de reinitialisation pour acceder a votre compte.</p>
+          <h1 className="text-5xl font-bold mb-6">Mot de passe oublié</h1>
+          <p className="text-xl opacity-90">
+            Recevez un lien de réinitialisation pour accéder à votre compte.
+          </p>
         </div>
       </div>
 
@@ -65,11 +67,9 @@ export default function ForgotPasswordPage() {
               <div className="lg:hidden mx-auto mb-4 h-16 w-16 flex items-center justify-center overflow-hidden">
                 <img src="/logo.jpeg" alt="Logo" className="h-14 w-14 object-contain" />
               </div>
-              <h2 className="text-3xl font-bold text-vdm-gold-800 mb-2">Reinitialisation</h2>
+              <h2 className="text-3xl font-bold text-vdm-gold-800 mb-2">Réinitialisation</h2>
               <p className="text-gray-600">Saisissez votre email ou matricule</p>
-              <p className="text-xs text-vdm-gold-700 mt-2">
-                Un email vous sera envoye si le compte existe.
-              </p>
+              <p className="text-xs text-vdm-gold-700 mt-2">Un email vous sera envoyé si le compte existe.</p>
             </div>
 
             <div className="space-y-6">
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="ex: admin@domaine.com ou CEO-001"
+                    placeholder="ex : admin@domaine.com ou CEO-001"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -100,7 +100,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <p className="mt-8 text-center text-sm text-gray-600">
-              Retour a{" "}
+              Retour à{" "}
               <a href="/login" className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline">
                 la connexion
               </a>

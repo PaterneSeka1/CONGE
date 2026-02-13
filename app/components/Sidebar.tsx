@@ -61,7 +61,7 @@ export function Sidebar({
     if (emp.isDsiAdmin || emp.departmentType === "DSI") {
       return "Directeur du service informatique";
     }
-    if (emp.role === "SERVICE_HEAD") return "Responsable de service";
+    if (emp.role === "SERVICE_HEAD") return "Directeur Adjoint";
     if (emp.role === "DEPT_HEAD") return "Directeur des opérations";
     if (emp.role === "ACCOUNTANT") return "Comptable";
     if (emp.role === "CEO") return "PDG";
@@ -138,9 +138,7 @@ export function Sidebar({
                 <Building2 className="w-4 h-4 text-white" />
                 <span className="text-xs">Organisations</span>
               </div>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${orgDropdownOpen ? "rotate-180" : ""}`}
-              />
+              <ChevronDown className={`w-4 h-4 transition-transform ${orgDropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
             {orgDropdownOpen && (
@@ -162,7 +160,7 @@ export function Sidebar({
                 ))}
                 <button
                   onClick={() => {
-                    console.log("Ajouter organisation");
+                    console.log("Ajouter une organisation");
                     setOrgDropdownOpen(false);
                   }}
                   className="w-full text-left px-3 py-2 bg-vdm-gold-50 hover:bg-vdm-gold-100 transition text-sm font-semibold text-vdm-gold-900 border-t"
@@ -178,7 +176,7 @@ export function Sidebar({
         ) : (
           <button className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl bg-vdm-gold-800 text-white hover:bg-vdm-gold-700 font-semibold transition border border-vdm-gold-900">
             <Plus className="w-4 h-4 text-white" />
-            <span className="text-xs">Ajouter organisation</span>
+            <span className="text-xs">Ajouter une organisation</span>
           </button>
         )}
       </div>
@@ -209,10 +207,7 @@ export function Sidebar({
 
       {/* MOBILE OVERLAY */}
       {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />
       )}
 
       {/* MOBILE MENU */}
@@ -226,9 +221,7 @@ export function Sidebar({
             <div className="text-sm font-semibold text-vdm-gold-100">
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">
-              {isMounted ? roleLabel(employee) : ""}
-            </div>
+            <div className="text-xs text-vdm-gold-200">{isMounted ? roleLabel(employee) : ""}</div>
           </div>
 
           <OrgButton />
@@ -237,9 +230,7 @@ export function Sidebar({
             <div key={idx} className="space-y-1">
               {section.title && (
                 <div className="px-2 mb-1">
-                  <div className="text-xs font-bold text-vdm-gold-200 uppercase tracking-widest">
-                    {section.title}
-                  </div>
+                  <div className="text-xs font-bold text-vdm-gold-200 uppercase tracking-widest">{section.title}</div>
                 </div>
               )}
 
@@ -252,9 +243,7 @@ export function Sidebar({
                     href={link.to}
                     onClick={() => setIsOpen(false)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl transition ${
-                      isActive
-                        ? "bg-vdm-gold-700 text-white"
-                        : "text-vdm-gold-100 hover:bg-vdm-gold-800"
+                      isActive ? "bg-vdm-gold-700 text-white" : "text-vdm-gold-100 hover:bg-vdm-gold-800"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -265,11 +254,11 @@ export function Sidebar({
             </div>
           ))}
 
-            <button
-              onClick={() => {
-                logout();
-                router.replace("/login");
-              }}
+          <button
+            onClick={() => {
+              logout();
+              router.replace("/login");
+            }}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-red-300 hover:bg-red-700/20 transition w-full font-semibold"
           >
             <LogOut className="w-5 h-5" />
@@ -295,9 +284,7 @@ export function Sidebar({
             <div className="text-sm font-semibold text-vdm-gold-100">
               {isMounted && employee ? `${employee.firstName} ${employee.lastName}` : "Utilisateur"}
             </div>
-            <div className="text-xs text-vdm-gold-200">
-              {isMounted ? roleLabel(employee) : ""}
-            </div>
+            <div className="text-xs text-vdm-gold-200">{isMounted ? roleLabel(employee) : ""}</div>
           </div>
 
           <OrgButton />
@@ -308,9 +295,7 @@ export function Sidebar({
             <div key={idx} className="space-y-1">
               {section.title && (
                 <div className="px-2 mb-1">
-                  <div className="text-[10px] font-bold text-vdm-gold-200 uppercase tracking-widest">
-                    {section.title}
-                  </div>
+                  <div className="text-[10px] font-bold text-vdm-gold-200 uppercase tracking-widest">{section.title}</div>
                 </div>
               )}
 
@@ -322,9 +307,7 @@ export function Sidebar({
                     key={link.to}
                     href={link.to}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl transition ${
-                      isActive
-                        ? "bg-vdm-gold-700 text-white"
-                        : "text-vdm-gold-100 hover:bg-vdm-gold-800"
+                      isActive ? "bg-vdm-gold-700 text-white" : "text-vdm-gold-100 hover:bg-vdm-gold-800"
                     }`}
                   >
                     <Icon className="w-5 h-5" />

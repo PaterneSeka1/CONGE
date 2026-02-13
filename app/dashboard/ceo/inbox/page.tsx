@@ -4,12 +4,16 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type Req = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   period: string;
   origin: "DEPT_HEAD" | "SERVICE_HEAD" | "ACCOUNTANT";
   note?: string;
@@ -28,6 +32,12 @@ function statusClass(status: Req["status"]) {
   return "text-amber-700";
 }
 
+function originLabel(origin: Req["origin"]) {
+  if (origin === "DEPT_HEAD") return "Directeur des opérations";
+  if (origin === "SERVICE_HEAD") return "Directeur Adjoint";
+  return "Comptable";
+}
+
 export default function CeoInbox() {
   const [rows, setRows] = useState<Req[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +45,7 @@ export default function CeoInbox() {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
+
     const load = async () => {
       setIsLoading(true);
       try {
@@ -46,7 +57,10 @@ export default function CeoInbox() {
           setRows(
             (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
+              firstName: x.employee?.firstName ?? "",
+              lastName: x.employee?.lastName ?? "",
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+              profilePhotoUrl: x.employee?.profilePhotoUrl ?? null,
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               origin:
                 x.employee?.role === "DEPT_HEAD"
@@ -63,12 +77,14 @@ export default function CeoInbox() {
         setIsLoading(false);
       }
     };
+
     load();
   }, []);
 
   const approve = async (id: string) => {
     const token = getToken();
     if (!token) return;
+
     const t = toast.loading("Validation en cours...");
     try {
       const res = await fetch(`/api/leave-requests/${id}/approve`, {
@@ -90,6 +106,7 @@ export default function CeoInbox() {
   const reject = async (id: string) => {
     const token = getToken();
     if (!token) return;
+
     const t = toast.loading("Refus en cours...");
     try {
       const res = await fetch(`/api/leave-requests/${id}/reject`, {
@@ -114,14 +131,29 @@ export default function CeoInbox() {
         header: "Employé",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+            </div>
           </div>
         ),
       },
       { header: "Période", accessorKey: "period" },
-      { header: "Origine", accessorKey: "origin" },
+      {
+        header: "Origine",
+        accessorKey: "origin",
+        cell: ({ row }) => (
+          <span className="text-xs font-semibold text-vdm-gold-800">
+            {originLabel(row.original.origin)}
+          </span>
+        ),
+      },
       {
         header: "Statut",
         accessorKey: "status",
@@ -168,9 +200,7 @@ export default function CeoInbox() {
         searchPlaceholder="Rechercher une demande..."
         onRefresh={() => window.location.reload()}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
     </div>
   );
 }

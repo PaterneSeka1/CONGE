@@ -24,7 +24,7 @@ export const accountantMenu: SidebarSection[] = [
   {
     title: "Demandes",
     links: [
-      { label: "Inbox (à traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
+      { label: "Boîte de réception (à traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
     ],
   },
   {
@@ -32,13 +32,12 @@ export const accountantMenu: SidebarSection[] = [
     links: [
       { label: "Employés (actuels)", icon: "users", to: "/dashboard/accountant/department/employees" },
       {
-        label: "Historique employés",
+        label: "Historique des employés",
         icon: "users",
         to: "/dashboard/accountant/department/employees-history",
       },
     ],
   },
-
   {
     title: "Achats",
     links: [
@@ -52,7 +51,6 @@ export const accountantMenu: SidebarSection[] = [
   },
 ];
 
-
 export const managerMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/manager" }] },
   {
@@ -62,7 +60,6 @@ export const managerMenu: SidebarSection[] = [
       { label: "Équipe", icon: "users", to: "/dashboard/manager/team" },
     ],
   },
-
   {
     title: "Achats",
     links: [
@@ -84,21 +81,18 @@ export const ceoMenu: SidebarSection[] = [
       { label: "Demandes escaladées", icon: "clipboard", to: "/dashboard/ceo/inbox" },
       { label: "Historique congés", icon: "clock", to: "/dashboard/ceo/leaves/history" },
       { label: "Périodes bloquées", icon: "clock", to: "/dashboard/ceo/blackouts" },
-      { label: "Vue globale", icon: "clock", to: "/dashboard/ceo/overview" },
     ],
   },
   {
     title: "Employés",
-    links: [
-      { label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" },
-    ],
+    links: [{ label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" }],
   },
   {
     title: "Département OTHERS",
     links: [
       { label: "Employés (actuels)", icon: "users", to: "/dashboard/ceo/department/others/employees" },
       {
-        label: "Historique employés",
+        label: "Historique des employés",
         icon: "users",
         to: "/dashboard/ceo/department/others/employees-history",
       },
@@ -116,4 +110,3 @@ export const ceoMenu: SidebarSection[] = [
     links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }],
   },
 ];
-

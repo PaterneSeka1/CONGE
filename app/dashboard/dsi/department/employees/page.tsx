@@ -1,28 +1,60 @@
 "use client";
-
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
-import { getToken } from "@/lib/auth-client";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
+import { getEmployee, getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  profilePhotoUrl?: string | null;
   matricule?: string | null;
   jobTitle?: string | null;
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
+  departmentName?: string;
+  serviceName?: string;
+};
+
+type EmployeeApiItem = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePhotoUrl?: string | null;
+  matricule?: string | null;
+  jobTitle?: string | null;
+  role?: EmployeeRow["role"];
+  status?: EmployeeRow["status"];
+  departmentId?: string | null;
+  serviceId?: string | null;
+  department?: { id: string; name?: string | null; type?: string | null } | null;
+  service?: { id: string; name?: string | null; type?: string | null } | null;
+};
+
+const statusLabel: Record<EmployeeRow["status"], string> = {
+  ACTIVE: "Actif",
+  PENDING: "En attente",
+  REJECTED: "Rejeté",
+};
+
+const roleLabel: Record<EmployeeRow["role"], string> = {
+  CEO: "DG",
+  ACCOUNTANT: "Comptable",
+  DEPT_HEAD: "Chef de département",
+  SERVICE_HEAD: "Directeur Adjoint",
+  EMPLOYEE: "Employé",
 };
 
 export default function DsiDepartmentEmployees() {
+  const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [departments, setDepartments] = useState<Record<string, string>>({});
-  const [services, setServices] = useState<Record<string, string>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EmployeeRow | null>(null);
@@ -37,15 +69,18 @@ export default function DsiDepartmentEmployees() {
     setDraft(null);
   };
 
-  const saveEdit = async () => {
+  const saveEdit = useCallback(async () => {
     if (!draft) return;
     const token = getToken();
     if (!token) return;
+
+    // optimistic update
     setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
     setEditingId(null);
     setDraft(null);
+
     await fetch(`/api/employees/${draft.id}`, {
-      method: "PATCH",
+      method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         firstName: draft.firstName,
@@ -57,54 +92,45 @@ export default function DsiDepartmentEmployees() {
         serviceId: draft.service ?? null,
       }),
     });
-  };
+  }, [draft]);
 
   const loadEmployees = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     setIsLoading(true);
     try {
-      const [empRes, depRes, svcRes] = await Promise.all([
-        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
+      const empRes = await fetch("/api/departments/dsi/employees", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const empData = await empRes.json().catch(() => ({}));
-      const depData = await depRes.json().catch(() => ({}));
-      const svcData = await svcRes.json().catch(() => ({}));
+      if (!empRes.ok) {
+        setRows([]);
+        return;
+      }
 
-      const depMap: Record<string, string> = {};
-      (depData?.departments ?? []).forEach((d: any) => {
-        depMap[d.id] = d.name ?? d.type ?? d.id;
-      });
-
-      const svcMap: Record<string, string> = {};
-      (svcData?.services ?? []).forEach((s: any) => {
-        svcMap[s.id] = s.name ?? s.type ?? s.id;
-      });
-
-      setDepartments(depMap);
-      setServices(svcMap);
-
-      const employees = (empData?.employees ?? []).map((e: any) => ({
+      const employeesList = Array.isArray(empData?.employees) ? (empData.employees as EmployeeApiItem[]) : [];
+      const employees = employeesList.map((e) => ({
         id: e.id,
         firstName: e.firstName,
         lastName: e.lastName,
         email: e.email,
+        profilePhotoUrl: e.profilePhotoUrl ?? null,
         matricule: e.matricule,
         jobTitle: e.jobTitle,
         role: e.role ?? "EMPLOYEE",
         status: e.status ?? "ACTIVE",
         department: e.departmentId ?? null,
         service: e.serviceId ?? null,
+        departmentName: e.department?.name ?? e.department?.type ?? "—",
+        serviceName: e.service?.name ?? e.service?.type ?? "—",
       })) as EmployeeRow[];
 
-      setRows(employees.filter((e) => (depMap[e.department ?? ""] ?? "") === "DSI"));
+      setRows(employees.filter((e) => e.id !== currentEmployee?.id));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentEmployee?.id]);
 
   useEffect(() => {
     loadEmployees();
@@ -120,11 +146,18 @@ export default function DsiDepartmentEmployees() {
           const isEdit = row.original.id === editingId;
           if (!isEdit || !draft) {
             return (
-              <div>
-                <div className="font-semibold">
-                  {row.original.firstName} {row.original.lastName}
+              <div className="flex items-center gap-2">
+                <EmployeeAvatar
+                  firstName={row.original.firstName}
+                  lastName={row.original.lastName}
+                  profilePhotoUrl={row.original.profilePhotoUrl}
+                />
+                <div>
+                  <div className="font-semibold">
+                    {row.original.firstName} {row.original.lastName}
+                  </div>
+                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
                 </div>
-                <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
               </div>
             );
           }
@@ -153,7 +186,7 @@ export default function DsiDepartmentEmployees() {
         },
       },
       {
-        header: "Email",
+        header: "E-mail",
         accessorKey: "email",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
@@ -185,14 +218,14 @@ export default function DsiDepartmentEmployees() {
       {
         header: "Rôle",
         accessorKey: "role",
-        cell: ({ row }) => row.original.role,
+        cell: ({ row }) => roleLabel[row.original.role] ?? row.original.role,
       },
       {
         header: "Statut",
         accessorKey: "status",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.status;
+          if (!isEdit || !draft) return statusLabel[row.original.status] ?? row.original.status;
           return (
             <select
               value={draft.status}
@@ -201,9 +234,9 @@ export default function DsiDepartmentEmployees() {
               }
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
             >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="PENDING">PENDING</option>
-              <option value="REJECTED">REJECTED</option>
+              <option value="ACTIVE">Actif</option>
+              <option value="PENDING">En attente</option>
+              <option value="REJECTED">Rejeté</option>
             </select>
           );
         },
@@ -213,7 +246,7 @@ export default function DsiDepartmentEmployees() {
         accessorKey: "department",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "—";
+          if (!isEdit || !draft) return row.original.departmentName ?? "—";
           return (
             <input
               value={draft.department ?? ""}
@@ -228,7 +261,7 @@ export default function DsiDepartmentEmployees() {
         accessorKey: "service",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "—";
+          if (!isEdit || !draft) return row.original.serviceName ?? "—";
           return (
             <input
               value={draft.service ?? ""}
@@ -272,26 +305,24 @@ export default function DsiDepartmentEmployees() {
         },
       },
     ],
-    [editingId, draft, departments, services, saveEdit]
+    [editingId, draft, saveEdit]
   );
 
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés actuels</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Liste des employés du service avec toutes les informations. Cliquez sur modifier pour éditer.
+        Liste des employés du département DSI. Cliquez sur « Modifier » pour éditer.
       </div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé…"
         pageSize={6}
         onRefresh={loadEmployees}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
     </div>
   );
 }

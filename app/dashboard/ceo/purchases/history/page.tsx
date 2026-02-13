@@ -4,11 +4,16 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 
 type HistoryItem = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
+  decidedBy: string;
   name: string;
   amount: number;
   date: string;
@@ -43,15 +48,35 @@ export default function CeoPurchaseHistory() {
     if (!token) return;
     setIsLoading(true);
     try {
-      const res = await fetch("/api/purchase-requests/history?scope=actor", {
+      const res = await fetch("/api/purchase-requests/history?scope=all", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setRows(
-          (data?.decisions ?? []).map((d: any) => ({
+          (data?.decisions ?? []).map((d: {
+            id: string;
+            type: "APPROVE" | "REJECT" | "ESCALATE";
+            createdAt: string;
+            toEmployee?: { role?: string } | null;
+            actor?: { firstName?: string; lastName?: string; role?: string } | null;
+            purchaseRequest?: {
+              employee?: { firstName?: string; lastName?: string; profilePhotoUrl?: string } | null;
+              name?: string;
+              amount?: number;
+              date?: string;
+              items?: Array<{ id: string; name: string; amount: number }>;
+            } | null;
+          }) => ({
             id: d.id,
+            firstName: d.purchaseRequest?.employee?.firstName ?? "",
+            lastName: d.purchaseRequest?.employee?.lastName ?? "",
             employeeName: `${d.purchaseRequest?.employee?.firstName ?? ""} ${d.purchaseRequest?.employee?.lastName ?? ""}`.trim(),
+            profilePhotoUrl: d.purchaseRequest?.employee?.profilePhotoUrl ?? null,
+            decidedBy:
+              `${d.actor?.firstName ?? ""} ${d.actor?.lastName ?? ""}`.trim() ||
+              d.actor?.role ||
+              "-",
             name: d.purchaseRequest?.name ?? "",
             amount: d.purchaseRequest?.amount ?? 0,
             date: d.purchaseRequest?.date ?? "",
@@ -74,7 +99,20 @@ export default function CeoPurchaseHistory() {
 
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
-      { header: "Employe", accessorKey: "employeeName" },
+      {
+        header: "Employe",
+        accessorKey: "employeeName",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div className="font-semibold">{row.original.employeeName}</div>
+          </div>
+        ),
+      },
       {
         header: "Demande",
         accessorKey: "name",
@@ -102,6 +140,7 @@ export default function CeoPurchaseHistory() {
           </span>
         ),
       },
+      { header: "Decide par", accessorKey: "decidedBy" },
       { header: "Cible", accessorKey: "target", cell: ({ row }) => row.original.target ?? "-" },
       { header: "Date decision", accessorKey: "decidedAt" },
     ],
@@ -111,7 +150,7 @@ export default function CeoPurchaseHistory() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des achats futurs</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité de vos décisions.</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité globale des décisions (CEO et autres valideurs).</div>
 
       <DataTable
         data={rows}

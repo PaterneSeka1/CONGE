@@ -18,6 +18,7 @@ enum DepartmentType {
 enum ServiceType {
   INFORMATION
   REPUTATION
+  QUALITE
 }
 
 enum ResponsibilityRole {
@@ -111,6 +112,9 @@ model Employee {
 
   matricule String? // PAS @unique (si tu as des null). Utilise un index unique partiel Mongo si besoin.
   jobTitle  String?
+  phone String?
+  profilePhotoUrl String?
+  fullAddress String?
   password  String
 
   role   EmployeeRole   @default(EMPLOYEE)
@@ -129,6 +133,7 @@ model Employee {
   service   Service? @relation(fields: [serviceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   responsibilities DepartmentResponsibility[]
+  supervisedResponsibilities DepartmentResponsibility[] @relation("ResponsibilitySupervisor")
 
   // Congés
   leaveRequests   LeaveRequest[]  @relation("EmployeeLeaveRequests")
@@ -161,6 +166,9 @@ model DepartmentResponsibility {
   employeeId String   @db.ObjectId
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  supervisorId String?   @db.ObjectId
+  supervisor   Employee? @relation("ResponsibilitySupervisor", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   role    ResponsibilityRole @default(RESPONSABLE)
   startAt DateTime           @default(now())
   endAt   DateTime?
@@ -170,6 +178,7 @@ model DepartmentResponsibility {
 
   @@index([departmentId])
   @@index([employeeId])
+  @@index([supervisorId])
   @@unique([departmentId, employeeId, startAt])
 }
 
@@ -235,6 +244,7 @@ model LeaveBlackout {
 
   departmentId String? @db.ObjectId
   department Department? @relation(fields: [departmentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  employeeIds String[] @db.ObjectId @default([])
 
   createdById String @db.ObjectId
   createdBy Employee @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)

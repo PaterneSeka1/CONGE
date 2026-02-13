@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
@@ -10,12 +11,21 @@ type EmployeeRow = {
   firstName: string;
   lastName: string;
   email: string;
+  profilePhotoUrl?: string | null;
   matricule?: string | null;
   jobTitle?: string | null;
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
+};
+
+const roleLabel: Record<EmployeeRow["role"], string> = {
+  CEO: "DG",
+  ACCOUNTANT: "Comptable",
+  DEPT_HEAD: "Directeur des opérations",
+  SERVICE_HEAD: "Directeur Adjoint",
+  EMPLOYEE: "Employé",
 };
 
 export default function AccountantDepartmentEmployees() {
@@ -92,6 +102,7 @@ export default function AccountantDepartmentEmployees() {
         firstName: e.firstName,
         lastName: e.lastName,
         email: e.email,
+        profilePhotoUrl: e.profilePhotoUrl ?? null,
         matricule: e.matricule,
         jobTitle: e.jobTitle,
         role: e.role ?? "EMPLOYEE",
@@ -120,11 +131,18 @@ export default function AccountantDepartmentEmployees() {
           const isEdit = row.original.id === editingId;
           if (!isEdit || !draft) {
             return (
-              <div>
-                <div className="font-semibold">
-                  {row.original.firstName} {row.original.lastName}
+              <div className="flex items-center gap-2">
+                <EmployeeAvatar
+                  firstName={row.original.firstName}
+                  lastName={row.original.lastName}
+                  profilePhotoUrl={row.original.profilePhotoUrl}
+                />
+                <div>
+                  <div className="font-semibold">
+                    {row.original.firstName} {row.original.lastName}
+                  </div>
+                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
                 </div>
-                <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
               </div>
             );
           }
@@ -185,7 +203,7 @@ export default function AccountantDepartmentEmployees() {
       {
         header: "Rôle",
         accessorKey: "role",
-        cell: ({ row }) => row.original.role,
+        cell: ({ row }) => roleLabel[row.original.role] ?? row.original.role,
       },
       {
         header: "Statut",
@@ -196,9 +214,7 @@ export default function AccountantDepartmentEmployees() {
           return (
             <select
               value={draft.status}
-              onChange={(e) =>
-                setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })
-              }
+              onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
             >
               <option value="ACTIVE">ACTIVE</option>
@@ -279,19 +295,18 @@ export default function AccountantDepartmentEmployees() {
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés actuels (DAF)</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Liste des employés du DAF avec toutes les informations. Cliquez sur modifier pour éditer.
+        Liste des employés du DAF avec toutes les informations. Cliquez sur Modifier pour éditer.
       </div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé..."
         pageSize={6}
         onRefresh={loadEmployees}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
-      ) : null}
+
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
     </div>
   );
 }

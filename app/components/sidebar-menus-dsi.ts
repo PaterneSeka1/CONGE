@@ -23,7 +23,7 @@ export const dsiMenu: SidebarSection[] = [
     title: "Département Informatique",
     links: [
       { label: "Employés (actuels)", icon: "users", to: "/dashboard/dsi/department/employees" },
-      { label: "Historique employés", icon: "users", to: "/dashboard/dsi/department/employees-history" },
+      { label: "Historique des employés", icon: "users", to: "/dashboard/dsi/department/employees-history" },
       { label: "Demandes transmises", icon: "clipboard", to: "/dashboard/dsi/inbox" },
     ],
   },

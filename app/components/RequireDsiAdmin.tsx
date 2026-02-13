@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { EmployeeSession, getEmployee, getToken, routeForRole } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  EmployeeSession,
+  getEmployee,
+  getToken,
+  hasRequiredProfileData,
+  routeForRole,
+} from "@/lib/auth-client";
 
 type DsiSession = EmployeeSession & {
   // recommandé: stocker ça au login
@@ -11,6 +17,7 @@ type DsiSession = EmployeeSession & {
 
 export default function RequireDsiAdmin({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const token = getToken();
@@ -41,7 +48,12 @@ export default function RequireDsiAdmin({ children }: { children: React.ReactNod
       router.replace("/dashboard/manager");
       return;
     }
-  }, [router]);
+
+    if (!hasRequiredProfileData(emp) && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+  }, [pathname, router]);
 
   return <>{children}</>;
 }

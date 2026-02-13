@@ -1,15 +1,22 @@
 "use client";
+// app/(dashboard)/dsi/inbox/page.tsx (ou ton chemin exact)
+// ✅ FICHIER COMPLET
+
 import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type Req = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   period: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   note?: string;
@@ -34,6 +41,7 @@ export default function DsiInbox() {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
+
     const load = async () => {
       setIsLoading(true);
       try {
@@ -45,7 +53,10 @@ export default function DsiInbox() {
           setRows(
             (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
+              firstName: x.employee?.firstName ?? "",
+              lastName: x.employee?.lastName ?? "",
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+              profilePhotoUrl: x.employee?.profilePhotoUrl ?? null,
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               status: x.status,
               note: x.reason ?? "",
@@ -56,6 +67,7 @@ export default function DsiInbox() {
         setIsLoading(false);
       }
     };
+
     load();
   }, []);
 
@@ -107,9 +119,16 @@ export default function DsiInbox() {
         header: "Employé",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+            </div>
           </div>
         ),
       },
@@ -160,9 +179,7 @@ export default function DsiInbox() {
         searchPlaceholder="Rechercher une demande..."
         onRefresh={() => window.location.reload()}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
     </div>
   );
 }

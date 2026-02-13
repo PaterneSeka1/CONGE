@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getEmployee, getToken } from "@/lib/auth-client";
 
 type TeamMember = {
@@ -10,6 +11,7 @@ type TeamMember = {
   firstName: string;
   lastName: string;
   email: string;
+  profilePhotoUrl?: string | null;
   matricule?: string | null;
   jobTitle?: string | null;
   status: "ACTIVE" | "PENDING" | "REJECTED";
@@ -60,6 +62,7 @@ export default function ManagerTeamPage() {
         firstName: e.firstName,
         lastName: e.lastName,
         email: e.email,
+        profilePhotoUrl: e.profilePhotoUrl ?? null,
         matricule: e.matricule,
         jobTitle: e.jobTitle,
         status: e.status ?? "ACTIVE",
@@ -90,11 +93,18 @@ export default function ManagerTeamPage() {
         header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">
-              {row.original.firstName} {row.original.lastName}
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">
+                {row.original.firstName} {row.original.lastName}
+              </div>
+              <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
             </div>
-            <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
           </div>
         ),
       },

@@ -112,7 +112,7 @@ export const openapiSpec = {
                 required: ["departmentId", "type", "name"],
                 properties: {
                   departmentId: { type: "string" },
-                  type: { type: "string", enum: ["INFORMATION", "REPUTATION"] },
+                  type: { type: "string", enum: ["INFORMATION", "REPUTATION", "QUALITE"] },
                   name: { type: "string" },
                   description: { type: "string", nullable: true },
                 },
@@ -159,6 +159,12 @@ export const openapiSpec = {
                 properties: {
                   employeeId: { type: "string" },
                   role: { type: "string", enum: ["RESPONSABLE", "CO_RESPONSABLE", "ADJOINT"] },
+                  supervisorId: {
+                    type: "string",
+                    nullable: true,
+                    description:
+                      "Requis en OPERATIONS: ID du Directeur Adjoint (SERVICE_HEAD). Max 3 responsables actifs par Directeur Adjoint.",
+                  },
                 },
               },
             },
@@ -493,4 +499,3 @@ export const openapiSpec = {
     },
   },
 } as const;
-

@@ -4,12 +4,17 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 
 type HistoryItem = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   employeeRole: string;
+  decidedBy: string;
   type: string;
   startDate: string;
   endDate: string;
@@ -56,30 +61,57 @@ export default function CeoLeavesHistory() {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
+
     const load = async () => {
       setIsLoading(true);
       try {
         const res = await fetch("/api/leave-requests/history?scope=all", {
           headers: { Authorization: `Bearer ${token}` },
         });
+
         const data = await res.json().catch(() => ({}));
+
         if (res.ok) {
           setRows(
-            (data?.leaves ?? []).map((x: any) => {
+            (data?.leaves ?? []).map((x: {
+              id: string;
+              type?: string;
+              startDate?: string;
+              endDate?: string;
+              status?: string;
+              employee?: { firstName?: string; lastName?: string; profilePhotoUrl?: string; role?: string } | null;
+              decisions?: Array<{
+                createdAt?: string;
+                actor?: { firstName?: string; lastName?: string; role?: string } | null;
+              }>;
+            }) => {
               const startRaw = x.startDate ?? "";
               const endRaw = x.endDate ?? "";
               const start = formatDateDMY(startRaw);
               const end = formatDateDMY(endRaw);
               const emp = x.employee ?? {};
+
+              // NB: si x.decisions est vide, decidedAt sera "-" (évite "Invalid Date")
+              const decidedAtRaw = x.decisions?.[0]?.createdAt;
+              const decidedAt = decidedAtRaw ? formatDateDMY(decidedAtRaw) : "-";
+              const decidedBy =
+                `${x.decisions?.[0]?.actor?.firstName ?? ""} ${x.decisions?.[0]?.actor?.lastName ?? ""}`.trim() ||
+                x.decisions?.[0]?.actor?.role ||
+                "-";
+
               return {
                 id: x.id,
+                firstName: emp.firstName ?? "",
+                lastName: emp.lastName ?? "",
                 employeeName: `${emp.firstName ?? ""} ${emp.lastName ?? ""}`.trim() || "—",
+                profilePhotoUrl: emp.profilePhotoUrl ?? null,
                 employeeRole: emp.role ?? "—",
-                type: x.type,
+                decidedBy,
+                type: x.type ?? "—",
                 startDate: start,
                 endDate: end,
-                status: x.status,
-                decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
+                status: x.status ?? "—",
+                decidedAt,
                 days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
               };
             })
@@ -89,6 +121,7 @@ export default function CeoLeavesHistory() {
         setIsLoading(false);
       }
     };
+
     load();
   }, []);
 
@@ -98,9 +131,16 @@ export default function CeoLeavesHistory() {
         header: "Employé",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.employeeRole}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{row.original.employeeRole}</div>
+            </div>
           </div>
         ),
       },
@@ -125,6 +165,7 @@ export default function CeoLeavesHistory() {
           </span>
         ),
       },
+      { header: "Decide par", accessorKey: "decidedBy" },
       { header: "Décision", accessorKey: "decidedAt" },
     ],
     []
@@ -133,17 +174,16 @@ export default function CeoLeavesHistory() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique global des congés</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Toutes les demandes traitées par l'entreprise.</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Toutes les demandes traitées par l&apos;entreprise.</div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé..."
         onRefresh={() => window.location.reload()}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
-      ) : null}
+
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l&apos;historique...</div> : null}
     </div>
   );
 }

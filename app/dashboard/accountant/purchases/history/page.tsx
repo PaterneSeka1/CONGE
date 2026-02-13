@@ -4,11 +4,15 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 
 type HistoryItem = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   name: string;
   amount: number;
   date: string;
@@ -51,7 +55,10 @@ export default function AccountantPurchaseHistory() {
         setRows(
           (data?.decisions ?? []).map((d: any) => ({
             id: d.id,
+            firstName: d.purchaseRequest?.employee?.firstName ?? "",
+            lastName: d.purchaseRequest?.employee?.lastName ?? "",
             employeeName: `${d.purchaseRequest?.employee?.firstName ?? ""} ${d.purchaseRequest?.employee?.lastName ?? ""}`.trim(),
+            profilePhotoUrl: d.purchaseRequest?.employee?.profilePhotoUrl ?? null,
             name: d.purchaseRequest?.name ?? "",
             amount: d.purchaseRequest?.amount ?? 0,
             date: d.purchaseRequest?.date ?? "",
@@ -74,16 +81,27 @@ export default function AccountantPurchaseHistory() {
 
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
-      { header: "Employe", accessorKey: "employeeName" },
+      {
+        header: "Employé",
+        accessorKey: "employeeName",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div className="font-semibold">{row.original.employeeName}</div>
+          </div>
+        ),
+      },
       {
         header: "Demande",
         accessorKey: "name",
         cell: ({ row }) => (
           <div>
             <div className="font-semibold">{row.original.name}</div>
-            <div className="text-xs text-vdm-gold-700">
-              {row.original.items?.length ?? 0} article(s)
-            </div>
+            <div className="text-xs text-vdm-gold-700">{row.original.items?.length ?? 0} article(s)</div>
           </div>
         ),
       },
@@ -94,7 +112,7 @@ export default function AccountantPurchaseHistory() {
       },
       { header: "Date", accessorKey: "date", cell: ({ row }) => formatDateDMY(row.original.date) },
       {
-        header: "Decision",
+        header: "Décision",
         accessorKey: "decision",
         cell: ({ row }) => (
           <span className={`text-xs font-semibold ${decisionClass(row.original.decision)}`}>
@@ -103,7 +121,7 @@ export default function AccountantPurchaseHistory() {
         ),
       },
       { header: "Cible", accessorKey: "target", cell: ({ row }) => row.original.target ?? "-" },
-      { header: "Date decision", accessorKey: "decidedAt" },
+      { header: "Date de décision", accessorKey: "decidedAt" },
     ],
     []
   );
@@ -113,12 +131,7 @@ export default function AccountantPurchaseHistory() {
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des achats futurs</div>
       <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité de vos décisions.</div>
 
-      <DataTable
-        data={rows}
-        columns={columns}
-        searchPlaceholder="Rechercher une decision..."
-        onRefresh={load}
-      />
+      <DataTable data={rows} columns={columns} searchPlaceholder="Rechercher une décision..." onRefresh={load} />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement...</div> : null}
     </div>
   );

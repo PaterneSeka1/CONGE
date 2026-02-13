@@ -18,7 +18,7 @@ export default function Home() {
             href="/login"
             className="inline-flex items-center justify-center rounded-lg bg-vdm-gold-700 px-6 py-3 text-white font-semibold hover:bg-vdm-gold-800 transition"
           >
-            Aller à la page de connexion
+            Connexion
           </a>
         </div>
       </main>

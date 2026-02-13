@@ -17,7 +17,20 @@ type LeaveItem = {
 };
 
 const BASE_ALLOWANCE = 25;
-const MONTHS = ["Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Juil", "Aout", "Sept", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Fév",
+  "Mar",
+  "Avr",
+  "Mai",
+  "Juin",
+  "Juil",
+  "Août",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Déc",
+];
 
 function toUtcDay(value: string | undefined) {
   if (!value) return null;
@@ -52,11 +65,11 @@ function consumedDaysForYear(leaves: LeaveItem[], year: number) {
 function statusLabel(status: LeaveItem["status"]) {
   switch (status) {
     case "APPROVED":
-      return "VALIDE";
+      return "VALIDÉE";
     case "REJECTED":
-      return "REFUSE";
+      return "REFUSÉE";
     case "CANCELLED":
-      return "ANNULE";
+      return "ANNULÉE";
     default:
       return "EN ATTENTE";
   }
@@ -136,8 +149,8 @@ export default function EmployeeDashboard() {
     const lineData = MONTHS.map((name, idx) => ({ name, value: monthlyCounts[idx] }));
     const pieData = [
       { name: "En attente", value: pendingCount },
-      { name: "Validees", value: approvedCount },
-      { name: "Refusees", value: rejectedCount },
+      { name: "Validées", value: approvedCount },
+      { name: "Refusées", value: rejectedCount },
     ];
     const barData = [
       { name: "Demandes", value: yearLeaves.length },
@@ -146,8 +159,10 @@ export default function EmployeeDashboard() {
     ];
 
     const last = leaves[0];
-        const lastLabel = last
-      ? `${statusLabel(last.status)} - ${formatDateDMY(last.startDate)} - ${formatDateDMY(last.endDate)}`
+    const lastLabel = last
+      ? `${statusLabel(last.status)} - ${formatDateDMY(last.startDate)} - ${formatDateDMY(
+          last.endDate
+        )}`
       : "Aucune";
 
     return { balance, pendingCount, lastLabel, lineData, pieData, barData };
@@ -156,38 +171,40 @@ export default function EmployeeDashboard() {
   return (
     <RequireAuth>
       <RoleGate allow={["EMPLOYEE"]}>
-        <DashboardShell title="Dashboard Employe">
+        <DashboardShell title="Dashboard Employé">
           <div className="grid gap-6">
             <section className="grid gap-4 md:grid-cols-3">
               <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm text-vdm-gold-700">Solde conges</div>
+                  <div className="text-sm text-vdm-gold-700">Solde de congés</div>
                   <button
                     type="button"
                     onClick={refreshData}
                     className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
                   >
-                    Rafraichir
+                    Rafraîchir
                   </button>
                 </div>
                 <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.balance}</div>
-                <div className="text-xs text-gray-500 mt-2">Base annuelle: {baseAllowance} jours.</div>
+                <div className="text-xs text-gray-500 mt-2">Base annuelle : {baseAllowance} jours.</div>
               </div>
+
               <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
                 <div className="text-sm text-vdm-gold-700">Demandes en cours</div>
                 <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.pendingCount}</div>
                 <div className="text-xs text-gray-500 mt-2">En attente de validation.</div>
               </div>
+
               <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-                <div className="text-sm text-vdm-gold-700">Derniere demande</div>
+                <div className="text-sm text-vdm-gold-700">Dernière demande</div>
                 <div className="text-sm font-semibold text-vdm-gold-800 mt-3">{stats.lastLabel}</div>
-                <div className="text-xs text-gray-500 mt-2">Statut et periode.</div>
+                <div className="text-xs text-gray-500 mt-2">Statut et période.</div>
               </div>
             </section>
 
             <DashboardCharts
               title="Mes statistiques"
-              subtitle="Suivi de mes demandes de conge."
+              subtitle="Suivi de mes demandes de congé."
               lineData={stats.lineData}
               pieData={stats.pieData}
               barData={stats.barData}

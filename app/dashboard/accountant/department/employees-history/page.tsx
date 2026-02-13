@@ -32,14 +32,14 @@ export default function AccountantDeptEmployeesHistory() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">
-        Historique — Employés DAF
+        Historique — Employés du DAF
       </div>
       <div className="text-sm text-vdm-gold-700 mb-4">Entrées / sorties du département.</div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé..."
         onRefresh={() => window.location.reload()}
       />
     </div>

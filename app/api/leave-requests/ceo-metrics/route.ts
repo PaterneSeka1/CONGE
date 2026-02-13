@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
 
-  const { id: actorId, role } = authRes.auth;
+  const { role } = authRes.auth;
   if (role !== "CEO") return jsonError("Accès refusé", 403);
 
   const now = new Date();
@@ -33,7 +33,6 @@ export async function GET(req: Request) {
 
   const decisionsThisMonth = await prisma.leaveDecision.count({
     where: {
-      actorId,
       type: { in: ["APPROVE", "REJECT"] },
       createdAt: { gte: from, lt: to },
     },
@@ -41,7 +40,6 @@ export async function GET(req: Request) {
 
   const decisions = await prisma.leaveDecision.findMany({
     where: {
-      actorId,
       type: { in: ["APPROVE", "REJECT"] },
       createdAt: { gte: from, lt: to },
     },

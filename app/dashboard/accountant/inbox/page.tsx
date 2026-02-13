@@ -4,12 +4,16 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type Req = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   department?: string;
   period: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
@@ -19,7 +23,10 @@ type Req = {
 
 type HistoryItem = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   period: string;
   decision: "APPROVED" | "REJECTED" | "ESCALATED" | "CANCELLED";
   decidedAt: string;
@@ -51,6 +58,13 @@ function decisionClass(decision: HistoryItem["decision"]) {
   if (decision === "REJECTED") return "text-red-600";
   if (decision === "CANCELLED") return "text-gray-500";
   return "text-amber-700";
+}
+
+function originLabel(origin: Req["origin"]) {
+  if (origin === "DEPT_HEAD") return "Directeur des opérations";
+  if (origin === "SERVICE_HEAD") return "Directeur Adjoint";
+  if (origin === "EMPLOYEE") return "Employé";
+  return "Autre";
 }
 
 function toUtcDay(value: string | undefined) {
@@ -90,7 +104,10 @@ export default function AccountantInbox() {
           setRows(
             (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
+              firstName: x.employee?.firstName ?? "",
+              lastName: x.employee?.lastName ?? "",
               employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+              profilePhotoUrl: x.employee?.profilePhotoUrl ?? null,
               department: x.employee?.department?.type ?? x.employee?.department?.name ?? "",
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               status: x.status,
@@ -99,8 +116,8 @@ export default function AccountantInbox() {
                 x.employee?.role === "DEPT_HEAD"
                   ? "DEPT_HEAD"
                   : x.employee?.role === "SERVICE_HEAD"
-                    ? "SERVICE_HEAD"
-                    : "EMPLOYEE",
+                  ? "SERVICE_HEAD"
+                  : "EMPLOYEE",
             }))
           );
         }
@@ -125,7 +142,10 @@ export default function AccountantInbox() {
               const end = formatDateDMY(endRaw);
               return {
                 id: d.id,
+                firstName: d.leaveRequest?.employee?.firstName ?? "",
+                lastName: d.leaveRequest?.employee?.lastName ?? "",
                 employeeName: `${d.leaveRequest?.employee?.firstName ?? ""} ${d.leaveRequest?.employee?.lastName ?? ""}`.trim(),
+                profilePhotoUrl: d.leaveRequest?.employee?.profilePhotoUrl ?? null,
                 period: `${start} - ${end}`,
                 decision:
                   d.type === "APPROVE"
@@ -153,9 +173,7 @@ export default function AccountantInbox() {
 
   const departments = useMemo(
     () =>
-      Array.from(
-        new Set(rows.map((row) => row.department).filter((dept): dept is string => !!dept))
-      ).sort(),
+      Array.from(new Set(rows.map((row) => row.department).filter((dept): dept is string => !!dept))).sort(),
     [rows]
   );
 
@@ -176,12 +194,12 @@ export default function AccountantInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Conge valide.", { id: t });
+        toast.success("Congé validé.", { id: t });
       } else {
         toast.error("Erreur lors de la validation.", { id: t });
       }
     } catch {
-      toast.error("Erreur reseau lors de la validation.", { id: t });
+      toast.error("Erreur réseau lors de la validation.", { id: t });
     }
   };
 
@@ -197,19 +215,19 @@ export default function AccountantInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Conge refuse.", { id: t });
+        toast.success("Congé refusé.", { id: t });
       } else {
         toast.error("Erreur lors du refus.", { id: t });
       }
     } catch {
-      toast.error("Erreur reseau lors du refus.", { id: t });
+      toast.error("Erreur réseau lors du refus.", { id: t });
     }
   };
 
   const forwardToDeptHead = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const t = toast.loading("Transmission au responsable...");
+    const t = toast.loading("Transmission au directeur de département...");
     try {
       const res = await fetch(`/api/leave-requests/${id}/escalate`, {
         method: "POST",
@@ -218,12 +236,12 @@ export default function AccountantInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Demande transmise au responsable.", { id: t });
+        toast.success("Demande transmise au directeur de département.", { id: t });
       } else {
         toast.error("Erreur lors de la transmission.", { id: t });
       }
     } catch {
-      toast.error("Erreur reseau lors de la transmission.", { id: t });
+      toast.error("Erreur réseau lors de la transmission.", { id: t });
     }
   };
 
@@ -244,17 +262,31 @@ export default function AccountantInbox() {
         toast.error("Erreur lors de la transmission.", { id: t });
       }
     } catch {
-      toast.error("Erreur reseau lors de la transmission.", { id: t });
+      toast.error("Erreur réseau lors de la transmission.", { id: t });
     }
   };
 
   const historyColumns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
-      { header: "Employe", accessorKey: "employeeName" },
-      { header: "Periode", accessorKey: "period" },
+      {
+        id: "historyEmployee",
+        header: "Employé",
+        accessorKey: "employeeName",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div className="font-semibold">{row.original.employeeName}</div>
+          </div>
+        ),
+      },
+      { header: "Période", accessorKey: "period" },
       { header: "Jours", accessorKey: "days" },
       {
-        header: "Decision",
+        header: "Décision",
         accessorKey: "decision",
         cell: ({ row }) => (
           <span className={`text-xs font-semibold ${decisionClass(row.original.decision)}`}>
@@ -271,17 +303,24 @@ export default function AccountantInbox() {
   const columns = useMemo<ColumnDef<Req>[]>(
     () => [
       {
-        header: "Employe",
+        header: "Employé",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{row.original.note ?? ""}</div>
+            </div>
           </div>
         ),
       },
-      { header: "Departement", accessorKey: "department", enableSorting: true },
-      { header: "Periode", accessorKey: "period" },
+      { header: "Département", accessorKey: "department", enableSorting: true },
+      { header: "Période", accessorKey: "period" },
       {
         header: "Statut",
         accessorKey: "status",
@@ -294,6 +333,7 @@ export default function AccountantInbox() {
       {
         header: "Origine",
         accessorKey: "origin",
+        cell: ({ row }) => originLabel(row.original.origin),
       },
       {
         id: "actions",
@@ -302,33 +342,38 @@ export default function AccountantInbox() {
           const isDirector = row.original.origin === "DEPT_HEAD" || row.original.origin === "SERVICE_HEAD";
           return (
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => approve(row.original.id)}
+                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
+              >
+                Valider
+              </button>
+              <button
+                onClick={() => reject(row.original.id)}
+                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+              >
+                Refuser
+              </button>
               {isDirector ? (
-                <span className="text-xs text-vdm-gold-700">Transmission automatique au CEO</span>
+                <button
+                  onClick={() => forwardToCeo(row.original.id)}
+                  className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+                >
+                  Transmettre au CEO
+                </button>
               ) : (
                 <>
-                  <button
-                    onClick={() => approve(row.original.id)}
-                    className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-                  >
-                    Valider
-                  </button>
-                  <button
-                    onClick={() => reject(row.original.id)}
-                    className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-                  >
-                    Refuser
-                  </button>
                   <button
                     onClick={() => forwardToDeptHead(row.original.id)}
                     className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
                   >
-                    Transmettre departement
+                    Transmettre au directeur de département
                   </button>
                   <button
                     onClick={() => forwardToCeo(row.original.id)}
                     className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
                   >
-                    Transmettre CEO
+                    Transmettre au CEO
                   </button>
                 </>
               )}
@@ -344,18 +389,17 @@ export default function AccountantInbox() {
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        La comptable peut valider/refuser les demandes des employes. Les demandes des directeurs sont
-        transmises au CEO.
+        La comptable peut transmettre les demandes au directeur de département ou directement au CEO. Les demandes des responsables sont transmises au CEO.
       </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-vdm-gold-700">Filtrer par departement</div>
+        <div className="text-xs text-vdm-gold-700">Filtrer par département</div>
         <select
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className="w-full sm:max-w-xs rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
-          <option value="">Tous les departements</option>
+          <option value="">Tous les départements</option>
           {departments.map((dept) => (
             <option key={dept} value={dept}>
               {dept}
@@ -370,24 +414,18 @@ export default function AccountantInbox() {
         searchPlaceholder="Rechercher une demande..."
         onRefresh={() => window.location.reload()}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
 
       <div className="mt-8">
-        <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique des decisions</div>
-        <div className="text-sm text-vdm-gold-700 mb-4">
-          Tracabilite des validations et transmissions.
-        </div>
+        <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique des décisions</div>
+        <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité des validations et transmissions.</div>
         <DataTable
           data={historyRows}
           columns={historyColumns}
-          searchPlaceholder="Rechercher une decision..."
+          searchPlaceholder="Rechercher une décision..."
           onRefresh={() => window.location.reload()}
         />
-        {isHistoryLoading ? (
-          <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
-        ) : null}
+        {isHistoryLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div> : null}
       </div>
     </div>
   );

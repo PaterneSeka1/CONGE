@@ -21,11 +21,9 @@ export function isFinalStatus(status: string) {
 }
 
 export async function findActiveEmployeeByRole(role: string, departmentId?: string | null) {
-  const roleFilter =
-    role === "DEPT_HEAD" ? { in: ["DEPT_HEAD", "SERVICE_HEAD"] } : (role as any);
   return prisma.employee.findFirst({
     where: {
-      role: roleFilter as any,
+      role: role as any,
       status: "ACTIVE",
       ...(departmentId ? { departmentId } : {}),
     },

@@ -136,9 +136,7 @@ export default function AccountantRequests() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes (Comptable)</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">
-        Suivez l'état de vos demandes en cours.
-      </div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Suivez l'état de vos demandes en cours.</div>
 
       <DataTable
         data={items}
@@ -146,10 +144,7 @@ export default function AccountantRequests() {
         searchPlaceholder="Rechercher une demande..."
         onRefresh={() => window.location.reload()}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
     </div>
   );
 }
-  

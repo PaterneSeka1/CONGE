@@ -5,6 +5,7 @@ import { getEmployee, getToken } from "@/lib/auth-client";
 import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
 import { adjacencyGraphs, dictionary as commonDictionary } from "@zxcvbn-ts/language-common";
 import { dictionary as frDictionary } from "@zxcvbn-ts/language-fr";
+import { isCompletePhone } from "@/lib/phone";
 
 zxcvbnOptions.setOptions({
   graphs: adjacencyGraphs,
@@ -16,15 +17,69 @@ zxcvbnOptions.setOptions({
 
 type EditableEmployee = ReturnType<typeof getEmployee> & {
   jobTitle?: string | null;
-  phone?: string | null;
 };
+type DepartmentListResponse = {
+  departments?: Array<{ id: string; name?: string; type?: string }>;
+};
+const MAX_PROFILE_PHOTO_SIZE_BYTES = 2 * 1024 * 1024;
+
+function parsePhone(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+  if (raw.startsWith("+ ")) {
+    const local = raw.slice(2).replace(/\D/g, "").slice(0, 12);
+    return { country: "", local };
+  }
+  if (raw.startsWith("+")) {
+    const body = raw.slice(1);
+    const sep = body.indexOf(" ");
+    if (sep === -1) {
+      const country = body.replace(/\D/g, "").slice(0, 3);
+      return { country, local: "" };
+    }
+    const country = body.slice(0, sep).replace(/\D/g, "").slice(0, 3);
+    const local = body.slice(sep + 1).replace(/\D/g, "").slice(0, 12);
+    return { country, local };
+  }
+  if (raw.startsWith("00")) {
+    const body = raw.slice(2);
+    const country = body.replace(/\D/g, "").slice(0, 3);
+    const local = body.slice(country.length).replace(/\D/g, "").slice(0, 12);
+    return { country, local };
+  }
+  return { country: "225", local: raw.replace(/\D/g, "").slice(0, 12) };
+}
+
+function formatLocalPhone(local: string) {
+  const pairs = local.match(/.{1,2}/g);
+  return pairs ? pairs.join(" ") : "";
+}
+
+function composePhone(country: string, local: string) {
+  const c = country.replace(/\D/g, "").slice(0, 3);
+  const l = local.replace(/\D/g, "").slice(0, 12);
+  const formattedLocal = formatLocalPhone(l);
+  if (!c) return formattedLocal ? `+ ${formattedLocal}` : "+";
+  return formattedLocal ? `+${c} ${formattedLocal}` : `+${c}`;
+}
+
+function roleLabel(role?: string | null) {
+  if (!role) return "—";
+  if (role === "DEPT_HEAD") return "Directeur de Département";
+  if (role === "SERVICE_HEAD") return "Directeur Adjoint";
+  if (role === "ACCOUNTANT") return "Comptable";
+  if (role === "CEO") return "PDG";
+  if (role === "EMPLOYEE") return "Employé";
+  return role;
+}
 
 export default function ProfileView() {
   const employee = useMemo(() => getEmployee() as EditableEmployee | null, []);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<EditableEmployee | null>(employee);
+  const [isPhotoPreviewOpen, setIsPhotoPreviewOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
 
   const pw = useMemo(() => {
@@ -56,10 +111,10 @@ export default function ProfileView() {
       const res = await fetch("/api/departments", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as DepartmentListResponse;
       if (res.ok) {
         const map: Record<string, string> = {};
-        (data?.departments ?? []).forEach((d: any) => {
+        (data?.departments ?? []).forEach((d) => {
           map[d.id] = d.name ?? d.type ?? d.id;
         });
         setDepartmentNames(map);
@@ -68,6 +123,15 @@ export default function ProfileView() {
     loadDepartments();
   }, []);
 
+  useEffect(() => {
+    if (!isPhotoPreviewOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsPhotoPreviewOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPhotoPreviewOpen]);
+
   if (!employee || !draft) {
     return (
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
@@ -75,12 +139,38 @@ export default function ProfileView() {
       </div>
     );
   }
+  const phone = parsePhone(draft.phone);
 
   const cancelEdit = () => {
     setDraft(employee);
     setPassword("");
     setPasswordError(null);
+    setPhotoError(null);
     setIsEditing(false);
+  };
+
+  const onProfilePhotoChange = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Le fichier doit etre une image.");
+      return;
+    }
+    if (file.size > MAX_PROFILE_PHOTO_SIZE_BYTES) {
+      setPhotoError("Image trop lourde (max 2 Mo).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      if (!result.startsWith("data:image/")) {
+        setPhotoError("Format d'image invalide.");
+        return;
+      }
+      setPhotoError(null);
+      setDraft((prev) => (prev ? { ...prev, profilePhotoUrl: result } : prev));
+    };
+    reader.onerror = () => setPhotoError("Erreur lors du chargement de l'image.");
+    reader.readAsDataURL(file);
   };
 
   const saveEdit = async () => {
@@ -94,7 +184,12 @@ export default function ProfileView() {
         return;
       }
     }
+    if (draft.phone && !isCompletePhone(draft.phone)) {
+      setPasswordError("Numero invalide. Format attendu: +225 00 00 00 00 00 (indicatif modifiable)");
+      return;
+    }
     setPasswordError(null);
+    setPhotoError(null);
     const token = getToken();
     if (!token) return;
 
@@ -102,6 +197,9 @@ export default function ProfileView() {
       firstName: draft.firstName,
       lastName: draft.lastName,
       jobTitle: draft.jobTitle ?? null,
+      phone: draft.phone ?? null,
+      profilePhotoUrl: draft.profilePhotoUrl ?? null,
+      fullAddress: draft.fullAddress ?? null,
     };
     if (password) payload.password = password;
 
@@ -122,6 +220,36 @@ export default function ProfileView() {
 
   return (
     <div className="bg-white border border-vdm-gold-200 rounded-xl p-6">
+      <div className="flex items-center gap-4 mb-5 pb-4 border-b border-vdm-gold-100">
+        {draft.profilePhotoUrl ? (
+          <button
+            type="button"
+            onClick={() => setIsPhotoPreviewOpen(true)}
+            className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            aria-label="Agrandir la photo de profil"
+          >
+            <img
+              src={draft.profilePhotoUrl}
+              alt="Photo de profil"
+              className="h-16 w-16 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
+            />
+          </button>
+        ) : (
+          <div className="h-16 w-16 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center font-semibold">
+            {(draft.firstName?.[0] ?? "").toUpperCase()}
+            {(draft.lastName?.[0] ?? "").toUpperCase()}
+          </div>
+        )}
+        <div>
+          <div className="text-sm font-semibold text-vdm-gold-900">Photo de profil</div>
+          <div className="text-xs text-vdm-gold-700">
+            {draft.profilePhotoUrl && draft.fullAddress && draft.phone
+              ? "Profil complet."
+              : "Photo, adresse precise et numero de telephone obligatoires."}
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <div className="text-lg font-semibold text-vdm-gold-800">Informations du compte</div>
@@ -152,6 +280,34 @@ export default function ProfileView() {
         )}
       </div>
 
+      {isPhotoPreviewOpen && draft.profilePhotoUrl ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          onClick={() => setIsPhotoPreviewOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Aperçu de la photo de profil"
+        >
+          <div
+            className="relative w-full max-w-3xl rounded-xl overflow-hidden bg-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsPhotoPreviewOpen(false)}
+              className="absolute right-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xs text-vdm-gold-900 border border-vdm-gold-200 hover:bg-white"
+            >
+              Fermer
+            </button>
+            <img
+              src={draft.profilePhotoUrl}
+              alt="Aperçu agrandi de la photo de profil"
+              className="w-full max-h-[85vh] object-contain bg-black"
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <div className="text-xs text-vdm-gold-600">Prénom</div>
@@ -181,6 +337,44 @@ export default function ProfileView() {
           <div className="text-xs text-vdm-gold-600">Email</div>
           <div className="text-sm text-vdm-gold-900 font-medium">{draft.email}</div>
         </div>
+        <div className="md:col-span-2">
+          <div className="text-xs text-vdm-gold-600">Photo de profil (upload image)</div>
+          {isEditing ? (
+            <div className="space-y-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onProfilePhotoChange(e.target.files?.[0] ?? null)}
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setDraft({ ...draft, profilePhotoUrl: null })}
+                className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs hover:bg-red-50"
+              >
+                Supprimer la photo
+              </button>
+              {photoError ? <div className="text-xs text-red-600">{photoError}</div> : null}
+            </div>
+          ) : (
+            <div className="text-sm text-vdm-gold-900 font-medium">
+              {draft.profilePhotoUrl ? "Photo chargee" : "—"}
+            </div>
+          )}
+        </div>
+        <div className="md:col-span-2">
+          <div className="text-xs text-vdm-gold-600">Adresse precise</div>
+          {isEditing ? (
+            <input
+              value={draft.fullAddress ?? ""}
+              onChange={(e) => setDraft({ ...draft, fullAddress: e.target.value })}
+              placeholder="Rue, ville, code postal, pays"
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            />
+          ) : (
+            <div className="text-sm text-vdm-gold-900 font-medium">{draft.fullAddress ?? "—"}</div>
+          )}
+        </div>
         <div>
           <div className="text-xs text-vdm-gold-600">Matricule</div>
           <div className="text-sm text-vdm-gold-900 font-medium">{draft.matricule ?? "—"}</div>
@@ -200,18 +394,33 @@ export default function ProfileView() {
         <div>
           <div className="text-xs text-vdm-gold-600">Téléphone</div>
           {isEditing ? (
-            <input
-              value={draft.phone ?? ""}
-              onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
+            <div className="flex gap-2">
+              <div className="w-24">
+                <input
+                  value={phone.country ? `+${phone.country}` : "+"}
+                  onChange={(e) => {
+                    const nextCountry = e.target.value.replace(/\D/g, "").slice(0, 3);
+                    setDraft({ ...draft, phone: composePhone(nextCountry, phone.local) });
+                  }}
+                  placeholder="+225"
+                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </div>
+              <input
+                value={formatLocalPhone(phone.local)}
+                onChange={(e) => setDraft({ ...draft, phone: composePhone(phone.country, e.target.value) })}
+                placeholder="00 00 00 00 00"
+                inputMode="numeric"
+                className="flex-1 border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              />
+            </div>
           ) : (
             <div className="text-sm text-vdm-gold-900 font-medium">{draft.phone ?? "—"}</div>
           )}
         </div>
         <div>
           <div className="text-xs text-vdm-gold-600">Rôle</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">{draft.role}</div>
+          <div className="text-sm text-vdm-gold-900 font-medium">{roleLabel(draft.role)}</div>
         </div>
         <div>
           <div className="text-xs text-vdm-gold-600">Statut</div>

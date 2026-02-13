@@ -20,7 +20,21 @@ type PendingLeave = {
 };
 
 const BASE_ALLOWANCE = 25;
-const MONTHS = ["Jan", "Fev", "Mar", "Avr", "Mai", "Juin", "Juil", "Aout", "Sept", "Oct", "Nov", "Dec"];
+
+const MONTHS = [
+  "Jan",
+  "Fév",
+  "Mar",
+  "Avr",
+  "Mai",
+  "Juin",
+  "Juil",
+  "Août",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Déc",
+];
 
 function toUtcDay(value: string | undefined) {
   if (!value) return null;
@@ -34,18 +48,25 @@ function overlapDaysInYear(start: string, end: string, year: number) {
   const endUtc = toUtcDay(end);
   if (startUtc == null || endUtc == null) return 0;
   if (endUtc < startUtc) return 0;
+
   const yearStart = Date.UTC(year, 0, 1);
   const yearEnd = Date.UTC(year, 11, 31);
+
   const s = Math.max(startUtc, yearStart);
   const e = Math.min(endUtc, yearEnd);
   if (s > e) return 0;
+
   return Math.floor((e - s) / 86400000) + 1;
 }
 
 function consumedDaysForYear(leaves: LeaveItem[], year: number) {
   let total = 0;
   for (const leave of leaves) {
-    if (leave.status === "APPROVED" || leave.status === "PENDING" || leave.status === "SUBMITTED") {
+    if (
+      leave.status === "APPROVED" ||
+      leave.status === "PENDING" ||
+      leave.status === "SUBMITTED"
+    ) {
       total += overlapDaysInYear(leave.startDate, leave.endDate, year);
     }
   }
@@ -64,9 +85,15 @@ export default function DsiDashboard() {
     if (!token) return;
 
     const [myRes, pendingRes, employeesRes] = await Promise.all([
-      fetch("/api/leave-requests/my", { headers: { Authorization: `Bearer ${token}` } }),
-      fetch("/api/leave-requests/pending", { headers: { Authorization: `Bearer ${token}` } }),
-      fetch("/api/admin/employees/pending", { headers: { Authorization: `Bearer ${token}` } }),
+      fetch("/api/leave-requests/my", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch("/api/leave-requests/pending", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch("/api/admin/employees/pending", {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     ]);
 
     const myData = await myRes.json().catch(() => ({}));
@@ -85,6 +112,7 @@ export default function DsiDashboard() {
 
   useEffect(() => {
     let active = true;
+
     const load = async () => {
       if (!active) return;
       await refreshData();
@@ -92,12 +120,16 @@ export default function DsiDashboard() {
 
     load();
     const intervalId = setInterval(load, 30000);
+
     const onVisible = () => {
       if (document.visibilityState === "visible") load();
     };
+
     const onUpdated = () => load();
+
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("leave-requests-updated", onUpdated);
+
     return () => {
       active = false;
       clearInterval(intervalId);
@@ -108,6 +140,7 @@ export default function DsiDashboard() {
 
   const stats = useMemo(() => {
     const year = new Date().getFullYear();
+
     let approvedDays = 0;
     let pendingCount = 0;
     let approvedCount = 0;
@@ -116,11 +149,18 @@ export default function DsiDashboard() {
     const monthlyCounts = Array.from({ length: 12 }, () => 0);
 
     for (const leave of leaves) {
-      if (leave.status === "PENDING" || leave.status === "SUBMITTED") pendingCount += 1;
+      if (leave.status === "PENDING" || leave.status === "SUBMITTED")
+        pendingCount += 1;
+
       if (leave.status === "APPROVED") {
         approvedCount += 1;
-        approvedDays += overlapDaysInYear(leave.startDate, leave.endDate, year);
+        approvedDays += overlapDaysInYear(
+          leave.startDate,
+          leave.endDate,
+          year
+        );
       }
+
       if (leave.status === "REJECTED") rejectedCount += 1;
 
       const d = new Date(leave.createdAt);
@@ -134,14 +174,17 @@ export default function DsiDashboard() {
 
     return {
       balance,
-      lineData: MONTHS.map((name, idx) => ({ name, value: monthlyCounts[idx] })),
+      lineData: MONTHS.map((name, idx) => ({
+        name,
+        value: monthlyCounts[idx],
+      })),
       pieData: [
         { name: "En attente", value: pendingCount },
-        { name: "Approuvees", value: approvedCount },
-        { name: "Refusees", value: rejectedCount },
+        { name: "Approuvées", value: approvedCount },
+        { name: "Refusées", value: rejectedCount },
       ],
       barData: [
-        { name: "Inbox", value: pendingLeaves.length },
+        { name: "Boîte de réception", value: pendingLeaves.length },
         { name: "Comptes", value: pendingEmployees.length },
         { name: "Solde", value: balance },
       ],
@@ -154,41 +197,59 @@ export default function DsiDashboard() {
         <div className="text-xl font-semibold text-vdm-gold-800">
           Bonjour {employee?.firstName ?? ""} {employee?.lastName ?? ""}
         </div>
-        <div className="text-sm text-vdm-gold-700">Vous etes connecte en tant que DSI (Admin).</div>
+        <div className="text-sm text-vdm-gold-700">
+          Vous êtes connecté en tant que DSI (Administrateur).
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-sm text-vdm-gold-700">Solde de conge</div>
+            <div className="text-sm text-vdm-gold-700">
+              Solde de congés
+            </div>
             <button
               type="button"
               onClick={refreshData}
               className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
             >
-              Rafraichir
+              Rafraîchir
             </button>
           </div>
-          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.balance} jours</div>
-          <div className="text-xs text-gray-500 mt-2">Base annuelle: {baseAllowance} jours.</div>
+          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
+            {stats.balance} jours
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            Base annuelle : {baseAllowance} jours.
+          </div>
         </div>
 
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">A traiter</div>
-          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{pendingLeaves.length}</div>
-          <div className="text-xs text-gray-500 mt-2">Demandes transmises par la comptable.</div>
+          <div className="text-sm text-vdm-gold-700">À traiter</div>
+          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
+            {pendingLeaves.length}
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            Demandes transmises par la comptable.
+          </div>
         </div>
 
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">Comptes en attente</div>
-          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{pendingEmployees.length}</div>
-          <div className="text-xs text-gray-500 mt-2">Validation des nouveaux employes.</div>
+          <div className="text-sm text-vdm-gold-700">
+            Comptes en attente
+          </div>
+          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
+            {pendingEmployees.length}
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            Validation des nouveaux employés.
+          </div>
         </div>
       </div>
 
       <DashboardCharts
         title="Indicateurs DSI"
-        subtitle="Synthese des demandes et comptes."
+        subtitle="Synthèse des demandes et des comptes."
         lineData={stats.lineData}
         pieData={stats.pieData}
         barData={stats.barData}

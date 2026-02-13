@@ -119,6 +119,7 @@
     services: {
       information: { id: string };
       reputation: { id: string };
+      qualite: { id: string };
     };
   }) {
     const firstNames = [
@@ -158,6 +159,12 @@
         serviceId = params.services.reputation.id;
         matriculePrefix = "OPS-REP";
         emailPrefix = "rep";
+      } else if (i <= 80) {
+        // OPERATIONS - QUALITE
+        departmentId = params.departments.ops.id;
+        serviceId = params.services.qualite.id;
+        matriculePrefix = "OPS-QLT";
+        emailPrefix = "qualite";
       } else if (i <= 85) {
         // DSI
         departmentId = params.departments.dsi.id;
@@ -200,6 +207,7 @@
     // 2) Services OPERATIONS
     const infoSvc = await ensureService(ops.id, "INFORMATION", "Service Information");
     const repSvc = await ensureService(ops.id, "REPUTATION", "Service Réputation");
+    const quaSvc = await ensureService(ops.id, "QUALITE", "Service Qualité");
 
     // 3) Comptes bootstrap (ACTIVE)
     const adminEmail = envOr("SEED_ADMIN_EMAIL", "admin.dsi@local.test");
@@ -218,7 +226,7 @@
     const opsDirectorEmail = envOr("SEED_OPS_DIRECTOR_EMAIL", "directeur.ops@local.test");
     const opsDirectorMat = envOr("SEED_OPS_DIRECTOR_MATRICULE", "OPS-DIR-001");
     const opsDirectorPass = envOr("SEED_OPS_DIRECTOR_PASSWORD", "Passw0rd!");
-    // Responsables de service (SERVICE_HEAD) + ACTIVE
+    // Directeurs adjoints (SERVICE_HEAD) + ACTIVE
     const infoHeadEmail = envOr("SEED_INFO_HEAD_EMAIL", "responsable.info@local.test");
     const infoHeadMat = envOr("SEED_INFO_HEAD_MATRICULE", "OPS-INF-RESP-001");
     const infoHeadPass = envOr("SEED_INFO_HEAD_PASSWORD", "Passw0rd!");
@@ -226,6 +234,10 @@
     const repHeadEmail = envOr("SEED_REP_HEAD_EMAIL", "responsable.rep@local.test");
     const repHeadMat = envOr("SEED_REP_HEAD_MATRICULE", "OPS-REP-RESP-001");
     const repHeadPass = envOr("SEED_REP_HEAD_PASSWORD", "Passw0rd!");
+
+    const quaHeadEmail = envOr("SEED_QUA_HEAD_EMAIL", "responsable.qualite@local.test");
+    const quaHeadMat = envOr("SEED_QUA_HEAD_MATRICULE", "OPS-QLT-RESP-001");
+    const quaHeadPass = envOr("SEED_QUA_HEAD_PASSWORD", "Passw0rd!");
 
 
     // Admin DSI (role=DEPT_HEAD) + ACTIVE
@@ -278,31 +290,44 @@
       jobTitle: "Directeur des opérations",
     });
 
-    // Responsables de service (SERVICE_HEAD) + ACTIVE
+    // Directeurs adjoints (SERVICE_HEAD) + ACTIVE
     const infoHead = await ensureEmployee({
       email: infoHeadEmail,
       matricule: infoHeadMat,
-      firstName: "Responsable",
+      firstName: "Directeur",
       lastName: "Information",
       passwordPlain: infoHeadPass,
       role: "SERVICE_HEAD",
       status: "ACTIVE",
       departmentId: ops.id,
       serviceId: infoSvc.id,
-      jobTitle: "Responsable Service Information",
+      jobTitle: "Directeur Adjoint Information",
     });
 
     const repHead = await ensureEmployee({
       email: repHeadEmail,
       matricule: repHeadMat,
-      firstName: "Responsable",
+      firstName: "Directeur",
       lastName: "Réputation",
       passwordPlain: repHeadPass,
       role: "SERVICE_HEAD",
       status: "ACTIVE",
       departmentId: ops.id,
       serviceId: repSvc.id,
-      jobTitle: "Responsable Service Réputation",
+      jobTitle: "Directeur Adjoint Réputation",
+    });
+
+    await ensureEmployee({
+      email: quaHeadEmail,
+      matricule: quaHeadMat,
+      firstName: "Directeur",
+      lastName: "Qualité",
+      passwordPlain: quaHeadPass,
+      role: "SERVICE_HEAD",
+      status: "ACTIVE",
+      departmentId: ops.id,
+      serviceId: quaSvc.id,
+      jobTitle: "Directeur Adjoint Qualité",
     });
 
     // 4) Responsabilité active DSI pour l’admin
@@ -313,21 +338,22 @@
     //   total: 100,
     //   passwordPlain: "Passw0rd!",
     //   departments: { daf, dsi, ops, oth },
-    //   services: { information: infoSvc, reputation: repSvc },
+    //   services: { information: infoSvc, reputation: repSvc, qualite: quaSvc },
     // });
 
   
 
     console.log("Seed OK ✅");
     console.log("Departments:", { daf: daf.id, dsi: dsi.id, ops: ops.id, oth: oth.id });
-    console.log("Services(OPS):", { information: infoSvc.id, reputation: repSvc.id });
+    console.log("Services(OPS):", { information: infoSvc.id, reputation: repSvc.id, qualite: quaSvc.id });
     console.log("Users:");
     console.log(" - Admin DSI:", { email: adminEmail, matricule: adminMat, role: "DEPT_HEAD" });
     console.log(" - Comptable:", { email: accountantEmail, matricule: accountantMat, role: "ACCOUNTANT" });
     console.log(" - PDG:", { email: ceoEmail, matricule: ceoMat, role: "CEO" });
     console.log(" - Directeur des opérations:", { email: opsDirectorEmail, matricule: opsDirectorMat, role: "DEPT_HEAD" });
-    console.log(" - Responsable service Information:", { email: infoHeadEmail, matricule: infoHeadMat, role: "SERVICE_HEAD" });
-    console.log(" - Responsable service Réputation:", { email: repHeadEmail, matricule: repHeadMat, role: "SERVICE_HEAD" });
+    console.log(" - Directeur Adjoint Information:", { email: infoHeadEmail, matricule: infoHeadMat, role: "SERVICE_HEAD" });
+    console.log(" - Directeur Adjoint Réputation:", { email: repHeadEmail, matricule: repHeadMat, role: "SERVICE_HEAD" });
+    console.log(" - Directeur Adjoint Qualité:", { email: quaHeadEmail, matricule: quaHeadMat, role: "SERVICE_HEAD" });
     // console.log(" - Employés génériques: 100 x", { emailPattern: "<email_prefix>.user<id>@local.test" });
   }
 

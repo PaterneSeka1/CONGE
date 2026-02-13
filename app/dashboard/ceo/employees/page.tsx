@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
@@ -11,6 +12,7 @@ type EmployeeRow = {
   firstName: string;
   lastName: string;
   email: string;
+  profilePhotoUrl?: string | null;
   matricule?: string | null;
   jobTitle?: string | null;
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
@@ -18,6 +20,14 @@ type EmployeeRow = {
   leaveBalance?: number;
   departmentId?: string | null;
   serviceId?: string | null;
+};
+
+const roleLabel: Record<EmployeeRow["role"], string> = {
+  CEO: "DG",
+  ACCOUNTANT: "Comptable",
+  DEPT_HEAD: "Directeur des opérations",
+  SERVICE_HEAD: "Directeur Adjoint",
+  EMPLOYEE: "Employé",
 };
 
 export default function CeoEmployees() {
@@ -45,13 +55,12 @@ export default function CeoEmployees() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [serviceFilter, setServiceFilter] = useState("ALL");
+
   const selectedDeptType = useMemo(
-    () =>
-      editForm.departmentId
-        ? String(departments[editForm.departmentId] ?? "")
-        : "",
+    () => (editForm.departmentId ? String(departments[editForm.departmentId] ?? "") : ""),
     [editForm.departmentId, departments]
   );
+
   const showServiceField = selectedDeptType === "OPERATIONS";
 
   useEffect(() => {
@@ -81,9 +90,7 @@ export default function CeoEmployees() {
         if (res.ok) {
           const next = data?.employee?.leaveBalance;
           setRows((prev) =>
-            prev.map((r) =>
-              r.id === id ? { ...r, leaveBalance: next ?? r.leaveBalance } : r
-            )
+            prev.map((r) => (r.id === id ? { ...r, leaveBalance: next ?? r.leaveBalance } : r))
           );
           toast.success("Solde mis à jour.", { id: t });
         } else {
@@ -146,7 +153,7 @@ export default function CeoEmployees() {
     if (!selectedEmployee) return;
     const token = getToken();
     if (!token) return;
-    const t = toast.loading("Mise a jour...");
+    const t = toast.loading("Mise à jour...");
     try {
       const res = await fetch(`/api/employees/${selectedEmployee.id}`, {
         method: "PUT",
@@ -168,46 +175,43 @@ export default function CeoEmployees() {
         setRows((prev) =>
           prev.map((r) => (r.id === selectedEmployee.id ? { ...r, ...data.employee } : r))
         );
-        toast.success("Utilisateur modifie.", { id: t });
+        toast.success("Utilisateur modifié.", { id: t });
       } else {
-        toast.error(data?.error || "Erreur lors de la mise a jour.", { id: t });
+        toast.error(data?.error || "Erreur lors de la mise à jour.", { id: t });
       }
     } catch {
-      toast.error("Erreur reseau.", { id: t });
+      toast.error("Erreur réseau.", { id: t });
     }
-  }, [editForm, selectedEmployee, closeEditModal]);
+  }, [editForm, selectedEmployee]);
 
-  const deleteEmployee = useCallback(
-    async (employee: EmployeeRow) => {
-      if (employee.role === "CEO") {
-        toast.error("Impossible de supprimer un compte CEO.");
-        return;
+  const deleteEmployee = useCallback(async (employee: EmployeeRow) => {
+    if (employee.role === "CEO") {
+      toast.error("Impossible de supprimer un compte CEO.");
+      return;
+    }
+    const ok = window.confirm(
+      `Supprimer ${employee.firstName} ${employee.lastName} — Cette action est irréversible.`
+    );
+    if (!ok) return;
+    const token = getToken();
+    if (!token) return;
+    const t = toast.loading("Suppression en cours...");
+    try {
+      const res = await fetch(`/api/employees/${employee.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setRows((prev) => prev.filter((r) => r.id !== employee.id));
+        toast.success("Utilisateur supprimé.", { id: t });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.error || "Erreur lors de la suppression.", { id: t });
       }
-      const ok = window.confirm(
-        `Supprimer ${employee.firstName} ${employee.lastName} - Cette action est irreversible.`
-      );
-      if (!ok) return;
-      const token = getToken();
-      if (!token) return;
-      const t = toast.loading("Suppression en cours...");
-      try {
-        const res = await fetch(`/api/employees/${employee.id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          setRows((prev) => prev.filter((r) => r.id !== employee.id));
-          toast.success("Utilisateur supprime.", { id: t });
-        } else {
-          const data = await res.json().catch(() => ({}));
-          toast.error(data?.error || "Erreur lors de la suppression.", { id: t });
-        }
-      } catch {
-        toast.error("Erreur reseau.", { id: t });
-      }
-    },
-    []
-  );
+    } catch {
+      toast.error("Erreur réseau.", { id: t });
+    }
+  }, []);
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
@@ -225,23 +229,34 @@ export default function CeoEmployees() {
     () => [
       {
         id: "employee",
-        header: "Employe",
+        header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">
-              {row.original.firstName} {row.original.lastName}
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">
+                {row.original.firstName} {row.original.lastName}
+              </div>
+              <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
             </div>
-            <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
           </div>
         ),
       },
       { header: "Email", accessorKey: "email" },
       { header: "Poste", accessorKey: "jobTitle" },
-      { header: "Role", accessorKey: "role" },
+      {
+        header: "Rôle",
+        accessorKey: "role",
+        cell: ({ row }) => roleLabel[row.original.role] ?? row.original.role,
+      },
       { header: "Statut", accessorKey: "status" },
       {
-        header: "Departement",
+        header: "Département",
         accessorFn: (row) => departments[row.departmentId ?? ""] ?? "-",
         cell: ({ row }) => departments[row.original.departmentId ?? ""] ?? "-",
       },
@@ -270,7 +285,7 @@ export default function CeoEmployees() {
               onClick={() => resetBalance(row.original.id)}
               className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
             >
-              Reinitialiser
+              Réinitialiser
             </button>
             <button
               onClick={() => openEditModal(row.original)}
@@ -325,6 +340,7 @@ export default function CeoEmployees() {
           firstName: e.firstName,
           lastName: e.lastName,
           email: e.email,
+          profilePhotoUrl: e.profilePhotoUrl ?? null,
           matricule: e.matricule,
           jobTitle: e.jobTitle,
           role: e.role ?? "EMPLOYEE",
@@ -345,8 +361,10 @@ export default function CeoEmployees() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Tous les employes</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Filtrer par departement, role, statut ou service.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Tous les employés</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">
+        Filtrer par département, rôle, statut ou service.
+      </div>
 
       <div className="grid gap-3 md:grid-cols-4 mb-4">
         <select
@@ -354,7 +372,7 @@ export default function CeoEmployees() {
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
-          <option value="ALL">Tous les departements</option>
+          <option value="ALL">Tous les départements</option>
           <option value="DSI">DSI</option>
           <option value="DAF">DAF</option>
           <option value="OPERATIONS">OPERATIONS</option>
@@ -366,10 +384,10 @@ export default function CeoEmployees() {
           onChange={(e) => setRoleFilter(e.target.value)}
           className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
-          <option value="ALL">Tous les roles</option>
+          <option value="ALL">Tous les rôles</option>
           <option value="EMPLOYEE">EMPLOYEE</option>
           <option value="DEPT_HEAD">DEPT_HEAD</option>
-          <option value="SERVICE_HEAD">SERVICE_HEAD</option>
+          <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
           <option value="ACCOUNTANT">ACCOUNTANT</option>
           <option value="CEO">CEO</option>
         </select>
@@ -393,6 +411,7 @@ export default function CeoEmployees() {
           <option value="ALL">Tous les services</option>
           <option value="INFORMATION">INFORMATION</option>
           <option value="REPUTATION">REPUTATION</option>
+          <option value="QUALITE">QUALITE</option>
           <option value="NONE">Aucun</option>
         </select>
       </div>
@@ -400,12 +419,10 @@ export default function CeoEmployees() {
       <DataTable
         data={filteredRows}
         columns={columns}
-        searchPlaceholder="Rechercher un employe..."
+        searchPlaceholder="Rechercher un employé..."
         onRefresh={loadEmployees}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employes...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
 
       {isBalanceModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -414,13 +431,13 @@ export default function CeoEmployees() {
             <div className="text-lg font-semibold text-vdm-gold-800">Augmenter le solde</div>
             <div className="text-sm text-vdm-gold-700 mt-1">
               {selectedEmployee
-                ? `Employe : ${selectedEmployee.firstName} ${selectedEmployee.lastName}`
-                : "Employe selectionne"}
+                ? `Employé : ${selectedEmployee.firstName} ${selectedEmployee.lastName}`
+                : "Employé sélectionné"}
             </div>
 
             <div className="mt-4">
               <label className="block text-sm font-medium text-vdm-gold-800 mb-1">
-                Nombre de jours a ajouter
+                Nombre de jours à ajouter
               </label>
               <input
                 type="number"
@@ -429,7 +446,7 @@ export default function CeoEmployees() {
                 value={balanceInput}
                 onChange={(e) => setBalanceInput(e.target.value)}
                 className="w-full border border-vdm-gold-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Ex: 3"
+                placeholder="Ex : 3"
               />
             </div>
 
@@ -455,11 +472,9 @@ export default function CeoEmployees() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/40" onClick={closeEditModal} />
           <div className="relative w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg">
-            <div className="text-lg font-semibold text-vdm-gold-800">Modifier utilisateur</div>
+            <div className="text-lg font-semibold text-vdm-gold-800">Modifier l’utilisateur</div>
             <div className="text-sm text-vdm-gold-700 mt-1">
-              {selectedEmployee
-                ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}`
-                : "Utilisateur"}
+              {selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : "Utilisateur"}
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -505,7 +520,7 @@ export default function CeoEmployees() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Role</label>
+                <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Rôle</label>
                 <select
                   value={editForm.role}
                   onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))}
@@ -513,9 +528,8 @@ export default function CeoEmployees() {
                 >
                   <option value="EMPLOYEE">EMPLOYEE</option>
                   <option value="DEPT_HEAD">DEPT_HEAD</option>
-                  <option value="SERVICE_HEAD">SERVICE_HEAD</option>
+                  <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
                   <option value="ACCOUNTANT">ACCOUNTANT</option>
-                  <option value="CEO">CEO</option>
                 </select>
               </div>
               <div>
@@ -531,7 +545,7 @@ export default function CeoEmployees() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Departement</label>
+                <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Département</label>
                 <select
                   value={editForm.departmentId}
                   onChange={(e) => {
@@ -556,6 +570,7 @@ export default function CeoEmployees() {
                   )}
                 </select>
               </div>
+
               {showServiceField ? (
                 <div>
                   <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Service</label>

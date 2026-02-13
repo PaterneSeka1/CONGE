@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getEmployee, getToken, routeForRole } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  getEmployee,
+  getToken,
+  hasRequiredProfileData,
+  routeForRole,
+} from "@/lib/auth-client";
 
 export default function RequireManagerDeptHead({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const token = getToken();
@@ -30,7 +36,12 @@ export default function RequireManagerDeptHead({ children }: { children: React.R
       router.replace("/dashboard/dsi");
       return;
     }
-  }, [router]);
+
+    if (!hasRequiredProfileData(emp) && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+  }, [pathname, router]);
 
   return <>{children}</>;
 }

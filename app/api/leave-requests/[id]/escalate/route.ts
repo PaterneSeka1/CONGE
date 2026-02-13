@@ -21,7 +21,7 @@ export async function POST(req: Request, ctx: Ctx) {
       employeeId: true,
       status: true,
       currentAssigneeId: true,
-      employee: { select: { departmentId: true } },
+      employee: { select: { departmentId: true, role: true } },
     },
   });
 
@@ -37,17 +37,33 @@ export async function POST(req: Request, ctx: Ctx) {
   let target = null;
 
   if (role === "ACCOUNTANT") {
-    if (toRole !== "DEPT_HEAD" && toRole !== "SERVICE_HEAD" && toRole !== "CEO") {
-      return jsonError("toRole requis (DEPT_HEAD|SERVICE_HEAD|CEO)", 400);
+    const requesterRole = leave.employee?.role ?? "EMPLOYEE";
+    const isDirectorRequester = requesterRole === "DEPT_HEAD" || requesterRole === "SERVICE_HEAD";
+
+    if (isDirectorRequester) {
+      if (toRole && toRole !== "CEO") {
+        return jsonError("toRole invalide (CEO uniquement pour les demandes de responsables)", 400);
+      }
+      target = await findActiveEmployeeByRole("CEO");
+    } else {
+      if (toRole && toRole !== "DEPT_HEAD" && toRole !== "CEO") {
+        return jsonError("toRole invalide (DEPT_HEAD|CEO)", 400);
+      }
+      target =
+        toRole === "CEO"
+          ? await findActiveEmployeeByRole("CEO")
+          : await findActiveEmployeeByRole("DEPT_HEAD", leave.employee?.departmentId ?? null);
     }
-    if (toRole === "DEPT_HEAD") {
-      target = await findActiveEmployeeByRole("DEPT_HEAD", leave.employee?.departmentId ?? null);
-    } else if (toRole === "SERVICE_HEAD") {
+  } else if (role === "DEPT_HEAD") {
+    if (toRole && toRole !== "SERVICE_HEAD" && toRole !== "CEO") {
+      return jsonError("toRole invalide (SERVICE_HEAD|CEO)", 400);
+    }
+    if (toRole === "SERVICE_HEAD") {
       target = await findActiveEmployeeByRole("SERVICE_HEAD", leave.employee?.departmentId ?? null);
     } else {
       target = await findActiveEmployeeByRole("CEO");
     }
-  } else if (role === "DEPT_HEAD" || role === "SERVICE_HEAD") {
+  } else if (role === "SERVICE_HEAD") {
     if (toRole && toRole !== "CEO") {
       return jsonError("toRole invalide (CEO uniquement)", 400);
     }

@@ -4,12 +4,16 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type Req = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   department?: string;
   name: string;
   amount: number;
@@ -35,6 +39,12 @@ function statusClass(status: Req["status"]) {
   return "text-amber-700";
 }
 
+function originLabel(origin: Req["origin"]) {
+  if (origin === "DEPT_HEAD") return "Directeur des opérations";
+  if (origin === "SERVICE_HEAD") return "Directeur Adjoint";
+  return "Autre";
+}
+
 export default function CeoPurchaseInbox() {
   const [rows, setRows] = useState<Req[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +62,10 @@ export default function CeoPurchaseInbox() {
         setRows(
           (data?.requests ?? []).map((x: any) => ({
             id: x.id,
+            firstName: x.employee?.firstName ?? "",
+            lastName: x.employee?.lastName ?? "",
             employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+            profilePhotoUrl: x.employee?.profilePhotoUrl ?? null,
             department: x.employee?.department?.type ?? x.employee?.department?.name ?? "",
             name: x.name,
             amount: x.amount,
@@ -120,9 +133,16 @@ export default function CeoPurchaseInbox() {
         header: "Demandeur",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.origin}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{originLabel(row.original.origin)}</div>
+            </div>
           </div>
         ),
       },

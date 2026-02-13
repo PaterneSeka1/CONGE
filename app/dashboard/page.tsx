@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getEmployee, getToken, routeForRole } from "@/lib/auth-client";
+import { getEmployee, getToken, hasRequiredProfileData, routeForRole } from "@/lib/auth-client";
 
 export default function DashboardIndex() {
   const router = useRouter();
@@ -18,6 +18,11 @@ export default function DashboardIndex() {
 
     if (emp.status !== "ACTIVE") {
       router.replace("/login");
+      return;
+    }
+
+    if (!hasRequiredProfileData(emp)) {
+      router.replace("/onboarding");
       return;
     }
 

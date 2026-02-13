@@ -19,6 +19,7 @@ export async function POST(req: Request) {
     const email = norm(body?.email).toLowerCase();
     const matricule = norm(body?.matricule) || null;
     const password = norm(body?.password);
+    const acceptedTerms = body?.acceptedTerms === true;
 
     if (!firstName || !lastName || !email || !password) {
       return jsonError("Champs requis: firstName, lastName, email, password", 400);
@@ -30,6 +31,9 @@ export async function POST(req: Request) {
 
     if (password.length < 6) {
       return jsonError("Mot de passe trop court (min 6)", 400);
+    }
+    if (!acceptedTerms) {
+      return jsonError("Vous devez accepter les conditions d'utilisation", 400);
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -74,15 +78,16 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string; meta?: { target?: unknown } };
     // Prisma unique constraint
-    if (e?.code === "P2002") {
-      const target = Array.isArray(e?.meta?.target)
-      ? e.meta.target.join(",")
-      : String(e?.meta?.target ?? "");
+    if (err?.code === "P2002") {
+      const target = Array.isArray(err?.meta?.target)
+      ? err.meta.target.join(",")
+      : String(err?.meta?.target ?? "");
       return jsonError("Email ou matricule déjà utilisé", 409, { target });
     }
 
-    return jsonError("Erreur serveur", 500, { code: e?.code, details: e?.message });
+    return jsonError("Erreur serveur", 500, { code: err?.code, details: err?.message });
   }
 }

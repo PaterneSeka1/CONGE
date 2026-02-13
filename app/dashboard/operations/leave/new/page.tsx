@@ -61,13 +61,6 @@ function daysBetweenInclusive(start: string, end: string) {
   return Math.floor((e - s) / 86400000) + 1;
 }
 
-function addDaysToDateInput(value: string, days: number) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  d.setDate(d.getDate() + days);
-  return toLocalDateInputValue(d);
-}
-
 function rangesOverlap(start: string, end: string, blackoutStart: string, blackoutEnd: string) {
   const s = toUtcDay(start);
   const e = toUtcDay(end);
@@ -245,18 +238,13 @@ export default function OperationsLeaveNew() {
         return;
       }
 
-      if (dateValue <= startDate) {
+      if (dateValue < startDate) {
         setStartDate(dateValue);
         return;
       }
 
       if (hasBlackoutOverlap(startDate, dateValue)) {
         toast.error("La periode chevauche une date bloquee. Veuillez ajuster.");
-        return;
-      }
-
-      if (daysBetweenInclusive(startDate, dateValue) <= 1) {
-        toast.error("La periode saisie est invalide (minimum 2 jours).");
         return;
       }
 
@@ -275,8 +263,8 @@ export default function OperationsLeaveNew() {
       return;
     }
     const daysRequested = daysBetweenInclusive(startDate, endDate);
-    if (daysRequested <= 1) {
-      toast.error("La periode saisie est invalide (minimum 2 jours).");
+    if (daysRequested < 1) {
+      toast.error("La periode saisie est invalide.");
       return;
     }
     if (daysRequested > balance) {
@@ -387,7 +375,7 @@ export default function OperationsLeaveNew() {
               }
               setEndDate(nextEnd);
             }}
-            min={startDate ? addDaysToDateInput(startDate, 1) : today}
+            min={startDate || today}
             disabled={isExhausted}
             className="w-full border border-vdm-gold-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           />

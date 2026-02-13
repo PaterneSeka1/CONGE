@@ -4,12 +4,16 @@ import { formatDateDMY } from "@/lib/date-format";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type Req = {
   id: string;
+  firstName: string;
+  lastName: string;
   employeeName: string;
+  profilePhotoUrl?: string | null;
   department?: string;
   name: string;
   amount: number;
@@ -35,6 +39,12 @@ function statusClass(status: Req["status"]) {
   return "text-amber-700";
 }
 
+function originLabel(origin: Req["origin"]) {
+  if (origin === "DEPT_HEAD") return "Directeur des opérations";
+  if (origin === "SERVICE_HEAD") return "Directeur Adjoint";
+  return "Autre";
+}
+
 export default function AccountantPurchaseInbox() {
   const [rows, setRows] = useState<Req[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +64,10 @@ export default function AccountantPurchaseInbox() {
         setRows(
           (data?.requests ?? []).map((x: any) => ({
             id: x.id,
+            firstName: x.employee?.firstName ?? "",
+            lastName: x.employee?.lastName ?? "",
             employeeName: `${x.employee?.firstName ?? ""} ${x.employee?.lastName ?? ""}`.trim(),
+            profilePhotoUrl: x.employee?.profilePhotoUrl ?? null,
             department: x.employee?.department?.type ?? x.employee?.department?.name ?? "",
             name: x.name,
             amount: x.amount,
@@ -76,9 +89,7 @@ export default function AccountantPurchaseInbox() {
 
   const departments = useMemo(
     () =>
-      Array.from(
-        new Set(rows.map((row) => row.department).filter((dept): dept is string => !!dept))
-      ).sort(),
+      Array.from(new Set(rows.map((row) => row.department).filter((dept): dept is string => !!dept))).sort(),
     [rows]
   );
 
@@ -156,22 +167,27 @@ export default function AccountantPurchaseInbox() {
         header: "Demandeur",
         accessorKey: "employeeName",
         cell: ({ row }) => (
-          <div>
-            <div className="font-semibold">{row.original.employeeName}</div>
-            <div className="text-xs text-vdm-gold-700">{row.original.origin}</div>
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">{row.original.employeeName}</div>
+              <div className="text-xs text-vdm-gold-700">{originLabel(row.original.origin)}</div>
+            </div>
           </div>
         ),
       },
-      { header: "Departement", accessorKey: "department" },
+      { header: "Département", accessorKey: "department" },
       {
         header: "Demande",
         accessorKey: "name",
         cell: ({ row }) => (
           <div>
             <div className="font-semibold">{row.original.name}</div>
-            <div className="text-xs text-vdm-gold-700">
-              {row.original.items?.length ?? 0} article(s)
-            </div>
+            <div className="text-xs text-vdm-gold-700">{row.original.items?.length ?? 0} article(s)</div>
           </div>
         ),
       },
@@ -215,7 +231,7 @@ export default function AccountantPurchaseInbox() {
               onClick={() => forwardToCeo(row.original.id)}
               className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
             >
-              Transmettre CEO
+              Transmettre au CEO
             </button>
           </div>
         ),
@@ -227,18 +243,16 @@ export default function AccountantPurchaseInbox() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d'achats futurs</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">
-        La comptable peut valider, refuser ou transmettre au CEO.
-      </div>
+      <div className="text-sm text-vdm-gold-700 mb-4">La comptable peut valider, refuser ou transmettre au CEO.</div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-vdm-gold-700">Filtrer par departement</div>
+        <div className="text-xs text-vdm-gold-700">Filtrer par département</div>
         <select
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
           className="w-full sm:max-w-xs rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
-          <option value="">Tous les departements</option>
+          <option value="">Tous les départements</option>
           {departments.map((dept) => (
             <option key={dept} value={dept}>
               {dept}
@@ -247,15 +261,8 @@ export default function AccountantPurchaseInbox() {
         </select>
       </div>
 
-      <DataTable
-        data={filteredRows}
-        columns={columns}
-        searchPlaceholder="Rechercher une demande..."
-        onRefresh={load}
-      />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
-      ) : null}
+      <DataTable data={filteredRows} columns={columns} searchPlaceholder="Rechercher une demande..." onRefresh={load} />
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
     </div>
   );
 }

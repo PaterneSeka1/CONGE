@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { EmployeeSession, getEmployee, getToken, routeForRole } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  EmployeeSession,
+  getEmployee,
+  getToken,
+  hasRequiredProfileData,
+  routeForRole,
+} from "@/lib/auth-client";
 
 type OpsSession = EmployeeSession & {
   departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
@@ -10,6 +16,7 @@ type OpsSession = EmployeeSession & {
 
 export default function RequireOperationsDirector({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const token = getToken();
@@ -39,7 +46,12 @@ export default function RequireOperationsDirector({ children }: { children: Reac
       router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
-  }, [router]);
+
+    if (!hasRequiredProfileData(emp) && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+  }, [pathname, router]);
 
   return <>{children}</>;
 }

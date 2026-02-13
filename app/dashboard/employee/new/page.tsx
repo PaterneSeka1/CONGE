@@ -46,7 +46,11 @@ function overlapDaysInYear(start: string, end: string, year: number) {
 function consumedDaysForYear(leaves: LeaveItem[], year: number) {
   let total = 0;
   for (const leave of leaves) {
-    if (leave.status === "APPROVED" || leave.status === "PENDING" || leave.status === "SUBMITTED") {
+    if (
+      leave.status === "APPROVED" ||
+      leave.status === "PENDING" ||
+      leave.status === "SUBMITTED"
+    ) {
       total += overlapDaysInYear(leave.startDate, leave.endDate, year);
     }
   }
@@ -59,13 +63,6 @@ function daysBetweenInclusive(start: string, end: string) {
   if (s == null || e == null) return 0;
   if (e < s) return 0;
   return Math.floor((e - s) / 86400000) + 1;
-}
-
-function addDaysToDateInput(value: string, days: number) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  d.setDate(d.getDate() + days);
-  return toLocalDateInputValue(d);
 }
 
 function rangesOverlap(start: string, end: string, blackoutStart: string, blackoutEnd: string) {
@@ -197,11 +194,14 @@ export default function EmployeeLeaveNew() {
 
   const selectedBlackouts = useMemo(() => {
     if (selectedDay == null) return [];
-    return blackouts.filter((b) => inRange(selectedDay, month, year, b.startDate, b.endDate));
+    return blackouts.filter((b) =>
+      inRange(selectedDay, month, year, b.startDate, b.endDate)
+    );
   }, [blackouts, selectedDay, month, year]);
 
   const hasBlackoutOverlap = useCallback(
-    (start: string, end: string) => blackouts.some((b) => rangesOverlap(start, end, b.startDate, b.endDate)),
+    (start: string, end: string) =>
+      blackouts.some((b) => rangesOverlap(start, end, b.startDate, b.endDate)),
     [blackouts]
   );
 
@@ -245,18 +245,13 @@ export default function EmployeeLeaveNew() {
         return;
       }
 
-      if (dateValue <= startDate) {
+      if (dateValue < startDate) {
         setStartDate(dateValue);
         return;
       }
 
       if (hasBlackoutOverlap(startDate, dateValue)) {
-        toast.error("La periode chevauche une date bloquee. Veuillez ajuster.");
-        return;
-      }
-
-      if (daysBetweenInclusive(startDate, dateValue) <= 1) {
-        toast.error("La periode saisie est invalide (minimum 2 jours).");
+        toast.error("La période chevauche une date bloquée. Veuillez ajuster.");
         return;
       }
 
@@ -267,24 +262,24 @@ export default function EmployeeLeaveNew() {
 
   const submit = async () => {
     if (isExhausted) {
-      toast.error("Solde de conges epuise.");
+      toast.error("Solde de congés épuisé.");
       return;
     }
     if (!startDate || !endDate) {
-      toast.error("Veuillez renseigner la date de debut et la date de fin.");
+      toast.error("Veuillez renseigner la date de début et la date de fin.");
       return;
     }
     const daysRequested = daysBetweenInclusive(startDate, endDate);
-    if (daysRequested <= 1) {
-      toast.error("La periode saisie est invalide (minimum 2 jours).");
+    if (daysRequested < 1) {
+      toast.error("La période saisie est invalide.");
       return;
     }
     if (daysRequested > balance) {
-      toast.error("La demande depasse votre solde de conges.");
+      toast.error("La demande dépasse votre solde de congés.");
       return;
     }
     if (hasBlackoutOverlap(startDate, endDate)) {
-      toast.error("La periode choisie chevauche une periode bloquee par le CEO.");
+      toast.error("La période choisie chevauche une période bloquée par le CEO.");
       return;
     }
 
@@ -303,7 +298,7 @@ export default function EmployeeLeaveNew() {
         }),
       });
       if (res.ok) {
-        toast.success("Demande envoyee. En attente de validation.", { id: t });
+        toast.success("Demande envoyée. En attente de validation.", { id: t });
         setStartDate("");
         setEndDate("");
         setReason("");
@@ -314,19 +309,19 @@ export default function EmployeeLeaveNew() {
         toast.error("Erreur lors de l'envoi.", { id: t });
       }
     } catch {
-      toast.error("Erreur reseau lors de l'envoi.", { id: t });
+      toast.error("Erreur réseau lors de l'envoi.", { id: t });
     }
   };
 
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Nouvelle demande</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de conge.</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de congé.</div>
 
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4 grid gap-3 md:grid-cols-2">
         {isExhausted ? (
           <div className="md:col-span-2 text-sm text-red-600">
-            Votre solde de conges est epuise. Impossible de soumettre une nouvelle demande.
+            Votre solde de congés est épuisé. Impossible de soumettre une nouvelle demande.
           </div>
         ) : null}
         <div>
@@ -337,7 +332,7 @@ export default function EmployeeLeaveNew() {
             disabled={isExhausted}
             className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           >
-            <option value="ANNUAL">Conge annuel</option>
+            <option value="ANNUAL">Congé annuel</option>
             <option value="SICK">Maladie</option>
             <option value="UNPAID">Sans solde</option>
             <option value="OTHER">Autre</option>
@@ -345,18 +340,20 @@ export default function EmployeeLeaveNew() {
         </div>
 
         <div className="flex items-end justify-between gap-2 text-sm text-vdm-gold-700">
-          <div>Solde: {balance} / {baseAllowance} jours</div>
+          <div>
+            Solde : {balance} / {baseAllowance} jours
+          </div>
           <button
             type="button"
             onClick={refreshBalance}
             className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
           >
-            Rafraichir
+            Rafraîchir
           </button>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Date debut</label>
+          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Date début</label>
           <input
             type="date"
             value={startDate}
@@ -364,7 +361,7 @@ export default function EmployeeLeaveNew() {
               const nextStart = e.target.value;
               setStartDate(nextStart);
               if (endDate && hasBlackoutOverlap(nextStart, endDate)) {
-                toast.error("La periode chevauche une date bloquee. Veuillez ajuster.");
+                toast.error("La période chevauche une date bloquée. Veuillez ajuster.");
                 setEndDate("");
               }
             }}
@@ -382,12 +379,12 @@ export default function EmployeeLeaveNew() {
             onChange={(e) => {
               const nextEnd = e.target.value;
               if (startDate && hasBlackoutOverlap(startDate, nextEnd)) {
-                toast.error("La periode chevauche une date bloquee. Veuillez ajuster.");
+                toast.error("La période chevauche une date bloquée. Veuillez ajuster.");
                 return;
               }
               setEndDate(nextEnd);
             }}
-            min={startDate ? addDaysToDateInput(startDate, 1) : today}
+            min={startDate || today}
             disabled={isExhausted}
             className="w-full border border-vdm-gold-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           />
@@ -396,8 +393,8 @@ export default function EmployeeLeaveNew() {
         <div className="md:col-span-2">
           <div className="text-xs text-vdm-gold-700">
             {daysRequested > 0
-              ? `Duree selectionnee: ${daysRequested} jour${daysRequested > 1 ? "s" : ""}`
-              : "Selectionnez des dates pour calculer la duree."}
+              ? `Durée sélectionnée : ${daysRequested} jour${daysRequested > 1 ? "s" : ""}`
+              : "Sélectionnez des dates pour calculer la durée."}
           </div>
         </div>
 
@@ -408,7 +405,7 @@ export default function EmployeeLeaveNew() {
             onChange={(e) => setReason(e.target.value)}
             disabled={isExhausted}
             className="w-full border border-vdm-gold-200 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            placeholder="Ex: repos, raison familiale..."
+            placeholder="Ex. : repos, raison familiale..."
           />
         </div>
 
@@ -425,9 +422,11 @@ export default function EmployeeLeaveNew() {
         <div className="md:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-vdm-gold-800">Calendrier des periodes bloquees (CEO)</div>
+              <div className="text-sm font-semibold text-vdm-gold-800">
+                Calendrier des périodes bloquées (CEO)
+              </div>
               <div className="text-xs text-vdm-gold-600">
-                Consultez les dates bloquees avant de choisir votre periode.
+                Consultez les dates bloquées avant de choisir votre période.
               </div>
             </div>
             <div className="text-xs text-vdm-gold-700 capitalize">{monthLabel}</div>
@@ -439,7 +438,7 @@ export default function EmployeeLeaveNew() {
               className="px-2 py-1 rounded-md border border-vdm-gold-200 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
               type="button"
             >
-              Prec
+              Préc.
             </button>
             <div className="text-xs text-gray-500">{year}</div>
             <button
@@ -447,7 +446,7 @@ export default function EmployeeLeaveNew() {
               className="px-2 py-1 rounded-md border border-vdm-gold-200 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
               type="button"
             >
-              Suiv
+              Suiv.
             </button>
           </div>
 
@@ -512,7 +511,7 @@ export default function EmployeeLeaveNew() {
           <div className="mt-3 flex items-center gap-3 text-xs text-gray-600 flex-wrap">
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-red-500" />
-              Periodes bloquees
+              Périodes bloquées
             </div>
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -520,29 +519,30 @@ export default function EmployeeLeaveNew() {
             </div>
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-amber-500" />
-              Jours demandes
+              Jours demandés
             </div>
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-red-500" />
-              Jours refuses
+              Jours refusés
             </div>
             {selectedDay != null ? (
-              <div className="text-vdm-gold-700">Selection: {selectedDateLabel}</div>
+              <div className="text-vdm-gold-700">Sélection : {selectedDateLabel}</div>
             ) : (
-              <div className="text-vdm-gold-700">Cliquez sur un jour pour voir le detail.</div>
+              <div className="text-vdm-gold-700">Cliquez sur un jour pour voir le détail.</div>
             )}
           </div>
           <div className="mt-1 text-xs text-vdm-gold-700">
-            Choisissez un jour pour le debut, puis un autre pour la fin.
+            Choisissez un jour pour le début, puis un autre pour la fin.
             <span className="ml-2">
-              Periode: {startDate ? formatDateDMY(startDate) : "-"} {" - "} {endDate ? formatDateDMY(endDate) : "-"}
+              Période : {startDate ? formatDateDMY(startDate) : "-"} {" - "}{" "}
+              {endDate ? formatDateDMY(endDate) : "-"}
             </span>
           </div>
 
           {selectedDay != null ? (
             <div className="mt-2 rounded-md border border-vdm-gold-100 bg-vdm-gold-50/50 p-3 text-xs text-gray-700">
               {selectedBlackouts.length === 0 ? (
-                <div>Aucune periode bloquee ce jour.</div>
+                <div>Aucune période bloquée ce jour.</div>
               ) : (
                 <ul className="space-y-1">
                   {selectedBlackouts.map((b, i) => (

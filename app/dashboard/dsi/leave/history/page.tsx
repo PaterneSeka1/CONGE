@@ -1,4 +1,7 @@
 "use client";
+// app/(dashboard)/dsi/leave-history/page.tsx (ou ton chemin exact)
+// ✅ FICHIER COMPLET
+
 import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
@@ -53,6 +56,7 @@ export default function DsiLeaveHistory() {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
+
     const load = async () => {
       setIsLoading(true);
       try {
@@ -85,6 +89,7 @@ export default function DsiLeaveHistory() {
         setIsLoading(false);
       }
     };
+
     load();
   }, []);
 
@@ -131,9 +136,7 @@ export default function DsiLeaveHistory() {
         searchPlaceholder="Rechercher un cong?..."
         onRefresh={() => window.location.reload()}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div> : null}
     </div>
   );
 }

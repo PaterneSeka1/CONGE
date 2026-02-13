@@ -1,4 +1,7 @@
 "use client";
+// app/(dashboard)/ceo/page.tsx  (ou le chemin exact de ton CeoHome)
+// ✅ FICHIER COMPLET
+
 import { formatDateDMY } from "@/lib/date-format";
 
 import { useEffect, useMemo, useState } from "react";
@@ -23,6 +26,27 @@ type CeoMetrics = {
   decisionsThisMonth: number;
   avgDecisionDelayDays: number | null;
 };
+
+type CeoDecision = {
+  id: string;
+  type: "APPROVE" | "REJECT" | "ESCALATE" | "CANCEL";
+  createdAt: string;
+};
+
+const MONTHS = [
+  "Jan",
+  "Fev",
+  "Mar",
+  "Avr",
+  "Mai",
+  "Juin",
+  "Juil",
+  "Aout",
+  "Sept",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
 
 function buildMonth(date: Date) {
   const year = date.getFullYear();
@@ -54,26 +78,8 @@ function inRange(day: number, month: number, year: number, start: string, end: s
 }
 
 export default function CeoHome() {
-  const lineData = [
-    { name: "Jan", value: 4 },
-    { name: "Fev", value: 6 },
-    { name: "Mar", value: 3 },
-    { name: "Avr", value: 7 },
-    { name: "Mai", value: 5 },
-    { name: "Juin", value: 8 },
-  ];
-  const pieData = [
-    { name: "Validees", value: 9 },
-    { name: "Refusees", value: 2 },
-    { name: "En attente", value: 3 },
-  ];
   const [metrics, setMetrics] = useState<CeoMetrics | null>(null);
-
-  const barData = [
-    { name: "Escaladees", value: metrics?.escalatedPending ?? 0 },
-    { name: "Decidees", value: metrics?.decisionsThisMonth ?? 0 },
-    { name: "Delai", value: metrics?.avgDecisionDelayDays ? Number(metrics.avgDecisionDelayDays.toFixed(1)) : 0 },
-  ];
+  const [decisions, setDecisions] = useState<CeoDecision[]>([]);
 
   const [current, setCurrent] = useState(() => new Date());
   const { year, month, cells } = useMemo(() => buildMonth(current), [current]);
@@ -88,6 +94,7 @@ export default function CeoHome() {
     return `${value.toFixed(1)} j`;
   };
 
+  // Load calendar (approved leaves + blackouts)
   useEffect(() => {
     const token = getToken();
     if (!token) return;
@@ -104,6 +111,7 @@ export default function CeoHome() {
     load();
   }, []);
 
+  // Load CEO metrics
   useEffect(() => {
     const token = getToken();
     if (!token) return;
@@ -124,20 +132,96 @@ export default function CeoHome() {
     load();
   }, []);
 
+  // ✅ Load CEO decisions (scope=actor) for dynamic charts
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    const load = async () => {
+      const res = await fetch("/api/leave-requests/history?scope=all-decisions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setDecisions(
+          (data?.decisions ?? []).map((d: {
+            id: string;
+            type: "APPROVE" | "REJECT" | "ESCALATE" | "CANCEL";
+            createdAt: string;
+          }) => ({
+            id: d.id,
+            type: d.type,
+            createdAt: d.createdAt,
+          }))
+        );
+      }
+    };
+
+    load();
+  }, []);
+
+  // ✅ Dynamic lineData + pieData from decisions
+  const { lineData, pieData } = useMemo(() => {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+
+    const monthly = Array.from({ length: 12 }, () => 0);
+
+    let approve = 0;
+    let reject = 0;
+    let escalate = 0;
+    let cancel = 0;
+
+    for (const d of decisions) {
+      const dt = new Date(d.createdAt);
+      if (Number.isNaN(dt.getTime())) continue;
+
+      if (dt.getUTCFullYear() === year) {
+        monthly[dt.getUTCMonth()] += 1;
+      }
+
+      if (d.type === "APPROVE") approve += 1;
+      if (d.type === "REJECT") reject += 1;
+      if (d.type === "ESCALATE") escalate += 1;
+      if (d.type === "CANCEL") cancel += 1;
+    }
+
+    return {
+      lineData: MONTHS.map((name, idx) => ({ name, value: monthly[idx] })),
+      pieData: [
+        { name: "Validees", value: approve },
+        { name: "Refusees", value: reject },
+        { name: "Transmises", value: escalate },
+        { name: "Annulees", value: cancel },
+      ],
+    };
+  }, [decisions]);
+
+  const barData = useMemo(
+    () => [
+      { name: "Escaladees", value: metrics?.escalatedPending ?? 0 },
+      { name: "Decidees", value: metrics?.decisionsThisMonth ?? 0 },
+      {
+        name: "Delai",
+        value:
+          metrics?.avgDecisionDelayDays != null
+            ? Number(metrics.avgDecisionDelayDays.toFixed(1))
+            : 0,
+      },
+    ],
+    [metrics]
+  );
+
   const goPrev = () => setCurrent((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const goNext = () => setCurrent((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   const today = new Date();
   const isToday = (day: number | null) =>
-    day &&
-    today.getFullYear() === year &&
-    today.getMonth() === month &&
-    today.getDate() === day;
+    day && today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
 
   const isPast = (day: number | null) =>
     day &&
-    Date.UTC(year, month, day) <
-      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    Date.UTC(year, month, day) < Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
 
   const hasLeave = (day: number | null) =>
     day && approvedLeaves.some((l) => inRange(day, month, year, l.startDate, l.endDate));
@@ -150,7 +234,9 @@ export default function CeoHome() {
 
   const details = useMemo(() => {
     if (selectedDay == null) return { leaves: [], blackouts: [] };
-    const leaves = approvedLeaves.filter((l) => inRange(selectedDay, month, year, l.startDate, l.endDate));
+    const leaves = approvedLeaves.filter((l) =>
+      inRange(selectedDay, month, year, l.startDate, l.endDate)
+    );
     const blk = blackouts.filter((b) => inRange(selectedDay, month, year, b.startDate, b.endDate));
     return { leaves, blackouts: blk };
   }, [approvedLeaves, blackouts, selectedDay, month, year]);
@@ -236,9 +322,7 @@ export default function CeoHome() {
                   className={`h-9 flex flex-col items-center justify-center rounded-md text-sm ${
                     day ? "text-vdm-gold-900" : "text-transparent"
                   } ${
-                    isToday(day)
-                      ? "bg-vdm-gold-200 font-semibold"
-                      : "hover:bg-vdm-gold-50"
+                    isToday(day) ? "bg-vdm-gold-200 font-semibold" : "hover:bg-vdm-gold-50"
                   } ${isPast(day) ? "bg-vdm-gold-50/70" : ""} ${
                     blackout ? "bg-red-100 text-red-900" : ""
                   } ${day ? "cursor-pointer" : ""}`}
@@ -288,7 +372,9 @@ export default function CeoHome() {
                         </div>
                         <div className="text-xs text-gray-500">
                           {(l.employee?.matricule ?? "—") + " · "}
-                          {(l.employee?.department?.type ?? l.employee?.department?.name ?? "—") + " · "}
+                          {(l.employee?.department?.type ??
+                            l.employee?.department?.name ??
+                            "—") + " · "}
                           {formatDateDMY(l.startDate)} - {formatDateDMY(l.endDate)}
                         </div>
                       </li>
@@ -308,11 +394,17 @@ export default function CeoHome() {
                       </thead>
                       <tbody>
                         {details.leaves.map((l, i) => (
-                          <tr key={`row-${l.startDate}-${l.endDate}-${i}`} className="odd:bg-white even:bg-vdm-gold-50/40">
+                          <tr
+                            key={`row-${l.startDate}-${l.endDate}-${i}`}
+                            className="odd:bg-white even:bg-vdm-gold-50/40"
+                          >
                             <td className="px-2 py-1 border-b border-vdm-gold-100">
-                              {`${l.employee?.firstName ?? ""} ${l.employee?.lastName ?? ""}`.trim() || "—"}
+                              {`${l.employee?.firstName ?? ""} ${l.employee?.lastName ?? ""}`.trim() ||
+                                "—"}
                             </td>
-                            <td className="px-2 py-1 border-b border-vdm-gold-100">{l.employee?.matricule ?? "—"}</td>
+                            <td className="px-2 py-1 border-b border-vdm-gold-100">
+                              {l.employee?.matricule ?? "—"}
+                            </td>
                             <td className="px-2 py-1 border-b border-vdm-gold-100">
                               {l.employee?.department?.type ?? l.employee?.department?.name ?? "—"}
                             </td>

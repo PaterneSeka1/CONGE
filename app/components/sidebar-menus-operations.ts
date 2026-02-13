@@ -20,10 +20,10 @@ export const operationsMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Direction des operations",
+    title: "Direction des opérations",
     links: [
       { label: "Employés (actuels)", icon: "users", to: "/dashboard/manager/department/employees" },
-      { label: "Historique employés", icon: "users", to: "/dashboard/manager/department/employees-history" },
+      { label: "Historique des employés", icon: "users", to: "/dashboard/manager/department/employees-history" },
       { label: "Demandes transmises", icon: "clipboard", to: "/dashboard/manager/inbox" },
     ],
   },

@@ -45,6 +45,7 @@ export async function GET(req: Request) {
           id: true,
           firstName: true,
           lastName: true,
+          profilePhotoUrl: true,
           role: true,
           departmentId: true,
           department: { select: { type: true, name: true } },

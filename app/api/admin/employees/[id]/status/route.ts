@@ -22,9 +22,52 @@ export async function PATCH(req: Request, ctx: Ctx) {
 
   const body = await req.json().catch(() => ({}));
   const status = body?.status;
+  const role = body?.role ? String(body.role) : null;
+  const departmentId = body?.departmentId ? String(body.departmentId) : null;
+  const serviceId = body?.serviceId ? String(body.serviceId) : null;
 
   if (!["ACTIVE", "REJECTED"].includes(status)) {
     return jsonError("status invalide (ACTIVE|REJECTED)", 400);
+  }
+
+  if (status === "ACTIVE" && role && !["EMPLOYEE", "ACCOUNTANT", "DEPT_HEAD", "SERVICE_HEAD"].includes(role)) {
+    return jsonError("role invalide (EMPLOYEE|ACCOUNTANT|DEPT_HEAD|SERVICE_HEAD)", 400);
+  }
+
+  if (status === "ACTIVE" && role === "SERVICE_HEAD") {
+    if (!departmentId) {
+      return jsonError("departmentId requis pour SERVICE_HEAD", 400);
+    }
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      select: { type: true },
+    });
+    if (!department || department.type !== "OPERATIONS") {
+      return jsonError("SERVICE_HEAD doit être rattaché au département OPERATIONS", 400);
+    }
+  }
+
+  if (status === "ACTIVE" && role === "DEPT_HEAD" && departmentId) {
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      select: { type: true },
+    });
+    if (department?.type === "OTHERS") {
+      return jsonError("Le département OTHERS est réservé au CEO", 400);
+    }
+  }
+
+  if (status === "ACTIVE" && role === "ACCOUNTANT") {
+    if (!departmentId) {
+      return jsonError("departmentId requis pour ACCOUNTANT", 400);
+    }
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      select: { type: true },
+    });
+    if (!department || department.type !== "DAF") {
+      return jsonError("ACCOUNTANT doit être rattaché au département DAF", 400);
+    }
   }
 
   // Empêcher de re-valider un compte déjà traité
@@ -43,6 +86,9 @@ export async function PATCH(req: Request, ctx: Ctx) {
     where: { id },
     data: {
       status,
+      ...(status === "ACTIVE" && role ? { role } : {}),
+      ...(status === "ACTIVE" ? { departmentId } : {}),
+      ...(status === "ACTIVE" ? { serviceId } : {}),
       approvedById: adminId,
     },
     select: {

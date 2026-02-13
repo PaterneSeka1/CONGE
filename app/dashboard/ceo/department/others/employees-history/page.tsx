@@ -39,7 +39,7 @@ export default function CeoOthersEmployeesHistory() {
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé..."
         onRefresh={() => window.location.reload()}
       />
     </div>

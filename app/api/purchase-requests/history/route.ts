@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
 
-  const { id: actorId } = authRes.auth;
+  const { id: actorId, role } = authRes.auth;
 
   const url = new URL(req.url);
   const mine = url.searchParams.get("mine") === "1";
@@ -54,7 +54,36 @@ export async function GET(req: Request) {
             amount: true,
             date: true,
             items: { select: { id: true, name: true, amount: true } },
-            employee: { select: { id: true, firstName: true, lastName: true } },
+            employee: { select: { id: true, firstName: true, lastName: true, profilePhotoUrl: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({ decisions });
+  }
+
+  if (scope === "all") {
+    if (role !== "CEO") return NextResponse.json({ decisions: [] });
+
+    const decisions = await prisma.purchaseDecision.findMany({
+      where: { type: { in: ["APPROVE", "REJECT", "ESCALATE"] } },
+      select: {
+        id: true,
+        type: true,
+        createdAt: true,
+        toEmployeeId: true,
+        toEmployee: { select: { id: true, firstName: true, lastName: true, role: true } },
+        actor: { select: { id: true, firstName: true, lastName: true, role: true } },
+        purchaseRequest: {
+          select: {
+            id: true,
+            name: true,
+            amount: true,
+            date: true,
+            items: { select: { id: true, name: true, amount: true } },
+            employee: { select: { id: true, firstName: true, lastName: true, profilePhotoUrl: true } },
           },
         },
       },

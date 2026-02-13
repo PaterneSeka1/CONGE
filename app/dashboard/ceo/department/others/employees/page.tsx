@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
@@ -10,12 +11,21 @@ type EmployeeRow = {
   firstName: string;
   lastName: string;
   email: string;
+  profilePhotoUrl?: string | null;
   matricule?: string | null;
   jobTitle?: string | null;
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
+};
+
+const roleLabel: Record<EmployeeRow["role"], string> = {
+  CEO: "DG",
+  ACCOUNTANT: "Comptable",
+  DEPT_HEAD: "Directeur des opérations",
+  SERVICE_HEAD: "Directeur Adjoint",
+  EMPLOYEE: "Employé",
 };
 
 export default function CeoOthersEmployees() {
@@ -92,6 +102,7 @@ export default function CeoOthersEmployees() {
         firstName: e.firstName,
         lastName: e.lastName,
         email: e.email,
+        profilePhotoUrl: e.profilePhotoUrl ?? null,
         matricule: e.matricule,
         jobTitle: e.jobTitle,
         role: e.role ?? "EMPLOYEE",
@@ -120,11 +131,18 @@ export default function CeoOthersEmployees() {
           const isEdit = row.original.id === editingId;
           if (!isEdit || !draft) {
             return (
-              <div>
-                <div className="font-semibold">
-                  {row.original.firstName} {row.original.lastName}
+              <div className="flex items-center gap-2">
+                <EmployeeAvatar
+                  firstName={row.original.firstName}
+                  lastName={row.original.lastName}
+                  profilePhotoUrl={row.original.profilePhotoUrl}
+                />
+                <div>
+                  <div className="font-semibold">
+                    {row.original.firstName} {row.original.lastName}
+                  </div>
+                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
                 </div>
-                <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
               </div>
             );
           }
@@ -187,18 +205,16 @@ export default function CeoOthersEmployees() {
         accessorKey: "role",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.role;
+          if (!isEdit || !draft) return roleLabel[row.original.role] ?? row.original.role;
           return (
             <select
               value={draft.role}
-              onChange={(e) =>
-                setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })
-              }
+              onChange={(e) => setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
             >
               <option value="EMPLOYEE">EMPLOYEE</option>
               <option value="DEPT_HEAD">DEPT_HEAD</option>
-              <option value="SERVICE_HEAD">SERVICE_HEAD</option>
+              <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
               <option value="ACCOUNTANT">ACCOUNTANT</option>
             </select>
           );
@@ -213,9 +229,7 @@ export default function CeoOthersEmployees() {
           return (
             <select
               value={draft.status}
-              onChange={(e) =>
-                setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })
-              }
+              onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
             >
               <option value="ACTIVE">ACTIVE</option>
@@ -295,20 +309,16 @@ export default function CeoOthersEmployees() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés (OTHERS)</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">
-        Gestion des employés du département OTHERS.
-      </div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Gestion des employés du département OTHERS.</div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé..."
         pageSize={6}
         onRefresh={loadEmployees}
       />
-      {isLoading ? (
-        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div>
-      ) : null}
+      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
     </div>
   );
 }

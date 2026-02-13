@@ -34,6 +34,12 @@ export async function PUT(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   if (!id) return jsonError("ID requis", 400);
 
+  const existing = await prisma.employee.findUnique({
+    where: { id },
+    select: { role: true },
+  });
+  if (!existing) return jsonError("Employé introuvable", 404);
+
   const body = await req.json().catch(() => ({}));
 
   const data: Record<string, unknown> = {};
@@ -63,6 +69,9 @@ export async function PUT(req: Request, ctx: Ctx) {
     const v = String(body?.role ?? "");
     if (!["CEO", "ACCOUNTANT", "DEPT_HEAD", "SERVICE_HEAD", "EMPLOYEE"].includes(v)) {
       return jsonError("role invalide", 400);
+    }
+    if (v === "CEO" && existing.role !== "CEO") {
+      return jsonError("Promotion en CEO interdite", 403);
     }
     data.role = v;
   }
@@ -106,4 +115,3 @@ export async function PUT(req: Request, ctx: Ctx) {
 
   return NextResponse.json({ employee: updated });
 }
-

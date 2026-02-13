@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { EmployeeRole, getEmployee, getToken, routeForRole } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  EmployeeRole,
+  getEmployee,
+  getToken,
+  hasRequiredProfileData,
+  routeForRole,
+} from "@/lib/auth-client";
 
 export default function RequireRole({
   allow,
@@ -12,6 +18,7 @@ export default function RequireRole({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const token = getToken();
@@ -31,7 +38,12 @@ export default function RequireRole({
       router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
-  }, [allow, router]);
+
+    if (!hasRequiredProfileData(emp) && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+  }, [allow, pathname, router]);
 
   return <>{children}</>;
 }

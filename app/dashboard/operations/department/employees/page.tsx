@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
+import EmployeeAvatar from "@/app/components/EmployeeAvatar";
 import { getEmployee, getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
@@ -10,12 +11,27 @@ type EmployeeRow = {
   firstName: string;
   lastName: string;
   email: string;
+  profilePhotoUrl?: string | null;
   matricule?: string | null;
   jobTitle?: string | null;
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
+};
+
+const statusLabel: Record<EmployeeRow["status"], string> = {
+  ACTIVE: "Actif",
+  PENDING: "En attente",
+  REJECTED: "Rejeté",
+};
+
+const roleLabel: Record<EmployeeRow["role"], string> = {
+  CEO: "DG",
+  ACCOUNTANT: "Comptable",
+  DEPT_HEAD: "Chef de département",
+  SERVICE_HEAD: "Directeur Adjoint",
+  EMPLOYEE: "Employé",
 };
 
 export default function OperationsDepartmentEmployees() {
@@ -43,9 +59,11 @@ export default function OperationsDepartmentEmployees() {
     if (!draft) return;
     const token = getToken();
     if (!token) return;
+
     setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
     setEditingId(null);
     setDraft(null);
+
     await fetch(`/api/employees/${draft.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -65,6 +83,7 @@ export default function OperationsDepartmentEmployees() {
     const token = getToken();
     if (!token) return;
     setIsLoading(true);
+
     try {
       const [empRes, depRes, svcRes] = await Promise.all([
         fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
@@ -97,6 +116,7 @@ export default function OperationsDepartmentEmployees() {
         firstName: e.firstName,
         lastName: e.lastName,
         email: e.email,
+        profilePhotoUrl: e.profilePhotoUrl ?? null,
         matricule: e.matricule,
         jobTitle: e.jobTitle,
         role: e.role ?? "EMPLOYEE",
@@ -123,14 +143,18 @@ export default function OperationsDepartmentEmployees() {
       const byDeptId = currentDeptId
         ? employees.filter((e) => e.department === currentDeptId && e.id !== currentEmployee?.id)
         : [];
+
       const byType = employees.filter(
-        (e) => (depTypeMap[e.department ?? ""] ?? "") === "OPERATIONS" && e.id !== currentEmployee?.id
+        (e) =>
+          (depTypeMap[e.department ?? ""] ?? "") === "OPERATIONS" &&
+          e.id !== currentEmployee?.id
       );
+
       setRows(currentDeptId ? byDeptId : byType);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentEmployee?.departmentId, currentEmployee?.serviceId, currentEmployee?.role, currentEmployee?.id]);
 
   useEffect(() => {
     loadEmployees();
@@ -140,17 +164,24 @@ export default function OperationsDepartmentEmployees() {
     () => [
       {
         id: "employee",
-        header: "Employe",
+        header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
           if (!isEdit || !draft) {
             return (
-              <div>
-                <div className="font-semibold">
-                  {row.original.firstName} {row.original.lastName}
+              <div className="flex items-center gap-2">
+                <EmployeeAvatar
+                  firstName={row.original.firstName}
+                  lastName={row.original.lastName}
+                  profilePhotoUrl={row.original.profilePhotoUrl}
+                />
+                <div>
+                  <div className="font-semibold">
+                    {row.original.firstName} {row.original.lastName}
+                  </div>
+                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
                 </div>
-                <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
               </div>
             );
           }
@@ -160,7 +191,7 @@ export default function OperationsDepartmentEmployees() {
                 value={draft.firstName}
                 onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
                 className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Prenom"
+                placeholder="Prénom"
               />
               <input
                 value={draft.lastName}
@@ -179,7 +210,7 @@ export default function OperationsDepartmentEmployees() {
         },
       },
       {
-        header: "Email",
+        header: "E-mail",
         accessorKey: "email",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
@@ -189,6 +220,7 @@ export default function OperationsDepartmentEmployees() {
               value={draft.email}
               onChange={(e) => setDraft({ ...draft, email: e.target.value })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              placeholder="Adresse e-mail"
             />
           );
         },
@@ -198,51 +230,55 @@ export default function OperationsDepartmentEmployees() {
         accessorKey: "jobTitle",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.jobTitle ?? "-";
+          if (!isEdit || !draft) return row.original.jobTitle ?? "—";
           return (
             <input
               value={draft.jobTitle ?? ""}
               onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              placeholder="Intitulé du poste"
             />
           );
         },
       },
       {
-        header: "Role",
+        header: "Rôle",
         accessorKey: "role",
-        cell: ({ row }) => row.original.role,
+        cell: ({ row }) => roleLabel[row.original.role] ?? row.original.role,
       },
       {
         header: "Statut",
         accessorKey: "status",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.status;
+          if (!isEdit || !draft) return statusLabel[row.original.status] ?? row.original.status;
           return (
             <select
               value={draft.status}
-              onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
+              onChange={(e) =>
+                setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })
+              }
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
             >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="PENDING">PENDING</option>
-              <option value="REJECTED">REJECTED</option>
+              <option value="ACTIVE">Actif</option>
+              <option value="PENDING">En attente</option>
+              <option value="REJECTED">Rejeté</option>
             </select>
           );
         },
       },
       {
-        header: "Departement",
+        header: "Département",
         accessorKey: "department",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "-";
+          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "—";
           return (
             <input
               value={draft.department ?? ""}
               onChange={(e) => setDraft({ ...draft, department: e.target.value })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              placeholder="ID du département"
             />
           );
         },
@@ -252,12 +288,13 @@ export default function OperationsDepartmentEmployees() {
         accessorKey: "service",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "-";
+          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "—";
           return (
             <input
               value={draft.service ?? ""}
               onChange={(e) => setDraft({ ...draft, service: e.target.value })}
               className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              placeholder="ID du service"
             />
           );
         },
@@ -296,24 +333,27 @@ export default function OperationsDepartmentEmployees() {
         },
       },
     ],
-    [editingId, draft, departments, services, saveEdit]
+    [editingId, draft, departments, services]
   );
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employes actuels</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés actuels</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Liste des employes de la direction des operations. Cliquez sur modifier pour editer.
+        Liste des employés de la direction des opérations. Cliquez sur « Modifier » pour éditer.
       </div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employe..."
+        searchPlaceholder="Rechercher un employé…"
         pageSize={6}
         onRefresh={loadEmployees}
       />
-      {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employes...</div> : null}
+
+      {isLoading ? (
+        <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés…</div>
+      ) : null}
     </div>
   );
 }

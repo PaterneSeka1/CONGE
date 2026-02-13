@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getEmployee, getToken } from "@/lib/auth-client";
+import { usePathname, useRouter } from "next/navigation";
+import { getEmployee, getToken, hasRequiredProfileData } from "@/lib/auth-client";
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const pathname = usePathname();
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -23,9 +24,14 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
       return;
     }
 
-    setReady(true);
-  }, [router]);
+    if (!hasRequiredProfileData(employee) && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
 
-  if (!ready) return null;
+    window.setTimeout(() => setChecked(true), 0);
+  }, [pathname, router]);
+
+  if (!checked) return null;
   return <>{children}</>;
 }

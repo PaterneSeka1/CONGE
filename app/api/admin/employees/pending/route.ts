@@ -21,6 +21,7 @@ export async function GET(req: Request) {
       id: true,
       firstName: true,
       lastName: true,
+      profilePhotoUrl: true,
       email: true,
       matricule: true,
       role: true,

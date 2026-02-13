@@ -26,6 +26,9 @@ export async function POST(req: Request) {
         matricule: true,
         firstName: true,
         lastName: true,
+        phone: true,
+        profilePhotoUrl: true,
+        fullAddress: true,
         password: true,
         role: true,
         status: true,
@@ -88,6 +91,9 @@ export async function POST(req: Request) {
         matricule: employee.matricule,
         firstName: employee.firstName,
         lastName: employee.lastName,
+        phone: employee.phone ?? null,
+        profilePhotoUrl: employee.profilePhotoUrl ?? null,
+        fullAddress: employee.fullAddress ?? null,
         role: employee.role,
         status: employee.status,
         leaveBalance: employee.leaveBalance ?? 25,
@@ -97,7 +103,8 @@ export async function POST(req: Request) {
         departmentType,
       },
     });
-  } catch (e: any) {
-    return jsonError("Erreur serveur", 500, { code: e?.code, details: e?.message });
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string };
+    return jsonError("Erreur serveur", 500, { code: err?.code, details: err?.message });
   }
 }

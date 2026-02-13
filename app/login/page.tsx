@@ -4,23 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
-
-type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
-type DepartmentType = "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string;
-
-function routeForRole(role: EmployeeRole, isDsiAdmin = false, departmentType?: DepartmentType | null) {
-  switch (role) {
-    case "CEO":
-      return "/dashboard/ceo";
-    case "ACCOUNTANT":
-      return "/dashboard/accountant";
-    case "DEPT_HEAD":
-    case "SERVICE_HEAD":
-      return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/manager";
-    default:
-      return "/dashboard/employee";
-  }
-}
+import { hasRequiredProfileData, routeForRole } from "@/lib/auth-client";
 
 function normIdentifier(v: string) {
   const s = v.trim();
@@ -77,14 +61,19 @@ function LoginContent() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("employee", JSON.stringify(data.employee));
 
-      toast.success("Connexion reussie", { id: loadingToast });
+      toast.success("Connexion réussie", { id: loadingToast });
 
-      const role = data.employee.role as EmployeeRole | undefined;
+      const role = data.employee.role as "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE" | undefined;
       const isDsiAdmin = Boolean(data.employee.isDsiAdmin);
-      const departmentType = (data.employee.departmentType ?? null) as DepartmentType | null;
-      window.location.href = role ? routeForRole(role, isDsiAdmin, departmentType) : "/dashboard";
+      const departmentType = (data.employee.departmentType ?? null) as "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
+      const nextRoute = !hasRequiredProfileData(data.employee)
+        ? "/onboarding"
+        : role
+          ? routeForRole(role, isDsiAdmin, departmentType)
+          : "/dashboard";
+      window.location.href = nextRoute;
     } catch {
-      toast.error("Erreur reseau. Veuillez reessayer.", { id: loadingToast });
+      toast.error("Erreur réseau. Veuillez réessayer.", { id: loadingToast });
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +92,7 @@ function LoginContent() {
             <img src="/logo.jpeg" alt="Logo" className="h-24 w-24 object-contain" />
           </div>
           <h1 className="text-5xl font-bold mb-6">Bienvenue</h1>
-          <p className="text-xl opacity-90">Connectez-vous pour acceder a votre espace personnel.</p>
+          <p className="text-xl opacity-90">Connectez-vous pour accéder à votre espace personnel.</p>
         </div>
       </div>
 
@@ -132,7 +121,7 @@ function LoginContent() {
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="ex: admin@domaine.com ou CEO-001"
+                    placeholder="ex : admin@domaine.com ou CEO-001"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -173,7 +162,7 @@ function LoginContent() {
                     href="/forgot-password"
                     className="text-sm text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline"
                   >
-                    Mot de passe oublie ?
+                    Mot de passe oublié ?
                   </a>
                 </div>
               </div>
@@ -189,9 +178,9 @@ function LoginContent() {
             </div>
 
             <p className="mt-8 text-center text-sm text-gray-600">
-              Pas encore de compte -{" "}
+              Pas encore de compte ?{" "}
               <a href="/register" className="text-vdm-gold-600 font-semibold hover:text-vdm-gold-700 hover:underline">
-                Creer un compte
+                Créer un compte
               </a>
             </p>
           </div>
@@ -203,9 +192,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}
-    >
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Chargement...</div>}>
       <LoginContent />
     </Suspense>
   );
