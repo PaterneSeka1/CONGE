@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { jsonError } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 export async function POST(req: Request) {
   try {
@@ -29,6 +30,9 @@ export async function POST(req: Request) {
         phone: true,
         profilePhotoUrl: true,
         fullAddress: true,
+        hireDate: true,
+        companyEntryDate: true,
+        cnpsNumber: true,
         password: true,
         role: true,
         status: true,
@@ -43,6 +47,7 @@ export async function POST(req: Request) {
 
     const valid = await bcrypt.compare(password, employee.password);
     if (!valid) return jsonError("Identifiants invalides", 401);
+    const synced = await syncEmployeeLeaveBalance(prisma, employee.id);
 
     // Blocage tant que pas validé par l'admin (DSI)
     if (employee.status !== "ACTIVE") {
@@ -94,9 +99,12 @@ export async function POST(req: Request) {
         phone: employee.phone ?? null,
         profilePhotoUrl: employee.profilePhotoUrl ?? null,
         fullAddress: employee.fullAddress ?? null,
+        hireDate: employee.hireDate ?? employee.companyEntryDate ?? null,
+        companyEntryDate: employee.companyEntryDate ?? null,
+        cnpsNumber: employee.cnpsNumber ?? null,
         role: employee.role,
         status: employee.status,
-        leaveBalance: employee.leaveBalance ?? 25,
+        leaveBalance: synced?.employee.leaveBalance ?? employee.leaveBalance ?? 25,
         departmentId: employee.departmentId,
         serviceId: employee.serviceId,
         isDsiAdmin,

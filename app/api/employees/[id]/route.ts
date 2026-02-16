@@ -5,8 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/auth";
 import { requireAuth } from "@/lib/leave-requests";
 import { norm } from "@/lib/validators";
+import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+function parseDateInput(value: unknown) {
+  const raw = norm(value);
+  if (!raw) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+}
 
 export async function DELETE(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);
@@ -90,14 +100,24 @@ export async function PUT(req: Request, ctx: Ctx) {
     const v = body?.serviceId ? String(body.serviceId) : null;
     data.serviceId = v || null;
   }
+  if (Object.prototype.hasOwnProperty.call(body, "hireDate")) {
+    const parsed = parseDateInput(body?.hireDate);
+    if (parsed === undefined) return jsonError("hireDate invalide (YYYY-MM-DD)", 400);
+    data.hireDate = parsed;
+    data.companyEntryDate = parsed;
+  }
 
   if (Object.keys(data).length === 0) {
     return jsonError("Aucun champ à modifier", 400);
   }
 
-  const updated = await prisma.employee.update({
+  await prisma.employee.update({
     where: { id },
     data,
+  });
+  await syncEmployeeLeaveBalance(prisma, id);
+  const updated = await prisma.employee.findUnique({
+    where: { id },
     select: {
       id: true,
       firstName: true,
@@ -110,8 +130,11 @@ export async function PUT(req: Request, ctx: Ctx) {
       departmentId: true,
       serviceId: true,
       leaveBalance: true,
+      hireDate: true,
     },
   });
+
+  if (!updated) return jsonError("Employé introuvable", 404);
 
   return NextResponse.json({ employee: updated });
 }

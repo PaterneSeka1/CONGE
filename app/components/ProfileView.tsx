@@ -6,6 +6,7 @@ import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
 import { adjacencyGraphs, dictionary as commonDictionary } from "@zxcvbn-ts/language-common";
 import { dictionary as frDictionary } from "@zxcvbn-ts/language-fr";
 import { isCompletePhone } from "@/lib/phone";
+import EmployeeDocumentsSection from "@/app/components/EmployeeDocumentsSection";
 
 zxcvbnOptions.setOptions({
   graphs: adjacencyGraphs,
@@ -60,6 +61,19 @@ function composePhone(country: string, local: string) {
   const formattedLocal = formatLocalPhone(l);
   if (!c) return formattedLocal ? `+ ${formattedLocal}` : "+";
   return formattedLocal ? `+${c} ${formattedLocal}` : `+${c}`;
+}
+
+function toDateInputValue(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function currentHireDateValue(draft: EditableEmployee) {
+  return draft.hireDate ?? draft.companyEntryDate ?? null;
 }
 
 function roleLabel(role?: string | null) {
@@ -200,6 +214,9 @@ export default function ProfileView() {
       phone: draft.phone ?? null,
       profilePhotoUrl: draft.profilePhotoUrl ?? null,
       fullAddress: draft.fullAddress ?? null,
+      hireDate: currentHireDateValue(draft),
+      companyEntryDate: currentHireDateValue(draft),
+      cnpsNumber: draft.cnpsNumber ?? null,
     };
     if (password) payload.password = password;
 
@@ -219,8 +236,9 @@ export default function ProfileView() {
   };
 
   return (
-    <div className="bg-white border border-vdm-gold-200 rounded-xl p-6">
-      <div className="flex items-center gap-4 mb-5 pb-4 border-b border-vdm-gold-100">
+    <div>
+      <div className="bg-white border border-vdm-gold-200 rounded-xl p-6">
+        <div className="flex items-center gap-4 mb-5 pb-4 border-b border-vdm-gold-100">
         {draft.profilePhotoUrl ? (
           <button
             type="button"
@@ -248,68 +266,68 @@ export default function ProfileView() {
               : "Photo, adresse precise et numero de telephone obligatoires."}
           </div>
         </div>
-      </div>
-
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <div className="text-lg font-semibold text-vdm-gold-800">Informations du compte</div>
-          <div className="text-sm text-vdm-gold-700">Mettez à jour vos informations personnelles.</div>
         </div>
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-          >
-            Modifier
-          </button>
-        ) : (
-          <div className="flex gap-2">
+
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <div className="text-lg font-semibold text-vdm-gold-800">Informations du compte</div>
+            <div className="text-sm text-vdm-gold-700">Mettez à jour vos informations personnelles.</div>
+          </div>
+          {!isEditing ? (
             <button
-              onClick={saveEdit}
-              className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800"
-            >
-              Enregistrer
-            </button>
-            <button
-              onClick={cancelEdit}
+              onClick={() => setIsEditing(true)}
               className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
             >
-              Annuler
+              Modifier
             </button>
-          </div>
-        )}
-      </div>
-
-      {isPhotoPreviewOpen && draft.profilePhotoUrl ? (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-          onClick={() => setIsPhotoPreviewOpen(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Aperçu de la photo de profil"
-        >
-          <div
-            className="relative w-full max-w-3xl rounded-xl overflow-hidden bg-white"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => setIsPhotoPreviewOpen(false)}
-              className="absolute right-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xs text-vdm-gold-900 border border-vdm-gold-200 hover:bg-white"
-            >
-              Fermer
-            </button>
-            <img
-              src={draft.profilePhotoUrl}
-              alt="Aperçu agrandi de la photo de profil"
-              className="w-full max-h-[85vh] object-contain bg-black"
-            />
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={saveEdit}
+                className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800"
+              >
+                Enregistrer
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+              >
+                Annuler
+              </button>
+            </div>
+          )}
         </div>
-      ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
+        {isPhotoPreviewOpen && draft.profilePhotoUrl ? (
+          <div
+            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+            onClick={() => setIsPhotoPreviewOpen(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Aperçu de la photo de profil"
+          >
+            <div
+              className="relative w-full max-w-3xl rounded-xl overflow-hidden bg-white"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setIsPhotoPreviewOpen(false)}
+                className="absolute right-3 top-3 rounded-md bg-white/90 px-2 py-1 text-xs text-vdm-gold-900 border border-vdm-gold-200 hover:bg-white"
+              >
+                Fermer
+              </button>
+              <img
+                src={draft.profilePhotoUrl}
+                alt="Aperçu agrandi de la photo de profil"
+                className="w-full max-h-[85vh] object-contain bg-black"
+              />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
           <div className="text-xs text-vdm-gold-600">Prénom</div>
           {isEditing ? (
             <input
@@ -438,6 +456,34 @@ export default function ProfileView() {
           <div className="text-xs text-vdm-gold-600">Service</div>
           <div className="text-sm text-vdm-gold-900 font-medium">{draft.serviceId ?? "—"}</div>
         </div>
+        <div>
+          <div className="text-xs text-vdm-gold-600">Date d&apos;entrée dans l&apos;entreprise</div>
+          {isEditing ? (
+            <input
+              type="date"
+              value={toDateInputValue(currentHireDateValue(draft))}
+              onChange={(e) => setDraft({ ...draft, hireDate: e.target.value, companyEntryDate: e.target.value })}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+            />
+          ) : (
+            <div className="text-sm text-vdm-gold-900 font-medium">
+              {toDateInputValue(currentHireDateValue(draft)) || "—"}
+            </div>
+          )}
+        </div>
+        <div>
+          <div className="text-xs text-vdm-gold-600">Numero CNPS</div>
+          {isEditing ? (
+            <input
+              value={draft.cnpsNumber ?? ""}
+              onChange={(e) => setDraft({ ...draft, cnpsNumber: e.target.value })}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              placeholder="Ex: CNPS-123456"
+            />
+          ) : (
+            <div className="text-sm text-vdm-gold-900 font-medium">{draft.cnpsNumber ?? "—"}</div>
+          )}
+        </div>
         {isEditing ? (
           <div className="md:col-span-2">
             <div className="text-xs text-vdm-gold-600">Mot de passe</div>
@@ -464,7 +510,9 @@ export default function ProfileView() {
             {passwordError ? <div className="mt-2 text-xs text-red-600">{passwordError}</div> : null}
           </div>
         ) : null}
+        </div>
       </div>
+      {employee.role !== "CEO" ? <EmployeeDocumentsSection employee={employee} /> : null}
     </div>
   );
 }

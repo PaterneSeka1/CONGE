@@ -18,9 +18,13 @@ type EmployeeRow = {
   role: "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
   status: "PENDING" | "ACTIVE" | "REJECTED";
   leaveBalance?: number;
+  annualLeaveBalance?: number;
   departmentId?: string | null;
   serviceId?: string | null;
 };
+
+type DepartmentApiItem = { id: string; name?: string | null; type?: string | null };
+type ServiceApiItem = { id: string; name?: string | null; type?: string | null };
 
 const roleLabel: Record<EmployeeRow["role"], string> = {
   CEO: "DG",
@@ -90,7 +94,15 @@ export default function CeoEmployees() {
         if (res.ok) {
           const next = data?.employee?.leaveBalance;
           setRows((prev) =>
-            prev.map((r) => (r.id === id ? { ...r, leaveBalance: next ?? r.leaveBalance } : r))
+            prev.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    leaveBalance: next ?? r.leaveBalance,
+                    annualLeaveBalance: next ?? r.annualLeaveBalance,
+                  }
+                : r
+            )
           );
           toast.success("Solde mis à jour.", { id: t });
         } else {
@@ -266,9 +278,12 @@ export default function CeoEmployees() {
         cell: ({ row }) => services[row.original.serviceId ?? ""] ?? "-",
       },
       {
-        header: "Solde restant",
-        accessorKey: "leaveBalance",
-        cell: ({ row }) => row.original.leaveBalance ?? "—",
+        header: "Solde total annuel",
+        accessorKey: "annualLeaveBalance",
+        cell: ({ row }) =>
+          Number.isFinite(row.original.annualLeaveBalance)
+            ? `${Number(row.original.annualLeaveBalance).toFixed(1)} j`
+            : "—",
       },
       {
         id: "actions",
@@ -322,12 +337,12 @@ export default function CeoEmployees() {
       const svcData = await svcRes.json().catch(() => ({}));
 
       const depMap: Record<string, string> = {};
-      (depData?.departments ?? []).forEach((d: any) => {
+      (depData?.departments ?? []).forEach((d: DepartmentApiItem) => {
         depMap[d.id] = d.name ?? d.type ?? d.id;
       });
 
       const svcMap: Record<string, string> = {};
-      (svcData?.services ?? []).forEach((s: any) => {
+      (svcData?.services ?? []).forEach((s: ServiceApiItem) => {
         svcMap[s.id] = s.name ?? s.type ?? s.id;
       });
 
@@ -335,7 +350,7 @@ export default function CeoEmployees() {
       setServices(svcMap);
 
       setRows(
-        (empData?.employees ?? []).map((e: any) => ({
+        (empData?.employees ?? []).map((e: Partial<EmployeeRow>) => ({
           id: e.id,
           firstName: e.firstName,
           lastName: e.lastName,
@@ -346,6 +361,7 @@ export default function CeoEmployees() {
           role: e.role ?? "EMPLOYEE",
           status: e.status ?? "ACTIVE",
           leaveBalance: e.leaveBalance ?? 25,
+          annualLeaveBalance: e.annualLeaveBalance ?? e.leaveBalance ?? 25,
           departmentId: e.departmentId ?? null,
           serviceId: e.serviceId ?? null,
         }))

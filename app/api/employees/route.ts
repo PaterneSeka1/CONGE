@@ -5,10 +5,12 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { verifyJwt, jsonError } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { syncAllActiveEmployeesLeaveBalance } from "@/lib/leave-balance";
 
 export async function GET(req: Request) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
+  await syncAllActiveEmployeesLeaveBalance();
 
   const url = new URL(req.url);
   const q = norm(url.searchParams.get("q"));
@@ -35,6 +37,9 @@ export async function GET(req: Request) {
       role: true,
       status: true,
       leaveBalance: true,
+      leaveBalanceAdjustment: true,
+      hireDate: true,
+      companyEntryDate: true,
       departmentId: true,
       serviceId: true,
       createdAt: true,
@@ -42,7 +47,12 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ employees });
+  const employeesWithAnnualBalance = employees.map((employee) => ({
+    ...employee,
+    annualLeaveBalance: Number(employee.leaveBalance ?? 0),
+  }));
+
+  return NextResponse.json({ employees: employeesWithAnnualBalance });
 }
 
 export async function POST(req: Request) {
@@ -86,6 +96,7 @@ export async function POST(req: Request) {
         role: true,
         status: true,
         leaveBalance: true,
+        hireDate: true,
         departmentId: true,
         serviceId: true,
         createdAt: true,
@@ -93,7 +104,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ employee: created }, { status: 201 });
-  } catch (e: any) {
-    return jsonError("Erreur serveur", 500, { code: e?.code, details: e?.message });
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string };
+    return jsonError("Erreur serveur", 500, { code: err?.code, details: err?.message });
   }
 }

@@ -10,6 +10,9 @@ export type EmployeeSession = {
   phone?: string | null;
   profilePhotoUrl?: string | null;
   fullAddress?: string | null;
+  hireDate?: string | null;
+  companyEntryDate?: string | null;
+  cnpsNumber?: string | null;
   role: EmployeeRole;
   status: EmployeeStatus;
   leaveBalance?: number;
@@ -87,6 +90,21 @@ export function hasPhoneNumber(employee?: EmployeeSession | null) {
   return Boolean(employee?.phone && String(employee.phone).trim().length > 0);
 }
 
+export function hasCompanyEntryDate(employee?: EmployeeSession | null) {
+  const value = employee?.hireDate ?? employee?.companyEntryDate;
+  return Boolean(value && String(value).trim().length > 0);
+}
+
+export function hasCnpsNumber(employee?: EmployeeSession | null) {
+  return Boolean(employee?.cnpsNumber && String(employee.cnpsNumber).trim().length > 0);
+}
+
 export function hasRequiredProfileData(employee?: EmployeeSession | null) {
-  return hasProfilePhoto(employee) && hasPreciseAddress(employee) && hasPhoneNumber(employee);
+  return (
+    hasProfilePhoto(employee) &&
+    hasPreciseAddress(employee) &&
+    hasPhoneNumber(employee) &&
+    hasCompanyEntryDate(employee) &&
+    hasCnpsNumber(employee)
+  );
 }

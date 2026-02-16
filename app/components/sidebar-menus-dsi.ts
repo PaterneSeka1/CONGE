@@ -32,6 +32,10 @@ export const dsiMenu: SidebarSection[] = [
     links: [{ label: "Validation des comptes", icon: "shield", to: "/dashboard/dsi/accounts/pending" }],
   },
   {
+    title: "Paie",
+    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/dsi/payslips" }],
+  },
+  {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/dsi/profile" }],
   },

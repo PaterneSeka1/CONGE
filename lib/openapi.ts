@@ -140,6 +140,81 @@ export const openapiSpec = {
       },
     },
 
+    "/api/employee-documents": {
+      get: {
+        summary: "Lister les documents RH (personnels ou globaux pour PDG/Comptable)",
+        parameters: [
+          { name: "employeeId", in: "query", required: false, schema: { type: "string" } },
+          {
+            name: "type",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: [
+                "ID_CARD",
+                "BIRTH_CERTIFICATE",
+                "SPOUSE_BIRTH_CERTIFICATE",
+                "CHILD_BIRTH_CERTIFICATE",
+                "CURRICULUM_VITAE",
+                "COVER_LETTER",
+                "GEOGRAPHIC_LOCATION",
+              ],
+            },
+          },
+        ],
+        responses: { "200": { description: "OK" } },
+      },
+      post: {
+        summary: "Ajouter un document RH (interdit au PDG, comptable = uniquement ses documents)",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["type", "fileName", "fileDataUrl"],
+                properties: {
+                  employeeId: { type: "string", nullable: true },
+                  type: {
+                    type: "string",
+                    enum: [
+                      "ID_CARD",
+                      "BIRTH_CERTIFICATE",
+                      "SPOUSE_BIRTH_CERTIFICATE",
+                      "CHILD_BIRTH_CERTIFICATE",
+                      "CURRICULUM_VITAE",
+                      "COVER_LETTER",
+                      "GEOGRAPHIC_LOCATION",
+                    ],
+                  },
+                  relatedPersonName: {
+                    type: "string",
+                    nullable: true,
+                    description: "Nom du conjoint ou de l'enfant (requis pour les types conjoint/enfant)",
+                  },
+                  childOrder: {
+                    type: "integer",
+                    nullable: true,
+                    description: "Rang de l'enfant (optionnel, uniquement pour CHILD_BIRTH_CERTIFICATE)",
+                  },
+                  fileName: { type: "string" },
+                  fileDataUrl: {
+                    type: "string",
+                    description: "Data URL base64 d'un PDF/image",
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Créé" },
+          "403": { description: "Ajout interdit (PDG) ou tentative d'ajout pour un autre employé" },
+        },
+      },
+    },
+
     "/api/departments/{id}/responsable": {
       get: {
         summary: "Lister responsables actifs d'un département",

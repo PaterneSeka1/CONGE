@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { jsonError, verifyJwt } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 function isValidHttpUrl(value: string) {
   try {
@@ -19,12 +20,22 @@ function isValidImageDataUrl(value: string) {
   return /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(value);
 }
 
+function parseCompanyEntryDate(value: unknown) {
+  const raw = norm(value);
+  if (!raw) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+}
+
 export async function GET(req: Request) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
 
   const id = String(v.payload?.sub ?? "");
   if (!id) return NextResponse.json({ error: "Token invalide" }, { status: 401 });
+  await syncEmployeeLeaveBalance(prisma, id);
 
   const employee = await prisma.employee.findUnique({
     where: { id },
@@ -37,6 +48,9 @@ export async function GET(req: Request) {
       phone: true,
       profilePhotoUrl: true,
       fullAddress: true,
+      hireDate: true,
+      companyEntryDate: true,
+      cnpsNumber: true,
       jobTitle: true,
       role: true,
       status: true,
@@ -97,6 +111,32 @@ export async function PUT(req: Request) {
     const value = norm(body?.fullAddress);
     data.fullAddress = value || null;
   }
+  if (Object.prototype.hasOwnProperty.call(body, "companyEntryDate")) {
+    const parsed = parseCompanyEntryDate(body?.companyEntryDate);
+    if (parsed === undefined) {
+      return jsonError("Date d'entrée invalide (format YYYY-MM-DD)", 400);
+    }
+    data.companyEntryDate = parsed;
+    data.hireDate = parsed;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "hireDate")) {
+    const parsed = parseCompanyEntryDate(body?.hireDate);
+    if (parsed === undefined) {
+      return jsonError("Date d'embauche invalide (format YYYY-MM-DD)", 400);
+    }
+    data.hireDate = parsed;
+    data.companyEntryDate = parsed;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "cnpsNumber")) {
+    const value = norm(body?.cnpsNumber);
+    if (!value) {
+      data.cnpsNumber = null;
+    } else if (value.length > 50) {
+      return jsonError("Numéro CNPS invalide (max 50 caractères)", 400);
+    } else {
+      data.cnpsNumber = value;
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(body, "password")) {
     const value = norm(body?.password);
     if (!value || value.length < 6) {
@@ -109,9 +149,13 @@ export async function PUT(req: Request) {
     return jsonError("Aucun champ a modifier", 400);
   }
 
-  const updated = await prisma.employee.update({
+  await prisma.employee.update({
     where: { id },
     data,
+  });
+  await syncEmployeeLeaveBalance(prisma, id);
+  const updated = await prisma.employee.findUnique({
+    where: { id },
     select: {
       id: true,
       email: true,
@@ -121,6 +165,9 @@ export async function PUT(req: Request) {
       phone: true,
       profilePhotoUrl: true,
       fullAddress: true,
+      hireDate: true,
+      companyEntryDate: true,
+      cnpsNumber: true,
       jobTitle: true,
       role: true,
       status: true,
@@ -130,5 +177,6 @@ export async function PUT(req: Request) {
     },
   });
 
+  if (!updated) return jsonError("Employé introuvable", 404);
   return NextResponse.json({ employee: updated });
 }

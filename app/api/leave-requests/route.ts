@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/auth";
 import { parseDate, requireAuth, findActiveEmployeeByRole } from "@/lib/leave-requests";
 import { norm } from "@/lib/validators";
+import {
+  calculateEntitledLeaveDaysForYear,
+  consumedLeaveDaysForYear,
+  requestedLeaveDays,
+  syncEmployeeLeaveBalance,
+} from "@/lib/leave-balance";
 
 function supportsLeaveBlackoutEmployeeIds() {
   const client = prisma as unknown as {
@@ -54,6 +60,47 @@ export async function POST(req: Request) {
 
   if (startDate > endDate) {
     return jsonError("startDate doit être avant endDate", 400);
+  }
+
+  await syncEmployeeLeaveBalance(prisma, actorId);
+  const employee = await prisma.employee.findUnique({
+    where: { id: actorId },
+    select: {
+      id: true,
+      leaveBalance: true,
+      leaveBalanceAdjustment: true,
+      hireDate: true,
+      companyEntryDate: true,
+      createdAt: true,
+    },
+  });
+  if (!employee) return jsonError("Employé introuvable", 404);
+
+  const currentYear = new Date().getUTCFullYear();
+  const consumed = await consumedLeaveDaysForYear(prisma, actorId, currentYear);
+  const nextYearEntitlement = calculateEntitledLeaveDaysForYear(
+    {
+      id: employee.id,
+      leaveBalance: Number(employee.leaveBalance ?? 0),
+      leaveBalanceAdjustment: Number(employee.leaveBalanceAdjustment ?? 0),
+      hireDate: employee.hireDate ?? null,
+      companyEntryDate: employee.companyEntryDate ?? null,
+      createdAt: employee.createdAt,
+    },
+    currentYear + 1
+  ).entitlement;
+  const availableCurrentYear = Math.max(0, Number(employee.leaveBalance ?? 0) - consumed);
+  const available = Math.max(0, availableCurrentYear + nextYearEntitlement);
+  const requested = requestedLeaveDays(startDate, endDate);
+  if (requested > available) {
+    return jsonError("La demande dépasse votre solde de congés disponible", 409, {
+      available,
+      availableCurrentYear,
+      nextYearAdvance: nextYearEntitlement,
+      requested,
+      consumed,
+      entitlement: employee.leaveBalance,
+    });
   }
 
   const supportsEmployeeIds = supportsLeaveBlackoutEmployeeIds();

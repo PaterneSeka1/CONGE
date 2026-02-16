@@ -57,6 +57,19 @@ function composePhone(country: string, local: string) {
   return formattedLocal ? `+${c} ${formattedLocal}` : `+${c}`;
 }
 
+function toDateInputValue(value: string | null | undefined) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function currentHireDateValue(draft: EditableEmployee) {
+  return draft.hireDate ?? draft.companyEntryDate ?? null;
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const initialEmployee = useMemo(() => getEmployee(), []);
@@ -137,6 +150,19 @@ export default function OnboardingPage() {
       toast.error("Adresse precise obligatoire.");
       return;
     }
+    const hireDate = currentHireDateValue(draft);
+    if (!hireDate || !String(hireDate).trim()) {
+      toast.error("Date d'entrée dans l'entreprise obligatoire.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(hireDate))) {
+      toast.error("Date d'entrée invalide. Utilisez le format YYYY-MM-DD.");
+      return;
+    }
+    if (!draft.cnpsNumber || !String(draft.cnpsNumber).trim()) {
+      toast.error("Numéro CNPS obligatoire.");
+      return;
+    }
 
     const token = getToken();
     if (!token) return;
@@ -154,6 +180,9 @@ export default function OnboardingPage() {
           phone: draft.phone ?? null,
           fullAddress: draft.fullAddress ?? null,
           profilePhotoUrl: draft.profilePhotoUrl ?? null,
+          hireDate: hireDate ?? null,
+          companyEntryDate: hireDate ?? null,
+          cnpsNumber: draft.cnpsNumber ?? null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -240,6 +269,24 @@ export default function OnboardingPage() {
               onChange={(e) => setDraft({ ...draft, fullAddress: e.target.value })}
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
               placeholder="Rue, ville, code postal, pays"
+            />
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600 mb-1">Date d&apos;entrée dans l&apos;entreprise (obligatoire)</div>
+            <input
+              type="date"
+              value={toDateInputValue(currentHireDateValue(draft))}
+              onChange={(e) => setDraft({ ...draft, hireDate: e.target.value, companyEntryDate: e.target.value })}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
+            />
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600 mb-1">Numero CNPS (obligatoire)</div>
+            <input
+              value={draft.cnpsNumber ?? ""}
+              onChange={(e) => setDraft({ ...draft, cnpsNumber: e.target.value })}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
+              placeholder="Ex: CNPS-123456"
             />
           </div>
           <div className="md:col-span-2">

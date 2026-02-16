@@ -9,6 +9,10 @@ export const employeeMenu: SidebarSection[] = [
       { label: "Mes demandes", icon: "clock", to: "/dashboard/employee/requests" },
     ],
   },
+  {
+    title: "Paie",
+    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/employee/payslips" }],
+  },
   { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/employee/profile" }] },
 ];
 
@@ -46,6 +50,13 @@ export const accountantMenu: SidebarSection[] = [
     ],
   },
   {
+    title: "Paie",
+    links: [
+      { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/accountant/payslips" },
+      { label: "Bulletins importés", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
+    ],
+  },
+  {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/accountant/profile" }],
   },
@@ -68,6 +79,10 @@ export const managerMenu: SidebarSection[] = [
     ],
   },
   {
+    title: "Paie",
+    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/manager/payslips" }],
+  },
+  {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/manager/profile" }],
   },
@@ -85,7 +100,10 @@ export const ceoMenu: SidebarSection[] = [
   },
   {
     title: "Employés",
-    links: [{ label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" }],
+    links: [
+      { label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" },
+      { label: "Documents RH", icon: "users", to: "/dashboard/ceo/documents" },
+    ],
   },
   {
     title: "Département OTHERS",
@@ -104,6 +122,10 @@ export const ceoMenu: SidebarSection[] = [
       { label: "Inbox", icon: "clipboard", to: "/dashboard/ceo/purchases/inbox" },
       { label: "Historique", icon: "clock", to: "/dashboard/ceo/purchases/history" },
     ],
+  },
+  {
+    title: "Paie",
+    links: [{ label: "Signer les bulletins", icon: "shield", to: "/dashboard/ceo/payslips/sign" }],
   },
   {
     title: "Compte",

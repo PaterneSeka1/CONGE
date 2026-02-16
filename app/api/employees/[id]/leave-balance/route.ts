@@ -4,10 +4,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError } from "@/lib/auth";
 import { requireAuth } from "@/lib/leave-requests";
+import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 type Ctx = { params: Promise<{ id: string }> };
-
-const BASE_ALLOWANCE = 25;
 
 export async function POST(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);
@@ -38,28 +37,27 @@ export async function POST(req: Request, ctx: Ctx) {
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    if (action === "RESET") {
-      return tx.employee.update({
-        where: { id },
-        data: { leaveBalance: BASE_ALLOWANCE },
-        select: { id: true, leaveBalance: true },
-      });
-    }
-
     const employee = await tx.employee.findUnique({
       where: { id },
-      select: { id: true, leaveBalance: true },
+      select: { id: true, leaveBalanceAdjustment: true },
     });
 
     if (!employee) return null;
 
-    const current = Number(employee.leaveBalance ?? BASE_ALLOWANCE);
-    const next = action === "INCREASE" ? current + amount : amount;
+    const currentAdjustment = Number(employee.leaveBalanceAdjustment ?? 0);
+    const nextAdjustment =
+      action === "RESET" ? 0 : action === "INCREASE" ? currentAdjustment + amount : amount;
 
-    return tx.employee.update({
+    await tx.employee.update({
       where: { id },
-      data: { leaveBalance: next },
-      select: { id: true, leaveBalance: true },
+      data: { leaveBalanceAdjustment: nextAdjustment },
+    });
+
+    await syncEmployeeLeaveBalance(tx, id);
+
+    return tx.employee.findUnique({
+      where: { id },
+      select: { id: true, leaveBalance: true, leaveBalanceAdjustment: true, hireDate: true },
     });
   });
 
@@ -67,4 +65,3 @@ export async function POST(req: Request, ctx: Ctx) {
 
   return NextResponse.json({ employee: updated });
 }
-

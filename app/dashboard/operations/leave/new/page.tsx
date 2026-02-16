@@ -103,6 +103,10 @@ function toDateValueForDay(year: number, month: number, day: number) {
   return toLocalDateInputValue(new Date(year, month, day));
 }
 
+function formatLeaveDays(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, "");
+}
+
 export default function OperationsLeaveNew() {
   const [type, setType] = useState("ANNUAL");
   const [startDate, setStartDate] = useState("");
@@ -111,6 +115,8 @@ export default function OperationsLeaveNew() {
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
   const [baseAllowance, setBaseAllowance] = useState<number>(BASE_ALLOWANCE);
   const [balance, setBalance] = useState<number>(BASE_ALLOWANCE);
+  const [seniorityYears, setSeniorityYears] = useState<number>(0);
+  const [seniorityBonusDays, setSeniorityBonusDays] = useState<number>(0);
   const today = useMemo(() => toLocalDateInputValue(new Date()), []);
   const [current, setCurrent] = useState(() => new Date());
   const { year, month, cells } = useMemo(() => buildMonth(current), [current]);
@@ -134,11 +140,19 @@ export default function OperationsLeaveNew() {
     if (!res.ok) return;
     const nextLeaves = (data?.leaves ?? []) as LeaveItem[];
     setLeaves(nextLeaves);
-    const base = Number(data?.employee?.leaveBalance ?? BASE_ALLOWANCE);
-    const year = new Date().getFullYear();
-    const consumedDays = consumedDaysForYear(nextLeaves, year);
+    const base = Number(data?.annualLeaveBalance ?? data?.employee?.leaveBalance ?? BASE_ALLOWANCE);
+    const remaining = Number(
+      data?.remainingCurrentYear ??
+      (() => {
+        const year = new Date().getFullYear();
+        const consumedDays = consumedDaysForYear(nextLeaves, year);
+        return Math.max(0, base - consumedDays);
+      })()
+    );
     setBaseAllowance(base);
-    setBalance(Math.max(0, base - consumedDays));
+    setBalance(Math.max(0, remaining));
+    setSeniorityYears(Number(data?.seniorityYears ?? 0));
+    setSeniorityBonusDays(Number(data?.seniorityBonusDays ?? 0));
   }, []);
 
   useEffect(() => {
@@ -190,13 +204,15 @@ export default function OperationsLeaveNew() {
       if (!day) return null;
       const dateValue = toDateValueForDay(year, month, day);
       const priority = ["APPROVED", "PENDING", "SUBMITTED", "REJECTED"] as const;
+      type PriorityStatus = (typeof priority)[number];
       let best: (typeof priority)[number] | null = null;
       for (const leave of leaves) {
         if (!rangesOverlap(dateValue, dateValue, leave.startDate, leave.endDate)) continue;
         const status = leave.status;
-        if (!priority.includes(status as any)) continue;
-        if (best == null || priority.indexOf(status as any) < priority.indexOf(best)) {
-          best = status as any;
+        if (!priority.includes(status as PriorityStatus)) continue;
+        const statusPriority = priority.indexOf(status as PriorityStatus);
+        if (best == null || statusPriority < priority.indexOf(best)) {
+          best = status as PriorityStatus;
         }
       }
       return best;
@@ -333,7 +349,12 @@ export default function OperationsLeaveNew() {
         </div>
 
         <div className="flex items-end justify-between gap-2 text-sm text-vdm-gold-700">
-          <div>Solde: {balance} / {baseAllowance} jours</div>
+          <div className="space-y-0.5">
+            <div>Solde restant annuel : {formatLeaveDays(balance)} / {formatLeaveDays(baseAllowance)} JOURS</div>
+            <div className="text-xs text-vdm-gold-600">
+              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)} JOURS
+            </div>
+          </div>
           <button
             type="button"
             onClick={refreshBalance}

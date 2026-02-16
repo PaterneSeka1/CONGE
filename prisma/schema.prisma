@@ -35,6 +35,16 @@ enum EmployeeRole {
   EMPLOYEE
 }
 
+enum EmployeeDocumentType {
+  ID_CARD
+  BIRTH_CERTIFICATE
+  SPOUSE_BIRTH_CERTIFICATE
+  CHILD_BIRTH_CERTIFICATE
+  CURRICULUM_VITAE
+  COVER_LETTER
+  GEOGRAPHIC_LOCATION
+}
+
 enum EmployeeStatus {
   PENDING
   ACTIVE
@@ -115,11 +125,15 @@ model Employee {
   phone String?
   profilePhotoUrl String?
   fullAddress String?
+  hireDate DateTime?
+  companyEntryDate DateTime?
+  cnpsNumber String?
   password  String
 
   role   EmployeeRole   @default(EMPLOYEE)
   status EmployeeStatus @default(PENDING)
-  leaveBalance Int @default(25)
+  leaveBalance Float @default(25)
+  leaveBalanceAdjustment Float @default(0)
 
   // Auto-relation (approbation) => NoAction obligatoire sur un côté
   approvedById  String?   @db.ObjectId
@@ -134,12 +148,19 @@ model Employee {
 
   responsibilities DepartmentResponsibility[]
   supervisedResponsibilities DepartmentResponsibility[] @relation("ResponsibilitySupervisor")
+  salarySlips SalarySlip[] @relation("SalarySlipOwner")
+  uploadedSalarySlips SalarySlip[] @relation("SalarySlipUploader")
+  signedSalarySlips SalarySlip[] @relation("SalarySlipSigner")
+  documents EmployeeDocument[] @relation("EmployeeDocuments")
+  uploadedDocuments EmployeeDocument[] @relation("EmployeeDocumentUploader")
+  ceoSignatureImageDataUrl String?
+  ceoSignatureImageMimeType String?
 
   // Congés
   leaveRequests   LeaveRequest[]  @relation("EmployeeLeaveRequests")
   assignedLeaves  LeaveRequest[]  @relation("LeaveAssignee")
   leaveDecisions  LeaveDecision[] @relation("LeaveActor")
-  receivedLeaveDecisions LeaveDecision[] @relation("LeaveDecisionTo") // ✅ champ inverse manquant
+  receivedLeaveDecisions LeaveDecision[] @relation("LeaveDecisionTo")  
   createdBlackouts LeaveBlackout[]
 
   // Achats / Notes de frais
@@ -155,6 +176,62 @@ model Employee {
   @@index([status])
   @@index([departmentId])
   @@index([serviceId])
+}
+
+model SalarySlip {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  employeeId String   @db.ObjectId
+  employee   Employee @relation("SalarySlipOwner", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  year  Int
+  month Int
+
+  fileName    String
+  mimeType    String
+  fileDataUrl String
+
+  uploadedById String   @db.ObjectId
+  uploadedBy   Employee @relation("SalarySlipUploader", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  signedById String?   @db.ObjectId
+  signedBy   Employee? @relation("SalarySlipSigner", fields: [signedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  signedAt DateTime?
+  signatureImageDataUrl String?
+  signatureImageMimeType String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([uploadedById])
+  @@index([signedById])
+  @@index([year, month])
+  @@unique([employeeId, year, month])
+}
+
+model EmployeeDocument {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  employeeId String   @db.ObjectId
+  employee   Employee @relation("EmployeeDocuments", fields: [employeeId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  type EmployeeDocumentType
+  relatedPersonName String?
+  childOrder Int?
+  fileName String
+  mimeType String
+  fileDataUrl String
+
+  uploadedById String   @db.ObjectId
+  uploadedBy   Employee @relation("EmployeeDocumentUploader", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([uploadedById])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model DepartmentResponsibility {

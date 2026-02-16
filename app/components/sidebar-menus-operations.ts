@@ -28,6 +28,10 @@ export const operationsMenu: SidebarSection[] = [
     ],
   },
   {
+    title: "Paie",
+    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/manager/payslips" }],
+  },
+  {
     title: "Compte",
     links: [{ label: "Profil", icon: "user", to: "/dashboard/manager/profile" }],
   },
