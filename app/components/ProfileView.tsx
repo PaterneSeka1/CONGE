@@ -187,6 +187,51 @@ export default function ProfileView() {
     reader.readAsDataURL(file);
   };
 
+  const downloadPassportPhoto = async () => {
+    if (!draft.profilePhotoUrl) return;
+    try {
+      const response = await fetch(draft.profilePhotoUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Impossible de charger l'image"));
+        img.src = objectUrl;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = 413;
+      canvas.height = 531;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas indisponible");
+
+      const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const dx = (canvas.width - drawWidth) / 2;
+      const dy = (canvas.height - drawHeight) / 2;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, dx, dy, drawWidth, drawHeight);
+
+      const jpgDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+      const safeName = `${draft.firstName ?? ""}-${draft.lastName ?? ""}`.replace(/\s+/g, "-").toLowerCase();
+      const a = document.createElement("a");
+      a.href = jpgDataUrl;
+      a.download = `photo-passeport-${safeName || "profil"}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      setPhotoError("Impossible de télécharger la photo en format passeport.");
+    }
+  };
+
   const saveEdit = async () => {
     if (password) {
       if (password.length < 6) {
@@ -258,14 +303,27 @@ export default function ProfileView() {
             {(draft.lastName?.[0] ?? "").toUpperCase()}
           </div>
         )}
-        <div>
+        <div className="flex-1">
           <div className="text-sm font-semibold text-vdm-gold-900">Photo de profil</div>
           <div className="text-xs text-vdm-gold-700">
             {draft.profilePhotoUrl && draft.fullAddress && draft.phone
               ? "Profil complet."
               : "Photo, adresse precise et numero de telephone obligatoires."}
           </div>
+          {photoError ? <div className="text-xs text-red-600 mt-1">{photoError}</div> : null}
         </div>
+        {draft.profilePhotoUrl ? (
+          <div>
+            <button
+              type="button"
+              onClick={downloadPassportPhoto}
+              className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+            >
+              Télécharger photo 
+ 
+            </button>
+          </div>
+        ) : null}
         </div>
 
         <div className="flex items-start justify-between gap-4 mb-4">

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken, type EmployeeSession } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 const DOCUMENT_TYPES = [
   { value: "ID_CARD", label: "CNI" },
@@ -35,6 +36,7 @@ type EmployeeDocument = {
   mimeType: string;
   fileDataUrl: string;
   createdAt: string;
+  updatedAt?: string;
   employee?: EmployeeOption;
   uploadedBy?: {
     id: string;
@@ -85,11 +87,10 @@ type Props = {
 
 export default function EmployeeDocumentsSection({ employee }: Props) {
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
+  const [uploadOwnerDocuments, setUploadOwnerDocuments] = useState<EmployeeDocument[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(
     canReadAll(employee.role) ? ALL_EMPLOYEES_VALUE : employee.id
   );
@@ -100,11 +101,61 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
   const [fileInputKey, setFileInputKey] = useState(0);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [photoPreviewLabel, setPhotoPreviewLabel] = useState<string>("Photo de profil");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editType, setEditType] = useState<DocumentType>("ID_CARD");
+  const [editRelatedPersonName, setEditRelatedPersonName] = useState("");
+  const [editChildOrder, setEditChildOrder] = useState("");
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
+  const [editFileInputKey, setEditFileInputKey] = useState(0);
+  const [isEditingBusy, setIsEditingBusy] = useState(false);
+  const [deleteModalDoc, setDeleteModalDoc] = useState<EmployeeDocument | null>(null);
 
   const hasGlobalAccess = useMemo(() => canReadAll(employee.role), [employee.role]);
   const canUploadDocuments = employee.role !== "CEO";
-  const needsRelatedName = selectedType === "SPOUSE_BIRTH_CERTIFICATE" || selectedType === "CHILD_BIRTH_CERTIFICATE";
-  const isChildType = selectedType === "CHILD_BIRTH_CERTIFICATE";
+  const isEditingChildType = editType === "CHILD_BIRTH_CERTIFICATE";
+  const isEditingNeedsRelatedName =
+    editType === "SPOUSE_BIRTH_CERTIFICATE" || editType === "CHILD_BIRTH_CERTIFICATE";
+
+  const refreshDocuments = useCallback(async (signal?: AbortSignal) => {
+    const token = getToken();
+    if (!token) return;
+
+    setIsLoading(true);
+    const params = new URLSearchParams();
+    if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
+      params.set("employeeId", selectedEmployeeId);
+    }
+    if (!hasGlobalAccess) {
+      params.set("employeeId", employee.id);
+    }
+
+    const query = params.toString();
+    const url = query ? `/api/employee-documents?${query}` : "/api/employee-documents";
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      toast.error(String(data?.error ?? "Impossible de charger les documents"));
+      setIsLoading(false);
+      return;
+    }
+    setDocuments(Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : []);
+    setIsLoading(false);
+  }, [employee.id, hasGlobalAccess, selectedEmployeeId]);
+
+  const refreshUploadOwnerDocuments = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+    const res = await fetch(`/api/employee-documents?employeeId=${employee.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    const list = Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : [];
+    setUploadOwnerDocuments(list);
+  }, [employee.id]);
 
   useEffect(() => {
     if (!hasGlobalAccess) return;
@@ -129,42 +180,27 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
     if (!token) return;
 
     const controller = new AbortController();
-    const loadDocuments = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams();
-      if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
-        params.set("employeeId", selectedEmployeeId);
-      }
-      if (!hasGlobalAccess) {
-        params.set("employeeId", employee.id);
-      }
-
-      const query = params.toString();
-      const url = query ? `/api/employee-documents?${query}` : "/api/employee-documents";
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(String(data?.error ?? "Impossible de charger les documents"));
+    const frame = window.requestAnimationFrame(() => {
+      refreshDocuments(controller.signal).catch((e: unknown) => {
+        if ((e as Error)?.name === "AbortError") return;
+        toast.error("Impossible de charger les documents");
         setIsLoading(false);
-        return;
-      }
-      setDocuments(Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : []);
-      setIsLoading(false);
-    };
-
-    loadDocuments().catch((e: unknown) => {
-      if ((e as Error)?.name === "AbortError") return;
-      setError("Impossible de charger les documents");
-      setIsLoading(false);
+      });
     });
 
-    return () => controller.abort();
-  }, [employee.id, hasGlobalAccess, selectedEmployeeId]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      controller.abort();
+    };
+  }, [refreshDocuments]);
+
+  useEffect(() => {
+    if (!canUploadDocuments) return;
+    const frame = window.requestAnimationFrame(() => {
+      refreshUploadOwnerDocuments();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [canUploadDocuments, refreshUploadOwnerDocuments]);
 
   useEffect(() => {
     if (!photoPreviewUrl) return;
@@ -177,24 +213,49 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [photoPreviewUrl]);
 
+  const uploadOwnerTypeSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const doc of uploadOwnerDocuments) {
+      if (doc.type === "CHILD_BIRTH_CERTIFICATE") continue;
+      set.add(doc.type);
+    }
+    return set;
+  }, [uploadOwnerDocuments]);
+
+  const availableUploadTypes = useMemo(
+    () =>
+      DOCUMENT_TYPES.filter(
+        (item) => item.value === "CHILD_BIRTH_CERTIFICATE" || !uploadOwnerTypeSet.has(item.value)
+      ),
+    [uploadOwnerTypeSet]
+  );
+  const effectiveSelectedType = useMemo(
+    () =>
+      availableUploadTypes.some((item) => item.value === selectedType)
+        ? selectedType
+        : (availableUploadTypes[0]?.value ?? "CHILD_BIRTH_CERTIFICATE"),
+    [availableUploadTypes, selectedType]
+  );
+  const needsRelatedName =
+    effectiveSelectedType === "SPOUSE_BIRTH_CERTIFICATE" || effectiveSelectedType === "CHILD_BIRTH_CERTIFICATE";
+  const isChildType = effectiveSelectedType === "CHILD_BIRTH_CERTIFICATE";
+
   const uploadDocument = async () => {
     if (!canUploadDocuments) {
-      setError("Le PDG ne peut pas ajouter de documents administratifs.");
+      toast.error("Le PDG ne peut pas ajouter de documents administratifs.");
       return;
     }
     const token = getToken();
     if (!token) return;
     if (!selectedFile) {
-      setError("Sélectionnez un fichier avant l'envoi.");
+      toast.error("Sélectionnez un fichier avant l'envoi.");
       return;
     }
 
     setIsUploading(true);
-    setError(null);
-    setSuccess(null);
 
     if (needsRelatedName && !relatedPersonName.trim()) {
-      setError("Le nom du conjoint/enfant est obligatoire.");
+      toast.error("Le nom du conjoint/enfant est obligatoire.");
       setIsUploading(false);
       return;
     }
@@ -202,13 +263,13 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
     try {
       const fileDataUrl = await toDataUrl(selectedFile);
       if (!fileDataUrl) {
-        setError("Fichier invalide.");
+        toast.error("Fichier invalide.");
         setIsUploading(false);
         return;
       }
 
       const payload: Record<string, unknown> = {
-        type: selectedType,
+        type: effectiveSelectedType,
         fileName: selectedFile.name,
         fileDataUrl,
       };
@@ -218,7 +279,7 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
       if (isChildType && childOrder.trim()) {
         const parsedChildOrder = Number(childOrder.trim());
         if (!Number.isInteger(parsedChildOrder) || parsedChildOrder <= 0) {
-          setError("Le rang de l'enfant doit être un entier positif.");
+          toast.error("Le rang de l'enfant doit être un entier positif.");
           setIsUploading(false);
           return;
         }
@@ -232,38 +293,158 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(String(data?.error ?? "Erreur lors de l'envoi du document"));
+        toast.error(String(data?.error ?? "Erreur lors de l'envoi du document"));
         setIsUploading(false);
         return;
       }
 
-      setSuccess("Document ajouté avec succès.");
+      toast.success("Document ajouté avec succès.");
       setSelectedFile(null);
       setRelatedPersonName("");
       setChildOrder("");
       setFileInputKey((prev) => prev + 1);
-
-      const params = new URLSearchParams();
-      if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
-        params.set("employeeId", selectedEmployeeId);
-      }
-      if (!hasGlobalAccess) {
-        params.set("employeeId", employee.id);
-      }
-      const query = params.toString();
-      const refreshUrl = query ? `/api/employee-documents?${query}` : "/api/employee-documents";
-      const refreshRes = await fetch(refreshUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const refreshData = await refreshRes.json().catch(() => ({}));
-      if (refreshRes.ok) {
-        setDocuments(Array.isArray(refreshData?.documents) ? (refreshData.documents as EmployeeDocument[]) : []);
-      }
+      await refreshDocuments();
+      await refreshUploadOwnerDocuments();
       setIsUploading(false);
     } catch {
-      setError("Erreur lors de la lecture du fichier.");
+      toast.error("Erreur lors de la lecture du fichier.");
       setIsUploading(false);
     }
+  };
+
+  const canManageDocument = (doc: EmployeeDocument) => {
+    if (employee.role === "CEO") return false;
+    if (employee.role === "ACCOUNTANT") return doc.employee?.role !== "CEO";
+    return doc.employeeId === employee.id;
+  };
+
+  const startEditDocument = (doc: EmployeeDocument) => {
+    setEditingId(doc.id);
+    setEditType(doc.type);
+    setEditRelatedPersonName(doc.relatedPersonName ?? "");
+    setEditChildOrder(doc.childOrder ? String(doc.childOrder) : "");
+    setEditSelectedFile(null);
+    setEditFileInputKey((v) => v + 1);
+  };
+
+  const cancelEditDocument = () => {
+    if (isEditingBusy) return;
+    setEditingId(null);
+    setEditSelectedFile(null);
+    setEditRelatedPersonName("");
+    setEditChildOrder("");
+  };
+
+  const saveEditDocument = async (doc: EmployeeDocument) => {
+    const token = getToken();
+    if (!token) return;
+
+    setIsEditingBusy(true);
+    try {
+      const payload: Record<string, unknown> = {
+        type: editType,
+        relatedPersonName: isEditingNeedsRelatedName ? editRelatedPersonName.trim() : null,
+      };
+
+      if (isEditingNeedsRelatedName && !editRelatedPersonName.trim()) {
+        toast.error("Le nom du conjoint/enfant est obligatoire.");
+        setIsEditingBusy(false);
+        return;
+      }
+
+      if (isEditingChildType && editChildOrder.trim()) {
+        const parsedChildOrder = Number(editChildOrder.trim());
+        if (!Number.isInteger(parsedChildOrder) || parsedChildOrder <= 0) {
+          toast.error("Le rang de l'enfant doit être un entier positif.");
+          setIsEditingBusy(false);
+          return;
+        }
+        payload.childOrder = parsedChildOrder;
+      } else {
+        payload.childOrder = null;
+      }
+
+      if (editSelectedFile) {
+        const fileDataUrl = await toDataUrl(editSelectedFile);
+        if (!fileDataUrl) {
+          toast.error("Fichier invalide.");
+          setIsEditingBusy(false);
+          return;
+        }
+        payload.fileName = editSelectedFile.name;
+        payload.fileDataUrl = fileDataUrl;
+      }
+
+      const res = await fetch(`/api/employee-documents/${doc.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(String(data?.error ?? "Erreur lors de la modification du document"));
+        setIsEditingBusy(false);
+        return;
+      }
+
+      toast.success("Document modifié avec succès.");
+      setEditingId(null);
+      setEditSelectedFile(null);
+      await refreshDocuments();
+      await refreshUploadOwnerDocuments();
+      setIsEditingBusy(false);
+    } catch {
+      toast.error("Erreur réseau lors de la modification.");
+      setIsEditingBusy(false);
+    }
+  };
+
+  const deleteDocument = async (doc: EmployeeDocument) => {
+    setDeleteModalDoc(doc);
+  };
+
+  const confirmDeleteDocument = async () => {
+    if (!deleteModalDoc) return;
+    const token = getToken();
+    if (!token) return;
+
+    setIsEditingBusy(true);
+    try {
+      const res = await fetch(`/api/employee-documents/${deleteModalDoc.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(String(data?.error ?? "Erreur lors de la suppression du document"));
+        setIsEditingBusy(false);
+        return;
+      }
+      toast.success("Document supprimé.");
+      if (editingId === deleteModalDoc.id) setEditingId(null);
+      setDeleteModalDoc(null);
+      await refreshDocuments();
+      await refreshUploadOwnerDocuments();
+      setIsEditingBusy(false);
+    } catch {
+      toast.error("Erreur réseau lors de la suppression.");
+      setIsEditingBusy(false);
+    }
+  };
+
+
+  const getEditTypeOptions = (doc: EmployeeDocument) => {
+    const occupied = new Set(
+      documents
+        .filter((item) => item.employeeId === doc.employeeId && item.id !== doc.id && item.type !== "CHILD_BIRTH_CERTIFICATE")
+        .map((item) => item.type)
+    );
+    return DOCUMENT_TYPES.filter(
+      (item) =>
+        item.value === "CHILD_BIRTH_CERTIFICATE" ||
+        item.value === doc.type ||
+        !occupied.has(item.value)
+    );
   };
 
   return (
@@ -319,11 +500,11 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
             <div>
               <div className="text-xs text-vdm-gold-600 mb-1">Type de document</div>
               <select
-                value={selectedType}
+                value={effectiveSelectedType}
                 onChange={(e) => setSelectedType(e.target.value as DocumentType)}
                 className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
               >
-                {DOCUMENT_TYPES.map((item) => (
+                {availableUploadTypes.map((item) => (
                   <option key={item.value} value={item.value}>
                     {item.label}
                   </option>
@@ -377,16 +558,18 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
           <button
             type="button"
             onClick={uploadDocument}
-            disabled={isUploading}
+            disabled={isUploading || availableUploadTypes.length === 0}
             className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
           >
             {isUploading ? "Envoi..." : "Ajouter le document"}
           </button>
+          {availableUploadTypes.length === 0 ? (
+            <div className="text-xs text-vdm-gold-700 mt-1">
+              Tous les documents uniques sont déjà ajoutés. Seuls les extraits d&apos;enfant peuvent être multiples.
+            </div>
+          ) : null}
         </div>
       ) : null}
-
-      {error ? <div className="mb-3 text-sm text-red-600">{error}</div> : null}
-      {success ? <div className="mb-3 text-sm text-green-700">{success}</div> : null}
 
       {isLoading ? (
         <div className="text-sm text-vdm-gold-700">Chargement des documents...</div>
@@ -438,7 +621,7 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
                   ) : null}
                 </div>
                 </div>
-                <div>
+                <div className="flex flex-wrap gap-2">
                   <a
                     href={doc.fileDataUrl}
                     target="_blank"
@@ -448,8 +631,107 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
                   >
                     Ouvrir / Télécharger
                   </a>
+                  {canManageDocument(doc) ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => startEditDocument(doc)}
+                        className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                        disabled={isEditingBusy}
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteDocument(doc)}
+                        className="px-3 py-2 rounded-md border border-red-300 text-red-700 text-sm hover:bg-red-50"
+                        disabled={isEditingBusy}
+                      >
+                        Supprimer
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
+
+              {editingId === doc.id ? (
+                <div className="mt-3 border-t border-vdm-gold-100 pt-3 space-y-3">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <div className="text-xs text-vdm-gold-600 mb-1">Type de document</div>
+                      <select
+                        value={editType}
+                        onChange={(e) => setEditType(e.target.value as DocumentType)}
+                        className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                        disabled={isEditingBusy}
+                      >
+                        {getEditTypeOptions(doc).map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {isEditingNeedsRelatedName ? (
+                      <div>
+                        <div className="text-xs text-vdm-gold-600 mb-1">
+                          {isEditingChildType ? "Nom de l'enfant" : "Nom du conjoint"}
+                        </div>
+                        <input
+                          value={editRelatedPersonName}
+                          onChange={(e) => setEditRelatedPersonName(e.target.value)}
+                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                          disabled={isEditingBusy}
+                        />
+                      </div>
+                    ) : null}
+
+                    {isEditingChildType ? (
+                      <div>
+                        <div className="text-xs text-vdm-gold-600 mb-1">Rang de l&apos;enfant (optionnel)</div>
+                        <input
+                          value={editChildOrder}
+                          onChange={(e) => setEditChildOrder(e.target.value.replace(/\D/g, ""))}
+                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                          disabled={isEditingBusy}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-vdm-gold-600 mb-1">Remplacer le fichier (optionnel)</div>
+                    <input
+                      key={editFileInputKey}
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png,image/webp"
+                      onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
+                      className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                      disabled={isEditingBusy}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveEditDocument(doc)}
+                      className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+                      disabled={isEditingBusy}
+                    >
+                      {isEditingBusy ? "Enregistrement..." : "Enregistrer"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditDocument}
+                      className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                      disabled={isEditingBusy}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -479,6 +761,35 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
               alt={photoPreviewLabel}
               className="w-full max-h-[85vh] object-contain bg-black"
             />
+          </div>
+        </div>
+      ) : null}
+
+      {deleteModalDoc ? (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-xl bg-white border border-vdm-gold-200 p-5">
+            <div className="text-base font-semibold text-vdm-gold-900 mb-2">Confirmer la suppression</div>
+            <div className="text-sm text-vdm-gold-700 mb-4">
+              Voulez-vous vraiment supprimer ce document: <span className="font-semibold">{deleteModalDoc.fileName}</span> ?
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalDoc(null)}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                disabled={isEditingBusy}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteDocument}
+                className="px-3 py-2 rounded-md bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-60"
+                disabled={isEditingBusy}
+              >
+                {isEditingBusy ? "Suppression..." : "Supprimer"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
