@@ -147,7 +147,6 @@ export function Sidebar({
                   <button
                     key={org.id}
                     onClick={() => {
-                      console.log("Organisation sélectionnée :", org.id);
                       setOrgDropdownOpen(false);
                       setIsOpen(false);
                     }}
@@ -160,7 +159,6 @@ export function Sidebar({
                 ))}
                 <button
                   onClick={() => {
-                    console.log("Ajouter une organisation");
                     setOrgDropdownOpen(false);
                   }}
                   className="w-full text-left px-3 py-2 bg-vdm-gold-50 hover:bg-vdm-gold-100 transition text-sm font-semibold text-vdm-gold-900 border-t"

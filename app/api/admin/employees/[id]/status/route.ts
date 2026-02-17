@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwt, jsonError } from "@/lib/auth";
 import { isDsiAdmin } from "@/lib/dsiAdmin";
+import type { EmployeeRole, EmployeeStatus } from "@/generated/prisma/client";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -20,21 +21,25 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const ok = await isDsiAdmin(adminId);
   if (!ok) return jsonError("Accès refusé (admin DSI requis)", 403);
 
-  const body = await req.json().catch(() => ({}));
-  const status = body?.status;
-  const role = body?.role ? String(body.role) : null;
-  const departmentId = body?.departmentId ? String(body.departmentId) : null;
-  const serviceId = body?.serviceId ? String(body.serviceId) : null;
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const status = typeof body?.status === "string" ? body.status : null;
+  const role = typeof body?.role === "string" ? body.role : null;
+  const departmentId = typeof body?.departmentId === "string" ? body.departmentId : null;
+  const serviceId = typeof body?.serviceId === "string" ? body.serviceId : null;
 
-  if (!["ACTIVE", "REJECTED"].includes(status)) {
+  const allowedStatuses: EmployeeStatus[] = ["ACTIVE", "REJECTED"];
+  if (!status || !allowedStatuses.includes(status as EmployeeStatus)) {
     return jsonError("status invalide (ACTIVE|REJECTED)", 400);
   }
+  const parsedStatus = status as EmployeeStatus;
 
-  if (status === "ACTIVE" && role && !["EMPLOYEE", "ACCOUNTANT", "DEPT_HEAD", "SERVICE_HEAD"].includes(role)) {
+  const allowedRoles: EmployeeRole[] = ["EMPLOYEE", "ACCOUNTANT", "DEPT_HEAD", "SERVICE_HEAD"];
+  if (parsedStatus === "ACTIVE" && role && !allowedRoles.includes(role as EmployeeRole)) {
     return jsonError("role invalide (EMPLOYEE|ACCOUNTANT|DEPT_HEAD|SERVICE_HEAD)", 400);
   }
+  const parsedRole = role as EmployeeRole | null;
 
-  if (status === "ACTIVE" && role === "SERVICE_HEAD") {
+  if (parsedStatus === "ACTIVE" && parsedRole === "SERVICE_HEAD") {
     if (!departmentId) {
       return jsonError("departmentId requis pour SERVICE_HEAD", 400);
     }
@@ -47,7 +52,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
   }
 
-  if (status === "ACTIVE" && role === "DEPT_HEAD" && departmentId) {
+  if (parsedStatus === "ACTIVE" && parsedRole === "DEPT_HEAD" && departmentId) {
     const department = await prisma.department.findUnique({
       where: { id: departmentId },
       select: { type: true },
@@ -57,7 +62,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
   }
 
-  if (status === "ACTIVE" && role === "ACCOUNTANT") {
+  if (parsedStatus === "ACTIVE" && parsedRole === "ACCOUNTANT") {
     if (!departmentId) {
       return jsonError("departmentId requis pour ACCOUNTANT", 400);
     }
@@ -85,10 +90,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const updated = await prisma.employee.update({
     where: { id },
     data: {
-      status,
-      ...(status === "ACTIVE" && role ? { role } : {}),
-      ...(status === "ACTIVE" ? { departmentId } : {}),
-      ...(status === "ACTIVE" ? { serviceId } : {}),
+      status: parsedStatus,
+      ...(parsedStatus === "ACTIVE" && parsedRole ? { role: parsedRole } : {}),
+      ...(parsedStatus === "ACTIVE" ? { departmentId } : {}),
+      ...(parsedStatus === "ACTIVE" ? { serviceId } : {}),
       approvedById: adminId,
     },
     select: {

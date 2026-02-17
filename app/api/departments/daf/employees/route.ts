@@ -38,7 +38,7 @@ export async function GET(req: Request) {
   if (!dafDepartment) return NextResponse.json({ employees: [] });
 
   const serviceScoped =
-    actor.role === "SERVICE_HEAD" && actor.role !== "CEO" && actor.role !== "ACCOUNTANT"
+    actor.role === "SERVICE_HEAD"
       ? actor.serviceId
         ? { serviceId: actor.serviceId }
         : { id: "__none__" }
