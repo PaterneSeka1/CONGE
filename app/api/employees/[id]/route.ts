@@ -38,17 +38,35 @@ export async function PUT(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
 
-  const { role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Accès refusé", 403);
+  const { id: actorId, role } = authRes.auth;
+  const canManage = role === "CEO" || role === "ACCOUNTANT" || role === "DEPT_HEAD" || role === "SERVICE_HEAD";
+  if (!canManage) return jsonError("Accès refusé", 403);
 
   const { id } = await ctx.params;
   if (!id) return jsonError("ID requis", 400);
 
+  const actor = await prisma.employee.findUnique({
+    where: { id: actorId },
+    select: { id: true, role: true, departmentId: true, serviceId: true },
+  });
+  if (!actor) return jsonError("Acteur introuvable", 404);
+
   const existing = await prisma.employee.findUnique({
     where: { id },
-    select: { role: true },
+    select: { role: true, departmentId: true, serviceId: true },
   });
   if (!existing) return jsonError("Employé introuvable", 404);
+
+  // En dehors du CEO, l'édition est limitée au même département.
+  if (actor.role !== "CEO") {
+    if (!actor.departmentId || actor.departmentId !== existing.departmentId) {
+      return jsonError("Accès refusé", 403);
+    }
+    // Un service head ne peut modifier que les employés de son service.
+    if (actor.role === "SERVICE_HEAD" && actor.serviceId !== existing.serviceId) {
+      return jsonError("Accès refusé", 403);
+    }
+  }
 
   const body = await req.json().catch(() => ({}));
 
@@ -76,6 +94,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     data.jobTitle = norm(body?.jobTitle) || null;
   }
   if (Object.prototype.hasOwnProperty.call(body, "role")) {
+    if (actor.role !== "CEO") return jsonError("Modification du rôle interdite", 403);
     const v = String(body?.role ?? "");
     if (!["CEO", "ACCOUNTANT", "DEPT_HEAD", "SERVICE_HEAD", "EMPLOYEE"].includes(v)) {
       return jsonError("role invalide", 400);
@@ -93,10 +112,22 @@ export async function PUT(req: Request, ctx: Ctx) {
     data.status = v;
   }
   if (Object.prototype.hasOwnProperty.call(body, "departmentId")) {
+    if (actor.role !== "CEO") {
+      const requestedDepartment = body?.departmentId ? String(body.departmentId) : null;
+      if (requestedDepartment !== actor.departmentId) {
+        return jsonError("Changement de département interdit", 403);
+      }
+    }
     const v = body?.departmentId ? String(body.departmentId) : null;
     data.departmentId = v || null;
   }
   if (Object.prototype.hasOwnProperty.call(body, "serviceId")) {
+    if (actor.role === "SERVICE_HEAD") {
+      const requestedService = body?.serviceId ? String(body.serviceId) : null;
+      if (requestedService !== actor.serviceId) {
+        return jsonError("Changement de service interdit", 403);
+      }
+    }
     const v = body?.serviceId ? String(body.serviceId) : null;
     data.serviceId = v || null;
   }

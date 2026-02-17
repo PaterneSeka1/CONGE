@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import EmployeeAvatar from "@/app/components/EmployeeAvatar";
-import { getToken } from "@/lib/auth-client";
+import { getEmployee, getToken } from "@/lib/auth-client";
+import toast from "react-hot-toast";
 
 type EmployeeRow = {
   id: string;
@@ -18,6 +19,8 @@ type EmployeeRow = {
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
+  departmentName?: string;
+  serviceName?: string;
 };
 
 const roleLabel: Record<EmployeeRow["role"], string> = {
@@ -28,76 +31,56 @@ const roleLabel: Record<EmployeeRow["role"], string> = {
   EMPLOYEE: "Employé",
 };
 
+type EmployeeApiItem = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePhotoUrl?: string | null;
+  matricule?: string | null;
+  jobTitle?: string | null;
+  role?: EmployeeRow["role"];
+  status?: EmployeeRow["status"];
+  departmentId?: string | null;
+  serviceId?: string | null;
+  department?: { id: string; name?: string | null; type?: string | null } | null;
+  service?: { id: string; name?: string | null; type?: string | null } | null;
+};
+
 export default function AccountantDepartmentEmployees() {
+  const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [departments, setDepartments] = useState<Record<string, string>>({});
-  const [services, setServices] = useState<Record<string, string>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EmployeeRow | null>(null);
 
-  const startEdit = (row: EmployeeRow) => {
-    setEditingId(row.id);
+  const startEdit = useCallback((row: EmployeeRow) => {
     setDraft({ ...row });
-  };
+  }, []);
 
-  const cancelEdit = () => {
-    setEditingId(null);
+  const cancelEdit = useCallback(() => {
+    if (isSaving) return;
     setDraft(null);
-  };
-
-  const saveEdit = async () => {
-    if (!draft) return;
-    const token = getToken();
-    if (!token) return;
-    setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
-    setEditingId(null);
-    setDraft(null);
-    await fetch(`/api/employees/${draft.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        firstName: draft.firstName,
-        lastName: draft.lastName,
-        email: draft.email,
-        matricule: draft.matricule,
-        jobTitle: draft.jobTitle,
-        departmentId: draft.department ?? null,
-        serviceId: draft.service ?? null,
-      }),
-    });
-  };
+  }, [isSaving]);
 
   const loadEmployees = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     setIsLoading(true);
     try {
-      const [empRes, depRes, svcRes] = await Promise.all([
-        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
+      const empRes = await fetch("/api/departments/daf/employees", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const empData = await empRes.json().catch(() => ({}));
-      const depData = await depRes.json().catch(() => ({}));
-      const svcData = await svcRes.json().catch(() => ({}));
+      if (!empRes.ok) {
+        setRows([]);
+        return;
+      }
 
-      const depMap: Record<string, string> = {};
-      (depData?.departments ?? []).forEach((d: any) => {
-        depMap[d.id] = d.name ?? d.type ?? d.id;
-      });
-
-      const svcMap: Record<string, string> = {};
-      (svcData?.services ?? []).forEach((s: any) => {
-        svcMap[s.id] = s.name ?? s.type ?? s.id;
-      });
-
-      setDepartments(depMap);
-      setServices(svcMap);
-
-      const employees = (empData?.employees ?? []).map((e: any) => ({
+      const employeesList = Array.isArray(empData?.employees) ? (empData.employees as EmployeeApiItem[]) : [];
+      const employees = employeesList.map((e) => ({
         id: e.id,
         firstName: e.firstName,
         lastName: e.lastName,
@@ -109,13 +92,50 @@ export default function AccountantDepartmentEmployees() {
         status: e.status ?? "ACTIVE",
         department: e.departmentId ?? null,
         service: e.serviceId ?? null,
+        departmentName: e.department?.name ?? e.department?.type ?? "—",
+        serviceName: e.service?.name ?? e.service?.type ?? "—",
       })) as EmployeeRow[];
 
-      setRows(employees.filter((e) => (depMap[e.department ?? ""] ?? "") === "DAF"));
+      setRows(employees.filter((e) => e.id !== currentEmployee?.id));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentEmployee?.id]);
+
+  const saveEdit = useCallback(async () => {
+    if (!draft) return;
+    const token = getToken();
+    if (!token) return;
+    setIsSaving(true);
+    const t = toast.loading("Enregistrement en cours...");
+    try {
+      const res = await fetch(`/api/employees/${draft.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          email: draft.email,
+          matricule: draft.matricule,
+          jobTitle: draft.jobTitle,
+          status: draft.status,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(String(data?.error ?? "Échec de la mise à jour"), { id: t });
+        return;
+      }
+
+      await loadEmployees();
+      setDraft(null);
+      toast.success("Employé mis à jour avec succès", { id: t });
+    } catch {
+      toast.error("Erreur réseau pendant la mise à jour", { id: t });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [draft, loadEmployees]);
 
   useEffect(() => {
     loadEmployees();
@@ -127,168 +147,58 @@ export default function AccountantDepartmentEmployees() {
         id: "employee",
         header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) {
-            return (
-              <div className="flex items-center gap-2">
-                <EmployeeAvatar
-                  firstName={row.original.firstName}
-                  lastName={row.original.lastName}
-                  profilePhotoUrl={row.original.profilePhotoUrl}
-                />
-                <div>
-                  <div className="font-semibold">
-                    {row.original.firstName} {row.original.lastName}
-                  </div>
-                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
-                </div>
-              </div>
-            );
-          }
-          return (
-            <div className="grid gap-2">
-              <input
-                value={draft.firstName}
-                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Prénom"
-              />
-              <input
-                value={draft.lastName}
-                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Nom"
-              />
-              <input
-                value={draft.matricule ?? ""}
-                onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Matricule"
-              />
-            </div>
-          );
-        },
-      },
-      {
-        header: "Email",
-        accessorKey: "email",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.email;
-          return (
-            <input
-              value={draft.email}
-              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
             />
-          );
-        },
+            <div>
+              <div className="font-semibold">
+                {row.original.firstName} {row.original.lastName}
+              </div>
+              <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
+            </div>
+          </div>
+        ),
       },
+      { header: "Email", accessorKey: "email" },
       {
         header: "Poste",
         accessorKey: "jobTitle",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.jobTitle ?? "—";
-          return (
-            <input
-              value={draft.jobTitle ?? ""}
-              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.jobTitle ?? "—",
       },
       {
         header: "Rôle",
         accessorKey: "role",
         cell: ({ row }) => roleLabel[row.original.role] ?? row.original.role,
       },
-      {
-        header: "Statut",
-        accessorKey: "status",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.status;
-          return (
-            <select
-              value={draft.status}
-              onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="PENDING">PENDING</option>
-              <option value="REJECTED">REJECTED</option>
-            </select>
-          );
-        },
-      },
+      { header: "Statut", accessorKey: "status" },
       {
         header: "Département",
         accessorKey: "department",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "—";
-          return (
-            <input
-              value={draft.department ?? ""}
-              onChange={(e) => setDraft({ ...draft, department: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.departmentName ?? "—",
       },
       {
         header: "Service",
         accessorKey: "service",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "—";
-          return (
-            <input
-              value={draft.service ?? ""}
-              onChange={(e) => setDraft({ ...draft, service: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.serviceName ?? "—",
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit) {
-            return (
-              <button
-                onClick={() => startEdit(row.original)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Modifier
-              </button>
-            );
-          }
-          return (
-            <div className="flex gap-2">
-              <button
-                onClick={saveEdit}
-                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-              >
-                Enregistrer
-              </button>
-              <button
-                onClick={cancelEdit}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Annuler
-              </button>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <button
+            onClick={() => startEdit(row.original)}
+            className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+          >
+            Modifier
+          </button>
+        ),
       },
     ],
-    [editingId, draft, departments, services, saveEdit]
+    [startEdit]
   );
 
   return (
@@ -307,6 +217,104 @@ export default function AccountantDepartmentEmployees() {
       />
 
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
+
+      {draft ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-white border border-vdm-gold-200 shadow-2xl p-5 space-y-4">
+            <div>
+              <div className="text-lg font-semibold text-vdm-gold-900">Modifier l&apos;employé</div>
+              <div className="text-sm text-vdm-gold-700">
+                {draft.firstName} {draft.lastName}
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm text-vdm-gold-900">
+                Prénom
+                <input
+                  value={draft.firstName}
+                  onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className="text-sm text-vdm-gold-900">
+                Nom
+                <input
+                  value={draft.lastName}
+                  onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className="text-sm text-vdm-gold-900">
+                Email
+                <input
+                  type="email"
+                  value={draft.email}
+                  onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className="text-sm text-vdm-gold-900">
+                Matricule
+                <input
+                  value={draft.matricule ?? ""}
+                  onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className="text-sm text-vdm-gold-900">
+                Poste
+                <input
+                  value={draft.jobTitle ?? ""}
+                  onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  disabled={isSaving}
+                />
+              </label>
+
+              <label className="text-sm text-vdm-gold-900">
+                Statut
+                <select
+                  value={draft.status}
+                  onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  disabled={isSaving}
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="REJECTED">REJECTED</option>
+                </select>
+              </label>
+
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={cancelEdit}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                disabled={isSaving}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveEdit}
+                className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+                disabled={isSaving}
+              >
+                {isSaving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
