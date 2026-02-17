@@ -3,11 +3,16 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  EmployeeSession,
   getEmployee,
   getToken,
   hasRequiredProfileData,
   routeForRole,
 } from "@/lib/auth-client";
+
+type ManagerSession = EmployeeSession & {
+  departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
+};
 
 export default function RequireManagerDeptHead({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,7 +20,7 @@ export default function RequireManagerDeptHead({ children }: { children: React.R
 
   useEffect(() => {
     const token = getToken();
-    const emp = getEmployee();
+    const emp = getEmployee() as ManagerSession | null;
 
     if (!token || !emp) {
       router.replace("/login");
@@ -27,13 +32,18 @@ export default function RequireManagerDeptHead({ children }: { children: React.R
       return;
     }
 
-    if (emp.role !== "DEPT_HEAD" && emp.role !== "SERVICE_HEAD") {
+    if (emp.role !== "SERVICE_HEAD") {
       router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
 
     if (emp.isDsiAdmin) {
       router.replace("/dashboard/dsi");
+      return;
+    }
+
+    if (emp.departmentType && emp.departmentType !== "OPERATIONS") {
+      router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
 

@@ -102,7 +102,6 @@ export default function OperationsDashboard() {
 
   const stats = useMemo(() => {
     const year = new Date().getFullYear();
-    let approvedDays = 0;
     let pendingCount = 0;
     let approvedCount = 0;
     let rejectedCount = 0;
@@ -113,7 +112,6 @@ export default function OperationsDashboard() {
       if (leave.status === "PENDING" || leave.status === "SUBMITTED") pendingCount += 1;
       if (leave.status === "APPROVED") {
         approvedCount += 1;
-        approvedDays += overlapDaysInYear(leave.startDate, leave.endDate, year);
       }
       if (leave.status === "REJECTED") rejectedCount += 1;
 
@@ -148,7 +146,9 @@ export default function OperationsDashboard() {
           Bonjour {employee?.firstName ?? ""} {employee?.lastName ?? ""}
         </div>
         <div className="text-sm text-vdm-gold-700">
-          Vous etes connecte en tant que direction des operations.
+          {employee?.role === "SERVICE_HEAD"
+            ? "Vous etes connecte en tant que sous-directeur."
+            : "Vous etes connecte en tant que directeur des operations."}
         </div>
       </div>
 

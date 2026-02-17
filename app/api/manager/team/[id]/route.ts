@@ -21,7 +21,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
     select: { id: true, role: true, departmentId: true, serviceId: true },
   });
 
-  if (!manager || (manager.role !== "DEPT_HEAD" && manager.role !== "SERVICE_HEAD")) {
+  if (!manager || manager.role !== "SERVICE_HEAD") {
     return jsonError("Accès refusé", 403);
   }
 
@@ -32,21 +32,14 @@ export async function DELETE(req: Request, ctx: Ctx) {
 
   if (!target) return jsonError("Employé introuvable", 404);
 
-  if (manager.serviceId) {
-    if (target.serviceId !== manager.serviceId) return jsonError("Accès refusé", 403);
-    await prisma.employee.update({
-      where: { id: target.id },
-      data: { serviceId: null },
-    });
-  } else if (manager.departmentId) {
-    if (target.departmentId !== manager.departmentId) return jsonError("Accès refusé", 403);
-    await prisma.employee.update({
-      where: { id: target.id },
-      data: { serviceId: null, departmentId: null },
-    });
-  } else {
+  if (!manager.serviceId) {
     return jsonError("Manager sans département/service", 400);
   }
+  if (target.serviceId !== manager.serviceId) return jsonError("Accès refusé", 403);
+  await prisma.employee.update({
+    where: { id: target.id },
+    data: { serviceId: null },
+  });
 
   return NextResponse.json({ ok: true });
 }

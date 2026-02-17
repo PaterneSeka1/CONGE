@@ -67,7 +67,7 @@ function toDateInputValue(value: string | null | undefined) {
 }
 
 function currentHireDateValue(draft: EditableEmployee) {
-  return draft.hireDate ?? draft.companyEntryDate ?? null;
+  return draft.companyEntryDate ?? draft.hireDate ?? null;
 }
 
 export default function OnboardingPage() {

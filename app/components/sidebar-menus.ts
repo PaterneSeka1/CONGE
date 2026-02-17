@@ -65,7 +65,7 @@ export const accountantMenu: SidebarSection[] = [
 export const managerMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/manager" }] },
   {
-    title: "Département",
+    title: "Sous-direction",
     links: [
       { label: "Demandes transmises", icon: "clipboard", to: "/dashboard/manager/inbox" },
       { label: "Équipe", icon: "users", to: "/dashboard/manager/team" },

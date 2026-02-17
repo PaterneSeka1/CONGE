@@ -32,7 +32,7 @@ export default function RequireOperationsDirector({ children }: { children: Reac
       return;
     }
 
-    if (emp.role !== "DEPT_HEAD" && emp.role !== "SERVICE_HEAD") {
+    if (emp.role !== "DEPT_HEAD") {
       router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }

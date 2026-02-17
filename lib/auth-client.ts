@@ -56,8 +56,9 @@ export function routeForRole(
     case "ACCOUNTANT":
       return "/dashboard/accountant";
     case "DEPT_HEAD":
+      return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/operations";
     case "SERVICE_HEAD":
-      return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/manager";
+      return "/dashboard/manager";
     default:
       return "/dashboard/employee";
   }
@@ -70,8 +71,9 @@ export function profileRouteForSession(employee: EmployeeSession) {
     case "ACCOUNTANT":
       return "/dashboard/accountant/profile";
     case "DEPT_HEAD":
-    case "SERVICE_HEAD":
       if (employee.isDsiAdmin) return "/dashboard/dsi/profile";
+      return "/dashboard/operations/profile";
+    case "SERVICE_HEAD":
       return "/dashboard/manager/profile";
     default:
       return "/dashboard/employee/profile";
@@ -91,7 +93,7 @@ export function hasPhoneNumber(employee?: EmployeeSession | null) {
 }
 
 export function hasCompanyEntryDate(employee?: EmployeeSession | null) {
-  const value = employee?.hireDate ?? employee?.companyEntryDate;
+  const value = employee?.companyEntryDate ?? employee?.hireDate;
   return Boolean(value && String(value).trim().length > 0);
 }
 

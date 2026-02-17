@@ -39,13 +39,13 @@ export default function RequireDsiAdmin({ children }: { children: React.ReactNod
     }
 
     if (emp.isDsiAdmin === false) {
-      router.replace("/dashboard/manager");
+      router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
 
     // Check DSI: strict si tu veux. En dev, tu peux tolérer si departmentType manquant.
     if (emp.isDsiAdmin == null && emp.departmentType && emp.departmentType !== "DSI") {
-      router.replace("/dashboard/manager");
+      router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
       return;
     }
 

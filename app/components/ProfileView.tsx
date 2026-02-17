@@ -73,7 +73,7 @@ function toDateInputValue(value: string | null | undefined) {
 }
 
 function currentHireDateValue(draft: EditableEmployee) {
-  return draft.hireDate ?? draft.companyEntryDate ?? null;
+  return draft.companyEntryDate ?? draft.hireDate ?? null;
 }
 
 function roleLabel(role?: string | null) {
