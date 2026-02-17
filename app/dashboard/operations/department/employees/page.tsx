@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import EmployeeAvatar from "@/app/components/EmployeeAvatar";
-import { getEmployee, getToken } from "@/lib/auth-client";
+import { getToken } from "@/lib/auth-client";
 
 type EmployeeRow = {
   id: string;
@@ -18,6 +18,22 @@ type EmployeeRow = {
   status: "PENDING" | "ACTIVE" | "REJECTED";
   department?: string | null;
   service?: string | null;
+};
+
+type ApiEmployee = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePhotoUrl?: string | null;
+  matricule?: string | null;
+  jobTitle?: string | null;
+  role: EmployeeRow["role"];
+  status: EmployeeRow["status"];
+  departmentId?: string | null;
+  serviceId?: string | null;
+  department?: { id: string; name?: string | null; type?: string | null } | null;
+  service?: { id: string; name?: string | null; type?: string | null } | null;
 };
 
 const statusLabel: Record<EmployeeRow["status"], string> = {
@@ -35,49 +51,52 @@ const roleLabel: Record<EmployeeRow["role"], string> = {
 };
 
 export default function OperationsDepartmentEmployees() {
-  const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [departments, setDepartments] = useState<Record<string, string>>({});
-  const [departmentTypes, setDepartmentTypes] = useState<Record<string, string>>({});
   const [services, setServices] = useState<Record<string, string>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EmployeeRow | null>(null);
 
-  const startEdit = (row: EmployeeRow) => {
+  const startEdit = useCallback((row: EmployeeRow) => {
     setEditingId(row.id);
     setDraft({ ...row });
-  };
+  }, []);
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setEditingId(null);
     setDraft(null);
-  };
+  }, []);
 
-  const saveEdit = async () => {
+  const saveEdit = useCallback(async () => {
     if (!draft) return;
     const token = getToken();
     if (!token) return;
 
-    setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
-    setEditingId(null);
-    setDraft(null);
-
-    await fetch(`/api/employees/${draft.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        firstName: draft.firstName,
-        lastName: draft.lastName,
-        email: draft.email,
-        matricule: draft.matricule,
-        jobTitle: draft.jobTitle,
-        departmentId: draft.department ?? null,
-        serviceId: draft.service ?? null,
-      }),
-    });
-  };
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/employees/${draft.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          email: draft.email,
+          matricule: draft.matricule,
+          jobTitle: draft.jobTitle,
+          status: draft.status,
+        }),
+      });
+      if (!res.ok) return;
+      setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
+      setEditingId(null);
+      setDraft(null);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [draft]);
 
   const loadEmployees = useCallback(async () => {
     const token = getToken();
@@ -85,33 +104,31 @@ export default function OperationsDepartmentEmployees() {
     setIsLoading(true);
 
     try {
-      const [empRes, depRes, svcRes] = await Promise.all([
-        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-
-      const empData = await empRes.json().catch(() => ({}));
-      const depData = await depRes.json().catch(() => ({}));
-      const svcData = await svcRes.json().catch(() => ({}));
+      const res = await fetch("/api/departments/operations/employees", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRows([]);
+        return;
+      }
 
       const depNameMap: Record<string, string> = {};
-      const depTypeMap: Record<string, string> = {};
-      (depData?.departments ?? []).forEach((d: any) => {
-        depNameMap[d.id] = d.name ?? d.type ?? d.id;
-        depTypeMap[d.id] = d.type ?? d.name ?? d.id;
-      });
-
       const svcMap: Record<string, string> = {};
-      (svcData?.services ?? []).forEach((s: any) => {
-        svcMap[s.id] = s.name ?? s.type ?? s.id;
+
+      (data?.employees ?? []).forEach((e: ApiEmployee) => {
+        if (e.department?.id) {
+          depNameMap[e.department.id] = e.department.name ?? e.department.type ?? e.department.id;
+        }
+        if (e.service?.id) {
+          svcMap[e.service.id] = e.service.name ?? e.service.type ?? e.service.id;
+        }
       });
 
       setDepartments(depNameMap);
-      setDepartmentTypes(depTypeMap);
       setServices(svcMap);
 
-      const employees = (empData?.employees ?? []).map((e: any) => ({
+      const employees = (data?.employees ?? []).map((e: ApiEmployee) => ({
         id: e.id,
         firstName: e.firstName,
         lastName: e.lastName,
@@ -124,37 +141,11 @@ export default function OperationsDepartmentEmployees() {
         department: e.departmentId ?? null,
         service: e.serviceId ?? null,
       })) as EmployeeRow[];
-
-      const currentDeptId = currentEmployee?.departmentId ?? null;
-      const currentServiceId = currentEmployee?.serviceId ?? null;
-      const isServiceHead = currentEmployee?.role === "SERVICE_HEAD";
-
-      if (isServiceHead && currentServiceId) {
-        const byService = employees.filter(
-          (e) =>
-            e.service === currentServiceId &&
-            e.id !== currentEmployee?.id &&
-            e.role !== "DEPT_HEAD"
-        );
-        setRows(byService);
-        return;
-      }
-
-      const byDeptId = currentDeptId
-        ? employees.filter((e) => e.department === currentDeptId && e.id !== currentEmployee?.id)
-        : [];
-
-      const byType = employees.filter(
-        (e) =>
-          (depTypeMap[e.department ?? ""] ?? "") === "OPERATIONS" &&
-          e.id !== currentEmployee?.id
-      );
-
-      setRows(currentDeptId ? byDeptId : byType);
+      setRows(employees);
     } finally {
       setIsLoading(false);
     }
-  }, [currentEmployee?.departmentId, currentEmployee?.serviceId, currentEmployee?.role, currentEmployee?.id]);
+  }, []);
 
   useEffect(() => {
     loadEmployees();
@@ -166,80 +157,31 @@ export default function OperationsDepartmentEmployees() {
         id: "employee",
         header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) {
-            return (
-              <div className="flex items-center gap-2">
-                <EmployeeAvatar
-                  firstName={row.original.firstName}
-                  lastName={row.original.lastName}
-                  profilePhotoUrl={row.original.profilePhotoUrl}
-                />
-                <div>
-                  <div className="font-semibold">
-                    {row.original.firstName} {row.original.lastName}
-                  </div>
-                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
-                </div>
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">
+                {row.original.firstName} {row.original.lastName}
               </div>
-            );
-          }
-          return (
-            <div className="grid gap-2">
-              <input
-                value={draft.firstName}
-                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Prénom"
-              />
-              <input
-                value={draft.lastName}
-                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Nom"
-              />
-              <input
-                value={draft.matricule ?? ""}
-                onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Matricule"
-              />
+              <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
             </div>
-          );
-        },
+          </div>
+        ),
       },
       {
         header: "E-mail",
         accessorKey: "email",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.email;
-          return (
-            <input
-              value={draft.email}
-              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              placeholder="Adresse e-mail"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.email,
       },
       {
         header: "Poste",
         accessorKey: "jobTitle",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.jobTitle ?? "—";
-          return (
-            <input
-              value={draft.jobTitle ?? ""}
-              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              placeholder="Intitulé du poste"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.jobTitle ?? "—",
       },
       {
         header: "Rôle",
@@ -249,91 +191,32 @@ export default function OperationsDepartmentEmployees() {
       {
         header: "Statut",
         accessorKey: "status",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return statusLabel[row.original.status] ?? row.original.status;
-          return (
-            <select
-              value={draft.status}
-              onChange={(e) =>
-                setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })
-              }
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="ACTIVE">Actif</option>
-              <option value="PENDING">En attente</option>
-              <option value="REJECTED">Rejeté</option>
-            </select>
-          );
-        },
+        cell: ({ row }) => statusLabel[row.original.status] ?? row.original.status,
       },
       {
         header: "Département",
         accessorKey: "department",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "—";
-          return (
-            <input
-              value={draft.department ?? ""}
-              onChange={(e) => setDraft({ ...draft, department: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              placeholder="ID du département"
-            />
-          );
-        },
+        cell: ({ row }) => departments[row.original.department ?? ""] ?? "—",
       },
       {
         header: "Service",
         accessorKey: "service",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "—";
-          return (
-            <input
-              value={draft.service ?? ""}
-              onChange={(e) => setDraft({ ...draft, service: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              placeholder="ID du service"
-            />
-          );
-        },
+        cell: ({ row }) => services[row.original.service ?? ""] ?? "—",
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit) {
-            return (
-              <button
-                onClick={() => startEdit(row.original)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Modifier
-              </button>
-            );
-          }
-          return (
-            <div className="flex gap-2">
-              <button
-                onClick={saveEdit}
-                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-              >
-                Enregistrer
-              </button>
-              <button
-                onClick={cancelEdit}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Annuler
-              </button>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <button
+            onClick={() => startEdit(row.original)}
+            className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+          >
+            Modifier
+          </button>
+        ),
       },
     ],
-    [editingId, draft, departments, services]
+    [departments, services, startEdit]
   );
 
   return (
@@ -353,6 +236,93 @@ export default function OperationsDepartmentEmployees() {
 
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés…</div>
+      ) : null}
+
+      {editingId && draft ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-xl rounded-xl border border-vdm-gold-200 bg-white p-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-vdm-gold-900">Modifier l&apos;employé</h2>
+              <p className="text-sm text-vdm-gold-700">
+                {draft.firstName} {draft.lastName}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-vdm-gold-900">
+                Prénom
+                <input
+                  value={draft.firstName}
+                  onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Nom
+                <input
+                  value={draft.lastName}
+                  onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900 sm:col-span-2">
+                E-mail
+                <input
+                  value={draft.email}
+                  onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Matricule
+                <input
+                  value={draft.matricule ?? ""}
+                  onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Statut
+                <select
+                  value={draft.status}
+                  onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                >
+                  <option value="ACTIVE">Actif</option>
+                  <option value="PENDING">En attente</option>
+                  <option value="REJECTED">Rejeté</option>
+                </select>
+              </label>
+              <label className="text-sm text-vdm-gold-900 sm:col-span-2">
+                Poste
+                <input
+                  value={draft.jobTitle ?? ""}
+                  onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={isSaving}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={isSaving}
+                className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+              >
+                {isSaving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

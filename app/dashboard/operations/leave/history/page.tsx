@@ -26,6 +26,19 @@ type HistoryItem = {
   days: number;
 };
 
+type ApiLeave = {
+  id: string;
+  type: string;
+  startDate?: string;
+  endDate?: string;
+  status: LeaveItem["status"] | HistoryItem["status"];
+  currentAssignee?: { firstName?: string; lastName?: string } | null;
+  decisions?: Array<{ createdAt?: string }>;
+};
+
+const ACTIVE_ROUTES = ["/api/leave-requests/my", "/api/leaves"];
+const HISTORY_ROUTES = ["/api/leave-requests/history?mine=1", "/api/leaves/history?mine=1"];
+
 function toUtcDay(value: string | undefined) {
   if (!value) return null;
   const d = new Date(value);
@@ -67,64 +80,76 @@ export default function OperationsLeaveHistory() {
   useEffect(() => {
     const token = getToken();
     if (!token) return;
-    const load = async () => {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/leave-requests/my", {
+    const fetchFromRoutes = async (routes: string[]) => {
+      for (const route of routes) {
+        const res = await fetch(route, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          setItems(
-            (data?.leaves ?? []).map((x: any) => ({
-              id: x.id,
-              type: x.type,
-              startDate: formatDateDMY(x.startDate),
-              endDate: formatDateDMY(x.endDate),
-              status: x.status,
-              currentAssignee: x.currentAssignee
-                ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
-                : "-",
-            }))
-          );
+        if (res.ok) return { ok: true as const, data };
+      }
+      return { ok: false as const, data: {} };
+    };
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const result = await fetchFromRoutes(ACTIVE_ROUTES);
+        if (!result.ok) {
+          toast.error("Impossible de charger les demandes en cours.");
+          return;
         }
+        const data = result.data;
+        setItems(
+          (data?.leaves ?? []).map((x: ApiLeave) => ({
+            id: x.id,
+            type: x.type,
+            startDate: formatDateDMY(x.startDate),
+            endDate: formatDateDMY(x.endDate),
+            status: x.status,
+            currentAssignee: x.currentAssignee
+              ? `${x.currentAssignee.firstName} ${x.currentAssignee.lastName}`
+              : "-",
+          }))
+        );
       } finally {
         setIsLoading(false);
       }
     };
-    load();
 
     const loadHistory = async () => {
       setIsHistoryLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/history?mine=1", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          setHistoryItems(
-            (data?.leaves ?? []).map((x: any) => {
-              const startRaw = x.startDate ?? "";
-              const endRaw = x.endDate ?? "";
-              const start = formatDateDMY(startRaw);
-              const end = formatDateDMY(endRaw);
-              return {
-                id: x.id,
-                type: x.type,
-                startDate: start,
-                endDate: end,
-                status: x.status,
-                decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
-                days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
-              };
-            })
-          );
+        const result = await fetchFromRoutes(HISTORY_ROUTES);
+        if (!result.ok) {
+          toast.error("Impossible de charger l'historique des demandes.");
+          return;
         }
+        const data = result.data;
+        setHistoryItems(
+          (data?.leaves ?? []).map((x: ApiLeave) => {
+            const startRaw = x.startDate ?? "";
+            const endRaw = x.endDate ?? "";
+            const start = formatDateDMY(startRaw);
+            const end = formatDateDMY(endRaw);
+            return {
+              id: x.id,
+              type: x.type,
+              startDate: start,
+              endDate: end,
+              status: x.status,
+              decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
+              days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
+            };
+          })
+        );
       } finally {
         setIsHistoryLoading(false);
       }
     };
-    loadHistory();
+
+    void load();
+    void loadHistory();
   }, []);
 
   const activeItems = useMemo(
@@ -241,7 +266,7 @@ export default function OperationsLeaveHistory() {
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Suivez l'etat de vos demandes en cours de traitement.
+        Suivez l&apos;etat de vos demandes en cours de traitement.
       </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -292,7 +317,7 @@ export default function OperationsLeaveHistory() {
           onRefresh={() => window.location.reload()}
         />
         {isHistoryLoading ? (
-          <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
+          <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l&apos;historique...</div>
         ) : null}
       </div>
     </div>

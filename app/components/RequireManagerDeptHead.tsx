@@ -1,14 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  EmployeeSession,
-  getEmployee,
-  getToken,
-  hasRequiredProfileData,
-  routeForRole,
-} from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { EmployeeSession, getEmployee, getToken, routeForRole } from "@/lib/auth-client";
 
 type ManagerSession = EmployeeSession & {
   departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
@@ -16,7 +10,6 @@ type ManagerSession = EmployeeSession & {
 
 export default function RequireManagerDeptHead({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     const token = getToken();
@@ -37,21 +30,9 @@ export default function RequireManagerDeptHead({ children }: { children: React.R
       return;
     }
 
-    if (emp.isDsiAdmin) {
-      router.replace("/dashboard/dsi");
-      return;
-    }
-
-    if (emp.departmentType && emp.departmentType !== "OPERATIONS") {
-      router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
-      return;
-    }
-
-    if (!hasRequiredProfileData(emp) && pathname !== "/onboarding") {
-      router.replace("/onboarding");
-      return;
-    }
-  }, [pathname, router]);
+    router.replace(routeForRole(emp.role, emp.isDsiAdmin, emp.departmentType ?? null));
+    return;
+  }, [router]);
 
   return <>{children}</>;
 }

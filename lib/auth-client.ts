@@ -58,7 +58,7 @@ export function routeForRole(
     case "DEPT_HEAD":
       return isDsiAdmin ? "/dashboard/dsi" : "/dashboard/operations";
     case "SERVICE_HEAD":
-      return "/dashboard/manager";
+      return "/dashboard/employee";
     default:
       return "/dashboard/employee";
   }
@@ -74,7 +74,7 @@ export function profileRouteForSession(employee: EmployeeSession) {
       if (employee.isDsiAdmin) return "/dashboard/dsi/profile";
       return "/dashboard/operations/profile";
     case "SERVICE_HEAD":
-      return "/dashboard/manager/profile";
+      return "/dashboard/employee/profile";
     default:
       return "/dashboard/employee/profile";
   }

@@ -7,7 +7,7 @@ import MySalarySlips from "@/app/components/MySalarySlips";
 export default function EmployeePayslipsPage() {
   return (
     <RequireAuth>
-      <RoleGate allow={["EMPLOYEE"]}>
+      <RoleGate allow={["EMPLOYEE", "SERVICE_HEAD"]}>
         <MySalarySlips />
       </RoleGate>
     </RequireAuth>

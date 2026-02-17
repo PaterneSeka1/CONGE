@@ -24,7 +24,7 @@ function buildMonth(date: Date) {
   const month = date.getMonth();
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
-  const startWeekday = (first.getDay() + 6) % 7; // lundi=0
+  const startWeekday = (first.getDay() + 6) % 7; 
   const daysInMonth = last.getDate();
 
   const cells: (number | null)[] = [];

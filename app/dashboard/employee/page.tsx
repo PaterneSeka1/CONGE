@@ -124,7 +124,6 @@ export default function EmployeeDashboard() {
     let pendingCount = 0;
     let approvedCount = 0;
     let rejectedCount = 0;
-    let approvedDays = 0;
 
     const monthlyCounts = Array.from({ length: 12 }, () => 0);
 
@@ -132,7 +131,6 @@ export default function EmployeeDashboard() {
       if (leave.status === "PENDING" || leave.status === "SUBMITTED") pendingCount += 1;
       if (leave.status === "APPROVED") {
         approvedCount += 1;
-        approvedDays += overlapDaysInYear(leave.startDate, leave.endDate, year);
       }
       if (leave.status === "REJECTED") rejectedCount += 1;
     }
@@ -170,7 +168,7 @@ export default function EmployeeDashboard() {
 
   return (
     <RequireAuth>
-      <RoleGate allow={["EMPLOYEE"]}>
+      <RoleGate allow={["EMPLOYEE", "SERVICE_HEAD"]}>
         <DashboardShell title="Dashboard Employé">
           <div className="grid gap-6">
             <section className="grid gap-4 md:grid-cols-3">
