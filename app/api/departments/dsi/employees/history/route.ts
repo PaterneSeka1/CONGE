@@ -15,6 +15,7 @@ export async function GET(req: Request) {
     where: { id: actorId },
     select: {
       role: true,
+      serviceId: true,
       department: { select: { type: true } },
     },
   });
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
   const canReadAsManager = actor.role === "DEPT_HEAD" || actor.role === "SERVICE_HEAD";
   const inDsi = actor.department?.type === "DSI";
 
-  if (actor.role !== "CEO" && !(canReadAsManager && inDsi)) {
+  if (actor.role !== "CEO" && actor.role !== "ACCOUNTANT" && !(canReadAsManager && inDsi)) {
     return jsonError("Accès refusé", 403);
   }
 
@@ -33,35 +34,42 @@ export async function GET(req: Request) {
     select: { id: true },
   });
 
-  if (!dsiDepartment) {
-    return NextResponse.json({ leaves: [] });
-  }
+  if (!dsiDepartment) return NextResponse.json({ history: [] });
 
-  const leaves = await prisma.leaveRequest.findMany({
+  const employees = await prisma.employee.findMany({
     where: {
-      status: { in: ["APPROVED", "REJECTED", "CANCELLED"] },
-      employee: { departmentId: dsiDepartment.id },
+      departmentId: dsiDepartment.id,
+      ...(actor.role === "SERVICE_HEAD" ? { serviceId: actor.serviceId ?? "__none__" } : {}),
     },
     select: {
       id: true,
-      type: true,
-      startDate: true,
-      endDate: true,
+      firstName: true,
+      lastName: true,
+      profilePhotoUrl: true,
+      role: true,
       status: true,
       createdAt: true,
-      employee: { select: { id: true, firstName: true, lastName: true, profilePhotoUrl: true, role: true, leaveBalance: true } },
-      decisions: {
-        where: { type: { in: ["APPROVE", "REJECT", "CANCEL"] } },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: {
-          createdAt: true,
-          actor: { select: { id: true, firstName: true, lastName: true, role: true } },
-        },
-      },
+      updatedAt: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { updatedAt: "desc" },
   });
 
-  return NextResponse.json({ leaves });
+  const history = employees.map((employee) => {
+    const action = employee.status === "REJECTED" ? "LEFT" : "JOINED";
+    const actionDate = employee.status === "REJECTED" ? employee.updatedAt : employee.createdAt;
+
+    return {
+      id: `${employee.id}:${action}`,
+      employeeId: employee.id,
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      profilePhotoUrl: employee.profilePhotoUrl,
+      role: employee.role,
+      status: employee.status,
+      action,
+      date: actionDate,
+    };
+  });
+
+  return NextResponse.json({ history });
 }

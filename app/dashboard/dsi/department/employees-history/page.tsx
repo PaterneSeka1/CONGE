@@ -171,7 +171,7 @@ export default function DsiDeptEmployeesHistory() {
       },
       { header: "Jours", accessorKey: "days" },
       {
-        header: "Statut",
+        header: "Statut de la demande",
         accessorKey: "status",
         cell: ({ row }) => (
           <span className={`text-xs font-semibold ${statusClass(row.original.status)}`}>

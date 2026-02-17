@@ -99,6 +99,8 @@ export default function SalarySlipsAdmin() {
   const [employeeId, setEmployeeId] = useState("");
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [year, setYear] = useState(String(now.getFullYear()));
+  const [historyYearFilter, setHistoryYearFilter] = useState("ALL");
+  const [recentPage, setRecentPage] = useState(1);
   const [file, setFile] = useState<File | null>(null);
 
   const [error, setError] = useState<string | null>(null);
@@ -297,6 +299,89 @@ export default function SalarySlipsAdmin() {
       })),
     [employees]
   );
+  const selectedYear = Number(year);
+  const selectedMonth = Number(month);
+
+  const importedEmployeeIdsForSelectedPeriod = useMemo(() => {
+    if (!Number.isInteger(selectedYear) || !Number.isInteger(selectedMonth)) return new Set<string>();
+    const ids = slips
+      .filter((slip) => slip.year === selectedYear && slip.month === selectedMonth)
+      .map((slip) => slip.employeeId);
+    return new Set(ids);
+  }, [slips, selectedYear, selectedMonth]);
+
+  const availableEmployeeOptions = useMemo(
+    () => employeeOptions.filter((emp) => !importedEmployeeIdsForSelectedPeriod.has(emp.id)),
+    [employeeOptions, importedEmployeeIdsForSelectedPeriod]
+  );
+
+  const importedCountByMonth = useMemo(() => {
+    const byMonth = new Map<number, Set<string>>();
+    if (!Number.isInteger(selectedYear)) return byMonth;
+    for (const slip of slips) {
+      if (slip.year !== selectedYear) continue;
+      const set = byMonth.get(slip.month) ?? new Set<string>();
+      set.add(slip.employeeId);
+      byMonth.set(slip.month, set);
+    }
+    return byMonth;
+  }, [slips, selectedYear]);
+
+  const sortedSlips = useMemo(
+    () =>
+      [...slips].sort((a, b) => {
+        const tA = new Date(a.createdAt).getTime();
+        const tB = new Date(b.createdAt).getTime();
+        if (!Number.isNaN(tA) && !Number.isNaN(tB)) return tB - tA;
+        return String(b.createdAt).localeCompare(String(a.createdAt));
+      }),
+    [slips]
+  );
+
+  const pendingSlips = useMemo(() => sortedSlips.filter((slip) => !slip.signedAt), [sortedSlips]);
+  const RECENT_PAGE_SIZE = 5;
+  const recentTotalPages = Math.max(1, Math.ceil(pendingSlips.length / RECENT_PAGE_SIZE));
+  const recentSlips = useMemo(() => {
+    const start = (recentPage - 1) * RECENT_PAGE_SIZE;
+    return pendingSlips.slice(start, start + RECENT_PAGE_SIZE);
+  }, [pendingSlips, recentPage]);
+
+  const slipsByPeriod = useMemo(() => {
+    const signedSlips = sortedSlips.filter((slip) => Boolean(slip.signedAt));
+    const groups = new Map<string, { year: number; month: number; slips: Slip[] }>();
+    for (const slip of signedSlips) {
+      const key = `${slip.year}-${String(slip.month).padStart(2, "0")}`;
+      const current = groups.get(key);
+      if (current) current.slips.push(slip);
+      else groups.set(key, { year: slip.year, month: slip.month, slips: [slip] });
+    }
+    return Array.from(groups.values()).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    });
+  }, [sortedSlips]);
+
+  const historyYears = useMemo(
+    () => Array.from(new Set(sortedSlips.map((s) => String(s.year)))).sort((a, b) => Number(b) - Number(a)),
+    [sortedSlips]
+  );
+
+  const filteredSlipsByPeriod = useMemo(() => {
+    if (historyYearFilter === "ALL") return slipsByPeriod;
+    const y = Number(historyYearFilter);
+    if (!Number.isInteger(y)) return slipsByPeriod;
+    return slipsByPeriod.filter((group) => group.year === y);
+  }, [historyYearFilter, slipsByPeriod]);
+
+  useEffect(() => {
+    if (!employeeId) return;
+    const stillAvailable = availableEmployeeOptions.some((emp) => emp.id === employeeId);
+    if (!stillAvailable) setEmployeeId("");
+  }, [availableEmployeeOptions, employeeId]);
+
+  useEffect(() => {
+    if (recentPage > recentTotalPages) setRecentPage(recentTotalPages);
+  }, [recentPage, recentTotalPages]);
 
   return (
     <div className="p-6 space-y-6">
@@ -321,40 +406,7 @@ export default function SalarySlipsAdmin() {
 
       <section className="rounded-xl border border-vdm-gold-200 bg-white p-4 space-y-4">
         <h2 className="text-base font-semibold text-vdm-gold-900">Nouveau bulletin</h2>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          <label className="text-sm text-vdm-gold-900">
-            Employé
-            <select
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-vdm-gold-300 px-3 py-2"
-              disabled={isLoading || isSubmitting}
-            >
-              <option value="">Sélectionner...</option>
-              {employeeOptions.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-sm text-vdm-gold-900">
-            Mois
-            <select
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-vdm-gold-300 px-3 py-2"
-              disabled={isSubmitting}
-            >
-              {MONTH_LABELS.map((label, idx) => (
-                <option key={label} value={String(idx + 1)}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
+        <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm text-vdm-gold-900">
             Année
             <input
@@ -368,6 +420,54 @@ export default function SalarySlipsAdmin() {
             />
           </label>
 
+          <label className="text-sm text-vdm-gold-900">
+            Employé
+            <select
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-vdm-gold-300 px-3 py-2"
+              disabled={isLoading || isSubmitting}
+            >
+              <option value="">
+                {availableEmployeeOptions.length === 0 ? "Aucun employé disponible" : "Sélectionner..."}
+              </option>
+              {availableEmployeeOptions.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div>
+          <div className="text-sm text-vdm-gold-900 mb-2">
+            Mois du bulletin ({Number.isInteger(selectedYear) ? selectedYear : "année invalide"})
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {MONTH_LABELS.map((label, idx) => {
+              const m = idx + 1;
+              const selected = String(m) === month;
+              const importedCount = importedCountByMonth.get(m)?.size ?? 0;
+              const availableCount = Math.max(employees.length - importedCount, 0);
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => setMonth(String(m))}
+                  disabled={isSubmitting}
+                  className={`rounded-lg border px-3 py-2 text-left ${
+                    selected
+                      ? "border-vdm-gold-700 bg-vdm-gold-100 text-vdm-gold-900"
+                      : "border-vdm-gold-200 bg-white text-vdm-gold-800 hover:bg-vdm-gold-50"
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{label}</div>
+                  <div className="text-xs text-vdm-gold-700">{availableCount} disponible(s)</div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <label className="text-sm text-vdm-gold-900 block">
@@ -385,7 +485,7 @@ export default function SalarySlipsAdmin() {
           <button
             type="button"
             onClick={upload}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !employeeId || availableEmployeeOptions.length === 0}
             className="px-4 py-2 rounded-lg bg-vdm-gold-800 text-white hover:bg-vdm-gold-700 disabled:opacity-60"
           >
             {isSubmitting ? "Import en cours..." : "Importer le bulletin"}
@@ -395,70 +495,173 @@ export default function SalarySlipsAdmin() {
 
       <section className="rounded-xl border border-vdm-gold-200 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-vdm-gold-100">
-          <h2 className="text-base font-semibold text-vdm-gold-900">Bulletins importés</h2>
+          <h2 className="text-base font-semibold text-vdm-gold-900">Bulletins en attente de signature</h2>
         </div>
 
         {isLoading ? (
           <div className="p-4 text-sm text-gray-600">Chargement...</div>
-        ) : slips.length === 0 ? (
-          <div className="p-4 text-sm text-gray-600">Aucun bulletin importé.</div>
+        ) : recentSlips.length === 0 ? (
+          <div className="p-4 text-sm text-gray-600">Aucun bulletin en attente de signature.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-vdm-gold-50 text-vdm-gold-900">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Employé</th>
-                  <th className="px-4 py-3 text-left font-semibold">Période</th>
-                  <th className="px-4 py-3 text-left font-semibold">Fichier</th>
-                  <th className="px-4 py-3 text-left font-semibold">Statut signature</th>
-                  <th className="px-4 py-3 text-left font-semibold">Date d&apos;import</th>
-                  <th className="px-4 py-3 text-right font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {slips.map((slip) => (
-                  <tr key={slip.id} className="border-t border-vdm-gold-100">
-                    <td className="px-4 py-3">
-                      {slip.employee
-                        ? `${slip.employee.lastName} ${slip.employee.firstName}${
-                            slip.employee.matricule ? ` (${slip.employee.matricule})` : ""
-                          }`
-                        : "-"}
-                    </td>
-                    <td className="px-4 py-3">{toPeriod(slip.year, slip.month)}</td>
-                    <td className="px-4 py-3">{slip.fileName}</td>
-                    <td className="px-4 py-3">
-                      {slip.signedAt
-                        ? `Signé par ${slip.signedBy?.firstName ?? "CEO"} ${slip.signedBy?.lastName ?? ""} le ${formatDateTime(
-                            slip.signedAt
-                          )}`.trim()
-                        : "En attente CEO"}
-                    </td>
-                    <td className="px-4 py-3">{formatDate(slip.createdAt)}</td>
-                    <td className="px-4 py-3 text-right space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => downloadSlip(slip.id)}
-                        disabled={downloadingId === slip.id || removingId === slip.id}
-                        className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50 disabled:opacity-60"
-                      >
-                        {downloadingId === slip.id ? "Téléchargement..." : "Télécharger"}
-                      </button>
-                      {!slip.signedAt && (
+          <div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-vdm-gold-50 text-vdm-gold-900">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">Employé</th>
+                    <th className="px-4 py-3 text-left font-semibold">Période</th>
+                    <th className="px-4 py-3 text-left font-semibold">Date d&apos;import</th>
+                    <th className="px-4 py-3 text-right font-semibold">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentSlips.map((slip) => (
+                    <tr key={slip.id} className="border-t border-vdm-gold-100">
+                      <td className="px-4 py-3">
+                        {slip.employee
+                          ? `${slip.employee.lastName} ${slip.employee.firstName}${
+                              slip.employee.matricule ? ` (${slip.employee.matricule})` : ""
+                            }`
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3">{toPeriod(slip.year, slip.month)}</td>
+                      <td className="px-4 py-3">{formatDateTime(slip.createdAt)}</td>
+                      <td className="px-4 py-3 text-right">
                         <button
                           type="button"
-                          onClick={() => removeSlip(slip.id)}
-                          disabled={removingId === slip.id || downloadingId === slip.id}
-                          className="px-3 py-1.5 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                          onClick={() => downloadSlip(slip.id)}
+                          disabled={downloadingId === slip.id || removingId === slip.id}
+                          className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50 disabled:opacity-60"
                         >
-                          {removingId === slip.id ? "Retrait..." : "Retirer"}
+                          {downloadingId === slip.id ? "Téléchargement..." : "Télécharger"}
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-4 py-3 border-t border-vdm-gold-100 flex items-center justify-between">
+              <div className="text-xs text-vdm-gold-700">
+                Page {recentPage} / {recentTotalPages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRecentPage((p) => Math.max(1, p - 1))}
+                  disabled={recentPage <= 1}
+                  className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+                >
+                  Précédent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecentPage((p) => Math.min(recentTotalPages, p + 1))}
+                  disabled={recentPage >= recentTotalPages}
+                  className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+                >
+                  Suivant
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-vdm-gold-200 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-vdm-gold-100">
+          <h2 className="text-base font-semibold text-vdm-gold-900">Bulletins importés par mois</h2>
+        </div>
+
+        <div className="px-4 py-3 border-b border-vdm-gold-100 bg-vdm-gold-50/30">
+          <label className="text-sm text-vdm-gold-900">
+            Filtrer par année
+            <select
+              value={historyYearFilter}
+              onChange={(e) => setHistoryYearFilter(e.target.value)}
+              className="mt-1 w-full sm:w-64 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
+            >
+              <option value="ALL">Toutes</option>
+              {historyYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {isLoading ? (
+          <div className="p-4 text-sm text-gray-600">Chargement...</div>
+        ) : filteredSlipsByPeriod.length === 0 ? (
+          <div className="p-4 text-sm text-gray-600">Aucun bulletin signé.</div>
+        ) : (
+          <div className="divide-y divide-vdm-gold-100">
+            {filteredSlipsByPeriod.map((group, index) => (
+              <details key={`${group.year}-${group.month}`} open={index === 0}>
+                <summary className="list-none px-4 py-3 bg-vdm-gold-50 text-vdm-gold-900 font-semibold flex items-center justify-between">
+                  <span>{toPeriod(group.year, group.month)}</span>
+                  <span className="text-xs text-vdm-gold-700">{group.slips.length} bulletin(s)</span>
+                </summary>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-vdm-gold-50/60 text-vdm-gold-900">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold">Employé</th>
+                        <th className="px-4 py-3 text-left font-semibold">Fichier</th>
+                        <th className="px-4 py-3 text-left font-semibold">Statut signature</th>
+                        <th className="px-4 py-3 text-left font-semibold">Date d&apos;import</th>
+                        <th className="px-4 py-3 text-right font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.slips.map((slip) => (
+                        <tr key={slip.id} className="border-t border-vdm-gold-100">
+                          <td className="px-4 py-3">
+                            {slip.employee
+                              ? `${slip.employee.lastName} ${slip.employee.firstName}${
+                                  slip.employee.matricule ? ` (${slip.employee.matricule})` : ""
+                                }`
+                              : "-"}
+                          </td>
+                          <td className="px-4 py-3">{slip.fileName}</td>
+                          <td className="px-4 py-3">
+                            {slip.signedAt
+                              ? `Signé par ${slip.signedBy?.firstName ?? "CEO"} ${slip.signedBy?.lastName ?? ""} le ${formatDateTime(
+                                  slip.signedAt
+                                )}`.trim()
+                              : "En attente CEO"}
+                          </td>
+                          <td className="px-4 py-3">{formatDate(slip.createdAt)}</td>
+                          <td className="px-4 py-3 text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => downloadSlip(slip.id)}
+                              disabled={downloadingId === slip.id || removingId === slip.id}
+                              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50 disabled:opacity-60"
+                            >
+                              {downloadingId === slip.id ? "Téléchargement..." : "Télécharger"}
+                            </button>
+                            {!slip.signedAt && (
+                              <button
+                                type="button"
+                                onClick={() => removeSlip(slip.id)}
+                                disabled={removingId === slip.id || downloadingId === slip.id}
+                                className="px-3 py-1.5 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                              >
+                                {removingId === slip.id ? "Retrait..." : "Retirer"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ))}
           </div>
         )}
       </section>
