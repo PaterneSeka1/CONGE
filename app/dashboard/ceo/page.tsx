@@ -35,17 +35,17 @@ type CeoDecision = {
 
 const MONTHS = [
   "Jan",
-  "Fev",
+  "Fév",
   "Mar",
   "Avr",
   "Mai",
   "Juin",
   "Juil",
-  "Aout",
+  "Août",
   "Sept",
   "Oct",
   "Nov",
-  "Dec",
+  "Déc",
 ] as const;
 
 function buildMonth(date: Date) {
@@ -189,20 +189,20 @@ export default function CeoHome() {
     return {
       lineData: MONTHS.map((name, idx) => ({ name, value: monthly[idx] })),
       pieData: [
-        { name: "Validees", value: approve },
-        { name: "Refusees", value: reject },
+        { name: "Validées", value: approve },
+        { name: "Refusées", value: reject },
         { name: "Transmises", value: escalate },
-        { name: "Annulees", value: cancel },
+        { name: "Annulées", value: cancel },
       ],
     };
   }, [decisions]);
 
   const barData = useMemo(
     () => [
-      { name: "Escaladees", value: metrics?.escalatedPending ?? 0 },
-      { name: "Decidees", value: metrics?.decisionsThisMonth ?? 0 },
+      { name: "Demandes escaladées", value: metrics?.escalatedPending ?? 0 },
+      { name: "Décisions du mois", value: metrics?.decisionsThisMonth ?? 0 },
       {
-        name: "Delai",
+        name: "Délai moyen",
         value:
           metrics?.avgDecisionDelayDays != null
             ? Number(metrics.avgDecisionDelayDays.toFixed(1))
@@ -245,30 +245,34 @@ export default function CeoHome() {
     <div className="p-6 space-y-6">
       <div>
         <div className="text-xl font-semibold text-vdm-gold-800">Dashboard PDG</div>
-        <div className="text-sm text-vdm-gold-700 mt-1">Decision finale sur les demandes escaladees.</div>
+        <div className="text-sm text-vdm-gold-700 mt-1">
+          Décision finale sur les demandes escaladées.
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">Demandes escaladees</div>
+          <div className="text-sm text-vdm-gold-700">Demandes escaladées</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
             {metrics?.escalatedPending ?? "—"}
           </div>
-          <div className="text-xs text-gray-500 mt-2">A traiter en priorite.</div>
+          <div className="text-xs text-gray-500 mt-2">À traiter en priorité.</div>
         </div>
+
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">Decisions ce mois</div>
+          <div className="text-sm text-vdm-gold-700">Décisions du mois</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
             {metrics?.decisionsThisMonth ?? "—"}
           </div>
-          <div className="text-xs text-gray-500 mt-2">Total des validations/refus.</div>
+          <div className="text-xs text-gray-500 mt-2">Total des validations et refus.</div>
         </div>
+
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">Delais moyens</div>
+          <div className="text-sm text-vdm-gold-700">Délais moyens</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
             {formatAvgDelay(metrics?.avgDecisionDelayDays)}
           </div>
-          <div className="text-xs text-gray-500 mt-2">Temps moyen de decision.</div>
+          <div className="text-xs text-gray-500 mt-2">Temps moyen de décision.</div>
         </div>
       </div>
 
@@ -276,7 +280,7 @@ export default function CeoHome() {
         <div className="lg:col-span-2">
           <DashboardCharts
             title="Vue PDG"
-            subtitle="Decisions finales et escalades."
+            subtitle="Décisions finales et escalades."
             lineData={lineData}
             pieData={pieData}
             barData={barData}
@@ -288,19 +292,20 @@ export default function CeoHome() {
             <div className="text-sm font-semibold text-vdm-gold-800">Calendrier</div>
             <div className="text-xs text-vdm-gold-700 capitalize">{monthLabel}</div>
           </div>
+
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={goPrev}
               className="px-2 py-1 rounded-md border border-vdm-gold-200 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
             >
-              Prec
+              Préc.
             </button>
             <div className="text-xs text-gray-500">{year}</div>
             <button
               onClick={goNext}
               className="px-2 py-1 rounded-md border border-vdm-gold-200 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
             >
-              Suiv
+              Suiv.
             </button>
           </div>
 
@@ -311,6 +316,7 @@ export default function CeoHome() {
               </div>
             ))}
           </div>
+
           <div className="grid grid-cols-7 gap-1 text-center">
             {cells.map((day, idx) => {
               const leave = hasLeave(day);
@@ -344,7 +350,7 @@ export default function CeoHome() {
             </div>
             <div className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-red-500" />
-              Periodes bloquees
+              Périodes bloquées
             </div>
           </div>
         </div>
@@ -354,13 +360,14 @@ export default function CeoHome() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelectedDay(null)} />
           <div className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-lg">
-            <div className="text-lg font-semibold text-vdm-gold-800">Details du jour</div>
+            <div className="text-lg font-semibold text-vdm-gold-800">Détails du jour</div>
             <div className="text-sm text-vdm-gold-700 mt-1">{selectedDateLabel}</div>
 
             <div className="mt-4 space-y-4">
               <div>
-                <div className="text-sm font-semibold text-vdm-gold-800">Conges approuves</div>
-                <div className="text-xs text-gray-500">Demandeurs: {details.leaves.length}</div>
+                <div className="text-sm font-semibold text-vdm-gold-800">Congés approuvés</div>
+                <div className="text-xs text-gray-500">Demandeurs : {details.leaves.length}</div>
+
                 {details.leaves.length === 0 ? (
                   <div className="text-sm text-gray-500 mt-1">Aucun congé approuvé.</div>
                 ) : (
@@ -381,6 +388,7 @@ export default function CeoHome() {
                     ))}
                   </ul>
                 )}
+
                 {details.leaves.length > 0 ? (
                   <div className="mt-3 overflow-x-auto">
                     <table className="min-w-full text-xs text-left border border-vdm-gold-100 rounded-lg overflow-hidden">
@@ -420,9 +428,9 @@ export default function CeoHome() {
               </div>
 
               <div>
-                <div className="text-sm font-semibold text-vdm-gold-800">Periodes bloquees</div>
+                <div className="text-sm font-semibold text-vdm-gold-800">Périodes bloquées</div>
                 {details.blackouts.length === 0 ? (
-                  <div className="text-sm text-gray-500 mt-1">Aucune periode bloquee.</div>
+                  <div className="text-sm text-gray-500 mt-1">Aucune période bloquée.</div>
                 ) : (
                   <ul className="mt-2 text-sm text-gray-700 space-y-1">
                     {details.blackouts.map((b, i) => (
