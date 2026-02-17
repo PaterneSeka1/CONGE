@@ -86,6 +86,21 @@ export default function MySalarySlips() {
   }, [refresh]);
 
   const hasSlips = useMemo(() => slips.length > 0, [slips.length]);
+  const slipsByYear = useMemo(() => {
+    const sorted = [...slips].sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      if (a.month !== b.month) return b.month - a.month;
+      return String(b.createdAt).localeCompare(String(a.createdAt));
+    });
+
+    const grouped = new Map<number, Slip[]>();
+    for (const slip of sorted) {
+      const current = grouped.get(slip.year) ?? [];
+      current.push(slip);
+      grouped.set(slip.year, current);
+    }
+    return Array.from(grouped.entries()).map(([year, yearSlips]) => ({ year, slips: yearSlips }));
+  }, [slips]);
 
   const downloadSlip = useCallback(async (id: string) => {
     const token = getToken();
@@ -148,40 +163,42 @@ export default function MySalarySlips() {
         ) : !hasSlips ? (
           <div className="p-4 text-sm text-gray-600">Aucun bulletin disponible pour le moment.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-vdm-gold-50 text-vdm-gold-900">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Période</th>
-                  <th className="px-4 py-3 text-left font-semibold">Fichier</th>
-                  <th className="px-4 py-3 text-left font-semibold">Signé par</th>
-                  <th className="px-4 py-3 text-left font-semibold">Date/heure de signature</th>
-                  <th className="px-4 py-3 text-right font-semibold">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {slips.map((slip) => (
-                  <tr key={slip.id} className="border-t border-vdm-gold-100">
-                    <td className="px-4 py-3">{toPeriod(slip.year, slip.month)}</td>
-                    <td className="px-4 py-3">{slip.fileName}</td>
-                    <td className="px-4 py-3">
-                      {slip.signedBy ? `${slip.signedBy.firstName} ${slip.signedBy.lastName}` : "CEO"}
-                    </td>
-                    <td className="px-4 py-3">{formatDateTime(String(slip.signedAt ?? slip.createdAt))}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => downloadSlip(slip.id)}
-                        disabled={downloadingId === slip.id}
-                        className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50 disabled:opacity-60"
-                      >
-                        {downloadingId === slip.id ? "Téléchargement..." : "Télécharger"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y divide-vdm-gold-100">
+            {slipsByYear.map((group, index) => (
+              <details key={group.year} open={index === 0} className="group">
+                <summary className="list-none flex items-center justify-between gap-3 px-4 py-3 bg-vdm-gold-50 text-vdm-gold-900 font-semibold cursor-pointer">
+                  <span>Année {group.year}</span>
+                  <span className="text-xs font-medium text-vdm-gold-700">{group.slips.length} bulletin(s)</span>
+                </summary>
+
+                <div className="p-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.slips.map((slip) => (
+                    <div key={slip.id} className="rounded-lg border border-vdm-gold-200 bg-white p-3 space-y-2">
+                      <div className="text-sm font-semibold text-vdm-gold-900 uppercase">
+                        {MONTH_LABELS[slip.month - 1] ?? toPeriod(slip.year, slip.month)}
+                      </div>
+                      <div className="text-xs text-gray-600 truncate" title={slip.fileName}>
+                        {slip.fileName}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        Signé par {slip.signedBy ? `${slip.signedBy.firstName} ${slip.signedBy.lastName}` : "CEO"}
+                      </div>
+                      <div className="text-xs text-gray-600">{formatDateTime(String(slip.signedAt ?? slip.createdAt))}</div>
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => downloadSlip(slip.id)}
+                          disabled={downloadingId === slip.id}
+                          className="w-full px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50 disabled:opacity-60"
+                        >
+                          {downloadingId === slip.id ? "Téléchargement..." : "Télécharger"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
           </div>
         )}
       </div>

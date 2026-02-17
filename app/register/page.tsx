@@ -362,7 +362,7 @@ const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value
 
               <button
                 onClick={handleSubmit}
-                disabled={isLoading}
+                disabled={isLoading || !acceptedTerms}
                 className="w-full bg-gradient-to-r from-vdm-gold-500 to-vdm-gold-700 text-white py-3 rounded-lg font-semibold disabled:opacity-50 mt-4"
               >
                 {isLoading ? "Création..." : "Créer mon compte"}

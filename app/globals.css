@@ -30,4 +30,18 @@
   a:hover {
     @apply text-vdm-gold-700;
   }
+
+  button:not(:disabled) {
+    cursor: pointer;
+    transition: transform 150ms ease, filter 150ms ease;
+  }
+
+  button:not(:disabled):hover {
+    transform: scale(1.06);
+    filter: brightness(1.03);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
