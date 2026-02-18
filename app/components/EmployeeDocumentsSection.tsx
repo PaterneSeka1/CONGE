@@ -83,17 +83,23 @@ async function toDataUrl(file: File) {
 
 type Props = {
   employee: EmployeeSession;
+  scope?: "default" | "self" | "employees";
 };
 
-export default function EmployeeDocumentsSection({ employee }: Props) {
+export default function EmployeeDocumentsSection({ employee, scope = "default" }: Props) {
+  const isSelfScope = scope === "self";
+  const isEmployeesScope = scope === "employees";
+  const isReadAllRole = canReadAll(employee.role);
+  const hasGlobalAccess = isReadAllRole && !isSelfScope;
+  const canUploadDocuments = employee.role !== "CEO" && !isEmployeesScope;
+  const allEmployeesLabel = isEmployeesScope ? "Tous les employés" : "Tous les employés";
+
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [uploadOwnerDocuments, setUploadOwnerDocuments] = useState<EmployeeDocument[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(
-    canReadAll(employee.role) ? ALL_EMPLOYEES_VALUE : employee.id
-  );
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employee.id);
   const [selectedType, setSelectedType] = useState<DocumentType>("ID_CARD");
   const [relatedPersonName, setRelatedPersonName] = useState("");
   const [childOrder, setChildOrder] = useState("");
@@ -110,11 +116,17 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
   const [isEditingBusy, setIsEditingBusy] = useState(false);
   const [deleteModalDoc, setDeleteModalDoc] = useState<EmployeeDocument | null>(null);
 
-  const hasGlobalAccess = useMemo(() => canReadAll(employee.role), [employee.role]);
-  const canUploadDocuments = employee.role !== "CEO";
   const isEditingChildType = editType === "CHILD_BIRTH_CERTIFICATE";
   const isEditingNeedsRelatedName =
     editType === "SPOUSE_BIRTH_CERTIFICATE" || editType === "CHILD_BIRTH_CERTIFICATE";
+
+  useEffect(() => {
+    if (isSelfScope || !hasGlobalAccess) {
+      setSelectedEmployeeId(employee.id);
+      return;
+    }
+    setSelectedEmployeeId(ALL_EMPLOYEES_VALUE);
+  }, [employee.id, hasGlobalAccess, isSelfScope]);
 
   const refreshDocuments = useCallback(async (signal?: AbortSignal) => {
     const token = getToken();
@@ -122,10 +134,11 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
 
     setIsLoading(true);
     const params = new URLSearchParams();
-    if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
+    if (isSelfScope) {
+      params.set("employeeId", employee.id);
+    } else if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
       params.set("employeeId", selectedEmployeeId);
-    }
-    if (!hasGlobalAccess) {
+    } else if (!hasGlobalAccess) {
       params.set("employeeId", employee.id);
     }
 
@@ -141,9 +154,13 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
       setIsLoading(false);
       return;
     }
-    setDocuments(Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : []);
+    let nextDocuments = Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : [];
+    if (isEmployeesScope) {
+      nextDocuments = nextDocuments.filter((doc) => doc.employeeId !== employee.id);
+    }
+    setDocuments(nextDocuments);
     setIsLoading(false);
-  }, [employee.id, hasGlobalAccess, selectedEmployeeId]);
+  }, [employee.id, hasGlobalAccess, isEmployeesScope, isSelfScope, selectedEmployeeId]);
 
   const refreshUploadOwnerDocuments = useCallback(async () => {
     const token = getToken();
@@ -169,11 +186,11 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return;
       const list = Array.isArray(data?.employees) ? (data.employees as EmployeeOption[]) : [];
-      setEmployees(list.filter((item) => item.role !== "CEO"));
+      setEmployees(list.filter((item) => item.role !== "CEO" && (!isEmployeesScope || item.id !== employee.id)));
     };
 
     loadEmployees();
-  }, [hasGlobalAccess]);
+  }, [employee.id, hasGlobalAccess, isEmployeesScope]);
 
   useEffect(() => {
     const token = getToken();
@@ -314,6 +331,8 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
 
   const canManageDocument = (doc: EmployeeDocument) => {
     if (employee.role === "CEO") return false;
+    if (isSelfScope && doc.employeeId !== employee.id) return false;
+    if (isEmployeesScope && doc.employeeId === employee.id) return false;
     if (employee.role === "ACCOUNTANT") return doc.employee?.role !== "CEO";
     return doc.employeeId === employee.id;
   };
@@ -447,17 +466,40 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
     );
   };
 
+  const documentsByCategory = useMemo(() => {
+    const grouped = new Map<DocumentType, EmployeeDocument[]>();
+    for (const item of DOCUMENT_TYPES) grouped.set(item.value, []);
+    for (const doc of documents) {
+      const bucket = grouped.get(doc.type);
+      if (bucket) bucket.push(doc);
+    }
+    for (const bucket of grouped.values()) {
+      bucket.sort((a, b) => {
+        const at = new Date(a.createdAt).getTime();
+        const bt = new Date(b.createdAt).getTime();
+        return bt - at;
+      });
+    }
+    return DOCUMENT_TYPES
+      .map((item) => ({ type: item.value, label: item.label, documents: grouped.get(item.value) ?? [] }))
+      .filter((group) => group.documents.length > 0);
+  }, [documents]);
+
   return (
     <div className="bg-white border border-vdm-gold-200 rounded-xl p-6 mt-6">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <div className="text-lg font-semibold text-vdm-gold-800">Documents RH</div>
           <div className="text-sm text-vdm-gold-700">
-            Ajoutez et consultez vos documents administratifs (CNI, extraits, CV, lettre, situation géographique).
+            {isEmployeesScope
+              ? "Consultez et gérez les documents administratifs des employés."
+              : "Ajoutez et consultez vos documents administratifs (CNI, extraits, CV, lettre, situation géographique)."}
           </div>
           {!canUploadDocuments ? (
             <div className="text-xs text-vdm-gold-700 mt-1">
-              Mode lecture seule: vous pouvez consulter et télécharger les documents de tous les employés.
+              {employee.role === "CEO"
+                ? "Mode lecture seule: vous pouvez consulter et télécharger les documents de tous les employés."
+                : "Les documents personnels de la comptable sont gérés sur la page Profil."}
             </div>
           ) : hasGlobalAccess ? (
             <div className="text-xs text-vdm-gold-700 mt-1">
@@ -479,8 +521,8 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
                 }}
                 className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
               >
-                <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
-                {employee.role !== "CEO" ? (
+                <option value={ALL_EMPLOYEES_VALUE}>{allEmployeesLabel}</option>
+                {employee.role !== "CEO" && !isEmployeesScope ? (
                   <option value={employee.id}>{employee.firstName} {employee.lastName} (moi)</option>
                 ) : null}
                 {employees
@@ -576,9 +618,14 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
       ) : documents.length === 0 ? (
         <div className="text-sm text-vdm-gold-700">Aucun document pour le moment.</div>
       ) : (
-        <div className="space-y-2">
-          {documents.map((doc) => (
-            <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3">
+        <div className="space-y-4">
+          {documentsByCategory.map((group) => (
+            <div key={group.type} className="space-y-2">
+              <div className="text-sm font-semibold text-vdm-gold-800">
+                {group.label} ({group.documents.length})
+              </div>
+              {group.documents.map((doc) => (
+                <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                 <div className="flex items-start gap-3">
                   {doc.employee?.profilePhotoUrl ? (
@@ -732,6 +779,8 @@ export default function EmployeeDocumentsSection({ employee }: Props) {
                   </div>
                 </div>
               ) : null}
+            </div>
+              ))}
             </div>
           ))}
         </div>

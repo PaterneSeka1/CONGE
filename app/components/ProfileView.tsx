@@ -570,7 +570,9 @@ export default function ProfileView() {
         ) : null}
         </div>
       </div>
-      {employee.role !== "CEO" ? <EmployeeDocumentsSection employee={employee} /> : null}
+      {employee.role !== "CEO" ? (
+        <EmployeeDocumentsSection employee={employee} scope={employee.role === "ACCOUNTANT" ? "self" : "default"} />
+      ) : null}
     </div>
   );
 }

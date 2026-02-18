@@ -4,14 +4,14 @@ import { useMemo } from "react";
 import EmployeeDocumentsSection from "@/app/components/EmployeeDocumentsSection";
 import { getEmployee } from "@/lib/auth-client";
 
-export default function CeoDocumentsPage() {
+export default function AccountantEmployeeDocumentsPage() {
   const employee = useMemo(() => getEmployee(), []);
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Documents RH</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Documents RH des employés</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Liste des documents RH des employés (consultation et téléchargement).
+        Consultez les documents administratifs des employés. Vos documents personnels restent dans Profil.
       </div>
       {employee ? (
         <EmployeeDocumentsSection employee={employee} scope="employees" />

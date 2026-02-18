@@ -40,6 +40,11 @@ export const accountantMenu: SidebarSection[] = [
         icon: "users",
         to: "/dashboard/accountant/department/employees-history",
       },
+      {
+        label: "Documents RH employés",
+        icon: "users",
+        to: "/dashboard/accountant/documents/employees",
+      },
     ],
   },
   {
