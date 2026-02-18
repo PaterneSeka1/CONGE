@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     return jsonError("Accès refusé", 403);
   }
 
-  const dsiDepartment = await prisma.department.findUnique({
+  const dsiDepartment = await prisma.department.findFirst({
     where: { type: "DSI" },
     select: { id: true },
   });
