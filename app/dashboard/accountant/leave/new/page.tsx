@@ -143,11 +143,11 @@ export default function AccountantLeaveNew() {
     const base = Number(data?.annualLeaveBalance ?? data?.employee?.leaveBalance ?? BASE_ALLOWANCE);
     const remaining = Number(
       data?.remainingCurrentYear ??
-      (() => {
-        const year = new Date().getFullYear();
-        const consumedDays = consumedDaysForYear(nextLeaves, year);
-        return Math.max(0, base - consumedDays);
-      })()
+        (() => {
+          const year = new Date().getFullYear();
+          const consumedDays = consumedDaysForYear(nextLeaves, year);
+          return Math.max(0, base - consumedDays);
+        })()
     );
     setBaseAllowance(base);
     setBalance(Math.max(0, remaining));
@@ -196,7 +196,8 @@ export default function AccountantLeaveNew() {
     return now.getFullYear() === year && now.getMonth() === month && now.getDate() === day;
   };
 
-  const hasBlackout = (day: number | null) => day && blackouts.some((b) => inRange(day, month, year, b.startDate, b.endDate));
+  const hasBlackout = (day: number | null) =>
+    day != null && blackouts.some((b) => inRange(day, month, year, b.startDate, b.endDate));
 
   const selectedDateLabel = selectedDay != null ? formatDateDMY(new Date(year, month, selectedDay)) : "";
 
@@ -212,7 +213,7 @@ export default function AccountantLeaveNew() {
 
   const isPastDay = useCallback(
     (day: number | null) => {
-      if (!day || todayUtc == null) return false;
+      if (day == null || todayUtc == null) return false;
       return Date.UTC(year, month, day) < todayUtc;
     },
     [month, todayUtc, year]
@@ -220,19 +221,18 @@ export default function AccountantLeaveNew() {
 
   const leaveStatusForDay = useCallback(
     (day: number | null) => {
-      if (!day) return null;
+      if (day == null) return null;
       const dateValue = toDateValueForDay(year, month, day);
       const priority = ["APPROVED", "PENDING", "SUBMITTED", "REJECTED"] as const;
       type PriorityStatus = (typeof priority)[number];
-      let best: (typeof priority)[number] | null = null;
+      let best: PriorityStatus | null = null;
+
       for (const leave of leaves) {
         if (!rangesOverlap(dateValue, dateValue, leave.startDate, leave.endDate)) continue;
-        const status = leave.status;
-        if (!priority.includes(status as PriorityStatus)) continue;
-        const statusPriority = priority.indexOf(status as PriorityStatus);
-        if (best == null || statusPriority < priority.indexOf(best)) {
-          best = status as PriorityStatus;
-        }
+        const status = leave.status as PriorityStatus;
+        if (!priority.includes(status)) continue;
+        const statusPriority = priority.indexOf(status);
+        if (best == null || statusPriority < priority.indexOf(best)) best = status;
       }
       return best;
     },
@@ -241,7 +241,7 @@ export default function AccountantLeaveNew() {
 
   const handleCalendarSelect = useCallback(
     (day: number | null) => {
-      if (!day) return;
+      if (day == null) return;
       setSelectedDay(day);
       if (isPastDay(day) || hasBlackout(day)) return;
 
@@ -276,17 +276,17 @@ export default function AccountantLeaveNew() {
       toast.error("Veuillez renseigner la date de début et la date de fin.");
       return;
     }
-    const daysRequested = daysBetweenInclusive(startDate, endDate);
-    if (daysRequested < 1) {
+    const requested = daysBetweenInclusive(startDate, endDate);
+    if (requested < 1) {
       toast.error("La période saisie est invalide.");
       return;
     }
-    if (daysRequested > balance) {
+    if (requested > balance) {
       toast.error("La demande dépasse votre solde de congés.");
       return;
     }
     if (hasBlackoutOverlap(startDate, endDate)) {
-      toast.error("La période choisie chevauche une période bloquée par le CEO.");
+      toast.error("La période choisie chevauche une période bloquée par le PDG.");
       return;
     }
 
@@ -323,7 +323,7 @@ export default function AccountantLeaveNew() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Nouvelle demande (Comptable)</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de congé (validation CEO).</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Soumettez votre demande de congé (validation PDG).</div>
 
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4 grid gap-3 md:grid-cols-2">
         {isExhausted ? (
@@ -351,7 +351,8 @@ export default function AccountantLeaveNew() {
           <div className="space-y-0.5">
             Solde restant annuel : {formatLeaveDays(balance)} / {formatLeaveDays(baseAllowance)} JOURS
             <div className="text-xs text-vdm-gold-600">
-              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)} JOURS
+              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)}{" "}
+              JOURS
             </div>
           </div>
           <button
@@ -364,7 +365,7 @@ export default function AccountantLeaveNew() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Date début</label>
+          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Date de début</label>
           <input
             type="date"
             value={startDate}
@@ -383,7 +384,7 @@ export default function AccountantLeaveNew() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Date fin</label>
+          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Date de fin</label>
           <input
             type="date"
             value={endDate}
@@ -433,7 +434,7 @@ export default function AccountantLeaveNew() {
         <div className="md:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-vdm-gold-800">Calendrier des périodes bloquées (CEO)</div>
+              <div className="text-sm font-semibold text-vdm-gold-800">Calendrier des périodes bloquées (PDG)</div>
               <div className="text-xs text-vdm-gold-600">Consultez les dates bloquées avant de choisir votre période.</div>
             </div>
             <div className="text-xs text-vdm-gold-700 capitalize">{monthLabel}</div>
@@ -470,10 +471,10 @@ export default function AccountantLeaveNew() {
               const blackout = hasBlackout(day);
               const past = isPastDay(day);
               const dateValue = day != null ? toDateValueForDay(year, month, day) : "";
-              const isSelectedStart = !!day && dateValue === startDate;
-              const isSelectedEnd = !!day && dateValue === endDate;
+              const isSelectedStart = day != null && dateValue === startDate;
+              const isSelectedEnd = day != null && dateValue === endDate;
               const inSelectedRange =
-                !!day && !!startDate && !!endDate && rangesOverlap(dateValue, dateValue, startDate, endDate);
+                day != null && !!startDate && !!endDate && rangesOverlap(dateValue, dateValue, startDate, endDate);
               const leaveStatus = leaveStatusForDay(day);
               const leaveClass =
                 leaveStatus === "APPROVED"
@@ -483,13 +484,14 @@ export default function AccountantLeaveNew() {
                   : leaveStatus
                   ? "bg-amber-200 text-amber-900"
                   : "";
+
               return (
                 <button
                   key={`${day ?? "x"}-${idx}`}
                   type="button"
                   onClick={() => handleCalendarSelect(day)}
                   className={`h-9 flex flex-col items-center justify-center rounded-md text-sm ${
-                    day ? "text-vdm-gold-900" : "text-transparent"
+                    day != null ? "text-vdm-gold-900" : "text-transparent"
                   } ${
                     isSelectedStart || isSelectedEnd
                       ? "bg-vdm-gold-700 text-white font-semibold"
@@ -500,14 +502,12 @@ export default function AccountantLeaveNew() {
                       : isToday(day)
                       ? "bg-vdm-gold-200 font-semibold"
                       : "hover:bg-vdm-gold-50"
-                  } ${blackout ? "bg-gray-200 text-gray-500" : ""} ${past ? "bg-vdm-gold-50/70 text-vdm-gold-400" : ""} ${
-                    day && !blackout && !past ? "cursor-pointer" : "cursor-not-allowed"
-                  }`}
+                  } ${blackout ? "bg-gray-200 text-gray-500" : ""} ${
+                    past ? "bg-vdm-gold-50/70 text-vdm-gold-400" : ""
+                  } ${day != null && !blackout && !past ? "cursor-pointer" : "cursor-not-allowed"}`}
                 >
                   <div className="leading-none">{day ?? "-"}</div>
-                  <div className="mt-1 flex gap-1">
-                    {blackout ? <span className="h-1.5 w-1.5 rounded-full bg-red-500" /> : null}
-                  </div>
+                  <div className="mt-1 flex gap-1">{blackout ? <span className="h-1.5 w-1.5 rounded-full bg-red-500" /> : null}</div>
                 </button>
               );
             })}

@@ -9,7 +9,7 @@
   }
 
   async function ensureDepartment(type: any, name: string, description?: string) {
-    const existing = await prisma.department.findUnique({ where: { type } });
+    const existing = await prisma.department.findFirst({ where: { type } });
     if (existing) return existing;
 
     return prisma.department.create({

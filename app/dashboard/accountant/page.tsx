@@ -163,7 +163,7 @@ export default function AccountantHome() {
         </div>
 
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">Transmises au CEO</div>
+          <div className="text-sm text-vdm-gold-700">Transmises au PDG</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.escalatedCount}</div>
           <div className="text-xs text-gray-500 mt-2">Demandes issues des responsables.</div>
         </div>

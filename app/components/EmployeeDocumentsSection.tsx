@@ -8,10 +8,10 @@ const DOCUMENT_TYPES = [
   { value: "ID_CARD", label: "CNI" },
   { value: "BIRTH_CERTIFICATE", label: "Extrait de naissance" },
   { value: "SPOUSE_BIRTH_CERTIFICATE", label: "Extrait du conjoint" },
-  { value: "CHILD_BIRTH_CERTIFICATE", label: "Extrait d'un enfant" },
+  { value: "CHILD_BIRTH_CERTIFICATE", label: "Extrait de naissance d’un enfant" },
   { value: "CURRICULUM_VITAE", label: "Curriculum Vitae (CV)" },
   { value: "COVER_LETTER", label: "Lettre de motivation" },
-  { value: "GEOGRAPHIC_LOCATION", label: "Situation géographique" },
+  { value: "GEOGRAPHIC_LOCATION", label: "Localisation géographique" },
 ] as const;
 
 type DocumentType = (typeof DOCUMENT_TYPES)[number]["value"];
@@ -128,39 +128,42 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     setSelectedEmployeeId(ALL_EMPLOYEES_VALUE);
   }, [employee.id, hasGlobalAccess, isSelfScope]);
 
-  const refreshDocuments = useCallback(async (signal?: AbortSignal) => {
-    const token = getToken();
-    if (!token) return;
+  const refreshDocuments = useCallback(
+    async (signal?: AbortSignal) => {
+      const token = getToken();
+      if (!token) return;
 
-    setIsLoading(true);
-    const params = new URLSearchParams();
-    if (isSelfScope) {
-      params.set("employeeId", employee.id);
-    } else if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
-      params.set("employeeId", selectedEmployeeId);
-    } else if (!hasGlobalAccess) {
-      params.set("employeeId", employee.id);
-    }
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      if (isSelfScope) {
+        params.set("employeeId", employee.id);
+      } else if (hasGlobalAccess && selectedEmployeeId !== ALL_EMPLOYEES_VALUE) {
+        params.set("employeeId", selectedEmployeeId);
+      } else if (!hasGlobalAccess) {
+        params.set("employeeId", employee.id);
+      }
 
-    const query = params.toString();
-    const url = query ? `/api/employee-documents?${query}` : "/api/employee-documents";
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      signal,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      toast.error(String(data?.error ?? "Impossible de charger les documents"));
+      const query = params.toString();
+      const url = query ? `/api/employee-documents?${query}` : "/api/employee-documents";
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(String(data?.error ?? "Impossible de charger les documents"));
+        setIsLoading(false);
+        return;
+      }
+      let nextDocuments = Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : [];
+      if (isEmployeesScope) {
+        nextDocuments = nextDocuments.filter((doc) => doc.employeeId !== employee.id);
+      }
+      setDocuments(nextDocuments);
       setIsLoading(false);
-      return;
-    }
-    let nextDocuments = Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : [];
-    if (isEmployeesScope) {
-      nextDocuments = nextDocuments.filter((doc) => doc.employeeId !== employee.id);
-    }
-    setDocuments(nextDocuments);
-    setIsLoading(false);
-  }, [employee.id, hasGlobalAccess, isEmployeesScope, isSelfScope, selectedEmployeeId]);
+    },
+    [employee.id, hasGlobalAccess, isEmployeesScope, isSelfScope, selectedEmployeeId]
+  );
 
   const refreshUploadOwnerDocuments = useCallback(async () => {
     const token = getToken();
@@ -241,9 +244,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
 
   const availableUploadTypes = useMemo(
     () =>
-      DOCUMENT_TYPES.filter(
-        (item) => item.value === "CHILD_BIRTH_CERTIFICATE" || !uploadOwnerTypeSet.has(item.value)
-      ),
+      DOCUMENT_TYPES.filter((item) => item.value === "CHILD_BIRTH_CERTIFICATE" || !uploadOwnerTypeSet.has(item.value)),
     [uploadOwnerTypeSet]
   );
   const effectiveSelectedType = useMemo(
@@ -259,7 +260,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
 
   const uploadDocument = async () => {
     if (!canUploadDocuments) {
-      toast.error("Le PDG ne peut pas ajouter de documents administratifs.");
+      toast.error("Le PDG ne peut pas ajouter de documents RH.");
       return;
     }
     const token = getToken();
@@ -272,7 +273,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     setIsUploading(true);
 
     if (needsRelatedName && !relatedPersonName.trim()) {
-      toast.error("Le nom du conjoint/enfant est obligatoire.");
+      toast.error("Le nom du conjoint ou de l’enfant est obligatoire.");
       setIsUploading(false);
       return;
     }
@@ -296,7 +297,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
       if (isChildType && childOrder.trim()) {
         const parsedChildOrder = Number(childOrder.trim());
         if (!Number.isInteger(parsedChildOrder) || parsedChildOrder <= 0) {
-          toast.error("Le rang de l'enfant doit être un entier positif.");
+          toast.error("Le rang de l’enfant doit être un entier positif.");
           setIsUploading(false);
           return;
         }
@@ -366,7 +367,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
       };
 
       if (isEditingNeedsRelatedName && !editRelatedPersonName.trim()) {
-        toast.error("Le nom du conjoint/enfant est obligatoire.");
+        toast.error("Le nom du conjoint ou de l’enfant est obligatoire.");
         setIsEditingBusy(false);
         return;
       }
@@ -374,7 +375,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
       if (isEditingChildType && editChildOrder.trim()) {
         const parsedChildOrder = Number(editChildOrder.trim());
         if (!Number.isInteger(parsedChildOrder) || parsedChildOrder <= 0) {
-          toast.error("Le rang de l'enfant doit être un entier positif.");
+          toast.error("Le rang de l’enfant doit être un entier positif.");
           setIsEditingBusy(false);
           return;
         }
@@ -451,18 +452,19 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     }
   };
 
-
   const getEditTypeOptions = (doc: EmployeeDocument) => {
     const occupied = new Set(
       documents
-        .filter((item) => item.employeeId === doc.employeeId && item.id !== doc.id && item.type !== "CHILD_BIRTH_CERTIFICATE")
+        .filter(
+          (item) =>
+            item.employeeId === doc.employeeId &&
+            item.id !== doc.id &&
+            item.type !== "CHILD_BIRTH_CERTIFICATE"
+        )
         .map((item) => item.type)
     );
     return DOCUMENT_TYPES.filter(
-      (item) =>
-        item.value === "CHILD_BIRTH_CERTIFICATE" ||
-        item.value === doc.type ||
-        !occupied.has(item.value)
+      (item) => item.value === "CHILD_BIRTH_CERTIFICATE" || item.value === doc.type || !occupied.has(item.value)
     );
   };
 
@@ -493,12 +495,12 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
           <div className="text-sm text-vdm-gold-700">
             {isEmployeesScope
               ? "Consultez et gérez les documents administratifs des employés."
-              : "Ajoutez et consultez vos documents administratifs (CNI, extraits, CV, lettre, situation géographique)."}
+              : "Ajoutez et consultez vos documents administratifs (CNI, extraits, CV, lettre, localisation géographique)."}
           </div>
           {!canUploadDocuments ? (
             <div className="text-xs text-vdm-gold-700 mt-1">
               {employee.role === "CEO"
-                ? "Mode lecture seule: vous pouvez consulter et télécharger les documents de tous les employés."
+                ? "Mode lecture seule : vous pouvez consulter et télécharger les documents de tous les employés."
                 : "Les documents personnels de la comptable sont gérés sur la page Profil."}
             </div>
           ) : hasGlobalAccess ? (
@@ -523,7 +525,9 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
               >
                 <option value={ALL_EMPLOYEES_VALUE}>{allEmployeesLabel}</option>
                 {employee.role !== "CEO" && !isEmployeesScope ? (
-                  <option value={employee.id}>{employee.firstName} {employee.lastName} (moi)</option>
+                  <option value={employee.id}>
+                    {employee.firstName} {employee.lastName} (moi)
+                  </option>
                 ) : null}
                 {employees
                   .filter((item) => item.id !== employee.id)
@@ -556,9 +560,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
 
             {needsRelatedName ? (
               <div>
-                <div className="text-xs text-vdm-gold-600 mb-1">
-                  {isChildType ? "Nom de l'enfant" : "Nom du conjoint"}
-                </div>
+                <div className="text-xs text-vdm-gold-600 mb-1">{isChildType ? "Nom de l'enfant" : "Nom du conjoint"}</div>
                 <input
                   value={relatedPersonName}
                   onChange={(e) => setRelatedPersonName(e.target.value)}
@@ -570,7 +572,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
 
             {isChildType ? (
               <div>
-                <div className="text-xs text-vdm-gold-600 mb-1">Rang de l&apos;enfant (optionnel)</div>
+                <div className="text-xs text-vdm-gold-600 mb-1">Rang de l&apos;enfant (facultatif)</div>
                 <input
                   value={childOrder}
                   onChange={(e) => setChildOrder(e.target.value.replace(/\D/g, ""))}
@@ -607,7 +609,8 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
           </button>
           {availableUploadTypes.length === 0 ? (
             <div className="text-xs text-vdm-gold-700 mt-1">
-              Tous les documents uniques sont déjà ajoutés. Seuls les extraits d&apos;enfant peuvent être multiples.
+              Tous les documents à exemplaire unique sont déjà ajoutés. Seuls les extraits d&apos;enfant peuvent être
+              multiples.
             </div>
           ) : null}
         </div>
@@ -626,160 +629,163 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
               </div>
               {group.documents.map((doc) => (
                 <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div className="flex items-start gap-3">
-                  {doc.employee?.profilePhotoUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhotoPreviewUrl(doc.employee?.profilePhotoUrl ?? null);
-                        setPhotoPreviewLabel(`Photo de ${employeeLabel(doc.employee)}`);
-                      }}
-                      className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                      aria-label={`Agrandir la photo de ${employeeLabel(doc.employee)}`}
-                    >
-                      <img
-                        src={doc.employee.profilePhotoUrl}
-                        alt={`Photo de ${employeeLabel(doc.employee)}`}
-                        className="h-10 w-10 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
-                      />
-                    </button>
-                  ) : (
-                    <div className="h-10 w-10 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center text-xs font-semibold">
-                      {(doc.employee?.firstName?.[0] ?? "").toUpperCase()}
-                      {(doc.employee?.lastName?.[0] ?? "").toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                  <div className="text-sm font-semibold text-vdm-gold-900">{typeLabel(doc.type)}</div>
-                  <div className="text-xs text-vdm-gold-700">
-                    Fichier: {doc.fileName} | Ajouté le: {formatDate(doc.createdAt)}
-                  </div>
-                  {doc.relatedPersonName ? (
-                    <div className="text-xs text-vdm-gold-700">
-                      {doc.type === "CHILD_BIRTH_CERTIFICATE" ? "Enfant" : "Conjoint"}: {doc.relatedPersonName}
-                      {doc.type === "CHILD_BIRTH_CERTIFICATE" && doc.childOrder ? ` (rang ${doc.childOrder})` : ""}
-                    </div>
-                  ) : null}
-                  {hasGlobalAccess ? (
-                    <div className="text-xs text-vdm-gold-700">
-                      Employé: {employeeLabel(doc.employee)} | Déposé par: {doc.uploadedBy?.firstName} {doc.uploadedBy?.lastName}
-                    </div>
-                  ) : null}
-                </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <a
-                    href={doc.fileDataUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    download={doc.fileName}
-                    className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-                  >
-                    Ouvrir / Télécharger
-                  </a>
-                  {canManageDocument(doc) ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => startEditDocument(doc)}
-                        className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-                        disabled={isEditingBusy}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteDocument(doc)}
-                        className="px-3 py-2 rounded-md border border-red-300 text-red-700 text-sm hover:bg-red-50"
-                        disabled={isEditingBusy}
-                      >
-                        Supprimer
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-
-              {editingId === doc.id ? (
-                <div className="mt-3 border-t border-vdm-gold-100 pt-3 space-y-3">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div>
-                      <div className="text-xs text-vdm-gold-600 mb-1">Type de document</div>
-                      <select
-                        value={editType}
-                        onChange={(e) => setEditType(e.target.value as DocumentType)}
-                        className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                        disabled={isEditingBusy}
-                      >
-                        {getEditTypeOptions(doc).map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {isEditingNeedsRelatedName ? (
-                      <div>
-                        <div className="text-xs text-vdm-gold-600 mb-1">
-                          {isEditingChildType ? "Nom de l'enfant" : "Nom du conjoint"}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <div className="flex items-start gap-3">
+                      {doc.employee?.profilePhotoUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhotoPreviewUrl(doc.employee?.profilePhotoUrl ?? null);
+                            setPhotoPreviewLabel(`Photo de ${employeeLabel(doc.employee)}`);
+                          }}
+                          className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                          aria-label={`Agrandir la photo de ${employeeLabel(doc.employee)}`}
+                        >
+                          <img
+                            src={doc.employee.profilePhotoUrl}
+                            alt={`Photo de ${employeeLabel(doc.employee)}`}
+                            className="h-10 w-10 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
+                          />
+                        </button>
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center text-xs font-semibold">
+                          {(doc.employee?.firstName?.[0] ?? "").toUpperCase()}
+                          {(doc.employee?.lastName?.[0] ?? "").toUpperCase()}
                         </div>
-                        <input
-                          value={editRelatedPersonName}
-                          onChange={(e) => setEditRelatedPersonName(e.target.value)}
-                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                          disabled={isEditingBusy}
-                        />
-                      </div>
-                    ) : null}
-
-                    {isEditingChildType ? (
+                      )}
                       <div>
-                        <div className="text-xs text-vdm-gold-600 mb-1">Rang de l&apos;enfant (optionnel)</div>
+                        <div className="text-sm font-semibold text-vdm-gold-900">{typeLabel(doc.type)}</div>
+                        <div className="text-xs text-vdm-gold-700">
+                          Fichier: {doc.fileName} | Ajouté le: {formatDate(doc.createdAt)}
+                        </div>
+                        {doc.relatedPersonName ? (
+                          <div className="text-xs text-vdm-gold-700">
+                            {doc.type === "CHILD_BIRTH_CERTIFICATE" ? "Enfant" : "Conjoint"}: {doc.relatedPersonName}
+                            {doc.type === "CHILD_BIRTH_CERTIFICATE" && doc.childOrder
+                              ? ` (rang ${doc.childOrder})`
+                              : ""}
+                          </div>
+                        ) : null}
+                        {hasGlobalAccess ? (
+                          <div className="text-xs text-vdm-gold-700">
+                            Employé: {employeeLabel(doc.employee)} | Déposé par: {doc.uploadedBy?.firstName}{" "}
+                            {doc.uploadedBy?.lastName}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={doc.fileDataUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={doc.fileName}
+                        className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                      >
+                        Ouvrir / Télécharger
+                      </a>
+                      {canManageDocument(doc) ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startEditDocument(doc)}
+                            className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                            disabled={isEditingBusy}
+                          >
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteDocument(doc)}
+                            className="px-3 py-2 rounded-md border border-red-300 text-red-700 text-sm hover:bg-red-50"
+                            disabled={isEditingBusy}
+                          >
+                            Supprimer
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {editingId === doc.id ? (
+                    <div className="mt-3 border-t border-vdm-gold-100 pt-3 space-y-3">
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <div className="text-xs text-vdm-gold-600 mb-1">Type de document</div>
+                          <select
+                            value={editType}
+                            onChange={(e) => setEditType(e.target.value as DocumentType)}
+                            className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                            disabled={isEditingBusy}
+                          >
+                            {getEditTypeOptions(doc).map((item) => (
+                              <option key={item.value} value={item.value}>
+                                {item.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {isEditingNeedsRelatedName ? (
+                          <div>
+                            <div className="text-xs text-vdm-gold-600 mb-1">
+                              {isEditingChildType ? "Nom de l'enfant" : "Nom du conjoint"}
+                            </div>
+                            <input
+                              value={editRelatedPersonName}
+                              onChange={(e) => setEditRelatedPersonName(e.target.value)}
+                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                              disabled={isEditingBusy}
+                            />
+                          </div>
+                        ) : null}
+
+                        {isEditingChildType ? (
+                          <div>
+                            <div className="text-xs text-vdm-gold-600 mb-1">Rang de l&apos;enfant (facultatif)</div>
+                            <input
+                              value={editChildOrder}
+                              onChange={(e) => setEditChildOrder(e.target.value.replace(/\D/g, ""))}
+                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                              disabled={isEditingBusy}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div>
+                        <div className="text-xs text-vdm-gold-600 mb-1">Remplacer le fichier (optionnel)</div>
                         <input
-                          value={editChildOrder}
-                          onChange={(e) => setEditChildOrder(e.target.value.replace(/\D/g, ""))}
-                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                          key={editFileInputKey}
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png,image/webp"
+                          onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
+                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
                           disabled={isEditingBusy}
                         />
                       </div>
-                    ) : null}
-                  </div>
 
-                  <div>
-                    <div className="text-xs text-vdm-gold-600 mb-1">Remplacer le fichier (optionnel)</div>
-                    <input
-                      key={editFileInputKey}
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png,image/webp"
-                      onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
-                      className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
-                      disabled={isEditingBusy}
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => saveEditDocument(doc)}
-                      className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
-                      disabled={isEditingBusy}
-                    >
-                      {isEditingBusy ? "Enregistrement..." : "Enregistrer"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEditDocument}
-                      className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-                      disabled={isEditingBusy}
-                    >
-                      Annuler
-                    </button>
-                  </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => saveEditDocument(doc)}
+                          className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+                          disabled={isEditingBusy}
+                        >
+                          {isEditingBusy ? "Enregistrement..." : "Enregistrer"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditDocument}
+                          className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                          disabled={isEditingBusy}
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-            </div>
               ))}
             </div>
           ))}
@@ -805,11 +811,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
             >
               Fermer
             </button>
-            <img
-              src={photoPreviewUrl}
-              alt={photoPreviewLabel}
-              className="w-full max-h-[85vh] object-contain bg-black"
-            />
+            <img src={photoPreviewUrl} alt={photoPreviewLabel} className="w-full max-h-[85vh] object-contain bg-black" />
           </div>
         </div>
       ) : null}
@@ -819,7 +821,8 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
           <div className="w-full max-w-md rounded-xl bg-white border border-vdm-gold-200 p-5">
             <div className="text-base font-semibold text-vdm-gold-900 mb-2">Confirmer la suppression</div>
             <div className="text-sm text-vdm-gold-700 mb-4">
-              Voulez-vous vraiment supprimer ce document: <span className="font-semibold">{deleteModalDoc.fileName}</span> ?
+              Voulez-vous vraiment supprimer ce document :{" "}
+              <span className="font-semibold">{deleteModalDoc.fileName}</span> ?
             </div>
             <div className="flex justify-end gap-2">
               <button

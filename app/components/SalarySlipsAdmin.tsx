@@ -290,36 +290,39 @@ export default function SalarySlipsAdmin() {
     }
   }, []);
 
-  const removeSlip = useCallback(async (id: string) => {
-    const token = getToken();
-    if (!token) return;
+  const removeSlip = useCallback(
+    async (id: string) => {
+      const token = getToken();
+      if (!token) return;
 
-    const confirmed = window.confirm("Retirer ce bulletin non signé ?");
-    if (!confirmed) return;
+      const confirmed = window.confirm("Retirer ce bulletin non signé ?");
+      if (!confirmed) return;
 
-    setRemovingId(id);
-    setError(null);
-    setSuccess(null);
+      setRemovingId(id);
+      setError(null);
+      setSuccess(null);
 
-    try {
-      const res = await fetch(`/api/salary-slips/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(String(data?.error ?? "Impossible de retirer le bulletin"));
-        return;
+      try {
+        const res = await fetch(`/api/salary-slips/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(String(data?.error ?? "Impossible de retirer le bulletin"));
+          return;
+        }
+
+        setSuccess("Bulletin retiré avec succès.");
+        await refreshSlips();
+      } catch {
+        setError("Erreur réseau");
+      } finally {
+        setRemovingId(null);
       }
-
-      setSuccess("Bulletin retiré avec succès.");
-      await refreshSlips();
-    } catch {
-      setError("Erreur réseau");
-    } finally {
-      setRemovingId(null);
-    }
-  }, [refreshSlips]);
+    },
+    [refreshSlips]
+  );
 
   const employeeOptions = useMemo(
     () =>
@@ -408,7 +411,7 @@ export default function SalarySlipsAdmin() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-vdm-gold-900">Administration des bulletins</h1>
-          <p className="text-sm text-vdm-gold-700">Import des bulletins, puis signature par le CEO.</p>
+          <p className="text-sm text-vdm-gold-700">Import des bulletins, puis signature par le PDG.</p>
         </div>
         <button
           type="button"
@@ -642,7 +645,7 @@ export default function SalarySlipsAdmin() {
                               <th className="px-4 py-3 text-left font-semibold">Employé</th>
                               <th className="px-4 py-3 text-left font-semibold">Période</th>
                               <th className="px-4 py-3 text-left font-semibold">Fichier</th>
-                              <th className="px-4 py-3 text-left font-semibold">Statut signature</th>
+                              <th className="px-4 py-3 text-left font-semibold">Statut de signature</th>
                               <th className="px-4 py-3 text-left font-semibold">Date d&apos;import</th>
                               <th className="px-4 py-3 text-right font-semibold">Action</th>
                             </tr>
@@ -661,10 +664,10 @@ export default function SalarySlipsAdmin() {
                                 <td className="px-4 py-3">{slip.fileName}</td>
                                 <td className="px-4 py-3">
                                   {slip.signedAt
-                                    ? `Signé par ${slip.signedBy?.firstName ?? "CEO"} ${slip.signedBy?.lastName ?? ""} le ${formatDateTime(
+                                    ? `Signé par ${slip.signedBy?.firstName ?? "PDG"} ${slip.signedBy?.lastName ?? ""} le ${formatDateTime(
                                         slip.signedAt
                                       )}`.trim()
-                                    : "En attente CEO"}
+                                    : "En attente de signature du PDG"}
                                 </td>
                                 <td className="px-4 py-3">{formatDate(slip.createdAt)}</td>
                                 <td className="px-4 py-3 text-right space-x-2">

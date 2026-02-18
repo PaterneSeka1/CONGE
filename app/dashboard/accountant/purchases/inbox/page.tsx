@@ -41,7 +41,7 @@ function statusClass(status: Req["status"]) {
 
 function originLabel(origin: Req["origin"]) {
   if (origin === "DEPT_HEAD") return "Directeur des opérations";
-  if (origin === "SERVICE_HEAD") return "Directeur Adjoint";
+  if (origin === "SERVICE_HEAD") return "Directeur adjoint";
   return "Autre";
 }
 
@@ -143,7 +143,7 @@ export default function AccountantPurchaseInbox() {
   const forwardToCeo = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const t = toast.loading("Transmission au CEO...");
+    const t = toast.loading("Transmission au PDG...");
     try {
       const res = await fetch(`/api/purchase-requests/${id}/escalate`, {
         method: "POST",
@@ -152,7 +152,7 @@ export default function AccountantPurchaseInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Demande transmise au CEO.", { id: t });
+        toast.success("Demande transmise au PDG.", { id: t });
       } else {
         toast.error("Erreur lors de la transmission.", { id: t });
       }
@@ -231,7 +231,7 @@ export default function AccountantPurchaseInbox() {
               onClick={() => forwardToCeo(row.original.id)}
               className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
             >
-              Transmettre au CEO
+              Transmettre au PDG
             </button>
           </div>
         ),
@@ -242,8 +242,10 @@ export default function AccountantPurchaseInbox() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d'achats futurs</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">La comptable peut valider, refuser ou transmettre au CEO.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes d&apos;achats futurs</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">
+        La comptable peut valider, refuser ou transmettre au PDG.
+      </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-xs text-vdm-gold-700">Filtrer par département</div>

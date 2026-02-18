@@ -62,7 +62,7 @@ function decisionClass(decision: HistoryItem["decision"]) {
 
 function originLabel(origin: Req["origin"]) {
   if (origin === "DEPT_HEAD") return "Directeur des opérations";
-  if (origin === "SERVICE_HEAD") return "Directeur Adjoint";
+  if (origin === "SERVICE_HEAD") return "Directeur adjoint";
   if (origin === "EMPLOYEE") return "Employé";
   return "Autre";
 }
@@ -248,7 +248,7 @@ export default function AccountantInbox() {
   const forwardToCeo = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const t = toast.loading("Transmission au CEO...");
+    const t = toast.loading("Transmission au PDG...");
     try {
       const res = await fetch(`/api/leave-requests/${id}/escalate`, {
         method: "POST",
@@ -257,7 +257,7 @@ export default function AccountantInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Demande transmise au CEO.", { id: t });
+        toast.success("Demande transmise au PDG.", { id: t });
       } else {
         toast.error("Erreur lors de la transmission.", { id: t });
       }
@@ -359,7 +359,7 @@ export default function AccountantInbox() {
                   onClick={() => forwardToCeo(row.original.id)}
                   className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
                 >
-                  Transmettre au CEO
+                  Transmettre au PDG
                 </button>
               ) : (
                 <>
@@ -373,7 +373,7 @@ export default function AccountantInbox() {
                     onClick={() => forwardToCeo(row.original.id)}
                     className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
                   >
-                    Transmettre au CEO
+                    Transmettre au PDG
                   </button>
                 </>
               )}
@@ -387,9 +387,9 @@ export default function AccountantInbox() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Inbox des demandes</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Boîte de réception des demandes</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        La comptable peut transmettre les demandes au directeur de département ou directement au CEO. Les demandes des responsables sont transmises au CEO.
+        La comptable peut transmettre les demandes au directeur de département ou directement au PDG. Les demandes des responsables sont transmises au PDG.
       </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -425,7 +425,7 @@ export default function AccountantInbox() {
           searchPlaceholder="Rechercher une décision..."
           onRefresh={() => window.location.reload()}
         />
-        {isHistoryLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div> : null}
+        {isHistoryLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l’historique...</div> : null}
       </div>
     </div>
   );

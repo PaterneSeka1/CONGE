@@ -73,7 +73,9 @@ function currentHireDateValue(draft: EditableEmployee) {
 export default function OnboardingPage() {
   const router = useRouter();
   const initialEmployee = useMemo(() => getEmployee(), []);
-  const [draft, setDraft] = useState<EditableEmployee | null>(initialEmployee as EditableEmployee | null);
+  const [draft, setDraft] = useState<EditableEmployee | null>(
+    initialEmployee as EditableEmployee | null
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
@@ -89,7 +91,13 @@ export default function OnboardingPage() {
       return;
     }
     if (hasRequiredProfileData(employee)) {
-      router.replace(routeForRole(employee.role, employee.isDsiAdmin, employee.departmentType ?? null));
+      router.replace(
+        routeForRole(
+          employee.role,
+          employee.isDsiAdmin,
+          employee.departmentType ?? null
+        )
+      );
       return;
     }
 
@@ -99,7 +107,10 @@ export default function OnboardingPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.employee) {
-        const merged = { ...employee, ...data.employee } as EditableEmployee;
+        const merged = {
+          ...employee,
+          ...data.employee,
+        } as EditableEmployee;
         localStorage.setItem("employee", JSON.stringify(merged));
         setDraft(merged);
       }
@@ -110,7 +121,7 @@ export default function OnboardingPage() {
   const onProfilePhotoChange = (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setPhotoError("Le fichier doit etre une image.");
+      setPhotoError("Le fichier doit être une image.");
       return;
     }
     if (file.size > MAX_PROFILE_PHOTO_SIZE_BYTES) {
@@ -125,9 +136,12 @@ export default function OnboardingPage() {
         return;
       }
       setPhotoError(null);
-      setDraft((prev) => (prev ? { ...prev, profilePhotoUrl: result } : prev));
+      setDraft((prev) =>
+        prev ? { ...prev, profilePhotoUrl: result } : prev
+      );
     };
-    reader.onerror = () => setPhotoError("Erreur lors du chargement de l'image.");
+    reader.onerror = () =>
+      setPhotoError("Erreur lors du chargement de l'image.");
     reader.readAsDataURL(file);
   };
 
@@ -139,15 +153,17 @@ export default function OnboardingPage() {
       return;
     }
     if (!draft.phone || !String(draft.phone).trim()) {
-      toast.error("Numero de telephone obligatoire.");
+      toast.error("Numéro de téléphone obligatoire.");
       return;
     }
     if (!isCompletePhone(draft.phone)) {
-      toast.error("Numero invalide. Format attendu: +225 00 00 00 00 00 (indicatif modifiable)");
+      toast.error(
+        "Numéro invalide. Format attendu : +225 00 00 00 00 00 (indicatif modifiable)"
+      );
       return;
     }
     if (!draft.fullAddress || !String(draft.fullAddress).trim()) {
-      toast.error("Adresse precise obligatoire.");
+      toast.error("Adresse précise obligatoire.");
       return;
     }
     const hireDate = currentHireDateValue(draft);
@@ -156,7 +172,9 @@ export default function OnboardingPage() {
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(hireDate))) {
-      toast.error("Date d'entrée invalide. Utilisez le format YYYY-MM-DD.");
+      toast.error(
+        "Date d'entrée invalide. Utilisez le format YYYY-MM-DD."
+      );
       return;
     }
     if (!draft.cnpsNumber || !String(draft.cnpsNumber).trim()) {
@@ -172,7 +190,10 @@ export default function OnboardingPage() {
     try {
       const res = await fetch("/api/auth/me", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           firstName: draft.firstName,
           lastName: draft.lastName,
@@ -187,14 +208,23 @@ export default function OnboardingPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error(data?.error || "Impossible de finaliser l'onboarding.", { id: t });
+        toast.error(
+          data?.error || "Impossible de finaliser l'onboarding.",
+          { id: t }
+        );
         return;
       }
 
       const updated = { ...draft, ...(data?.employee ?? {}) };
       localStorage.setItem("employee", JSON.stringify(updated));
-      toast.success("Profil complete. Bienvenue.", { id: t });
-      router.replace(routeForRole(updated.role, updated.isDsiAdmin, updated.departmentType ?? null));
+      toast.success("Profil complété. Bienvenue.", { id: t });
+      router.replace(
+        routeForRole(
+          updated.role,
+          updated.isDsiAdmin,
+          updated.departmentType ?? null
+        )
+      );
     } finally {
       setIsSaving(false);
     }
@@ -202,23 +232,38 @@ export default function OnboardingPage() {
 
   if (!draft) return null;
   const phone = parsePhone(draft.phone);
+  const hireDateValue = String(currentHireDateValue(draft) ?? "").trim();
+  const canFinalize =
+    Boolean(String(draft.firstName ?? "").trim()) &&
+    Boolean(String(draft.lastName ?? "").trim()) &&
+    Boolean(String(draft.profilePhotoUrl ?? "").trim()) &&
+    !photoError &&
+    Boolean(String(draft.phone ?? "").trim()) &&
+    isCompletePhone(String(draft.phone ?? "")) &&
+    Boolean(String(draft.fullAddress ?? "").trim()) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(hireDateValue) &&
+    Boolean(String(draft.cnpsNumber ?? "").trim());
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl bg-white border border-vdm-gold-200 rounded-2xl p-6 space-y-5">
         <div>
-          <div className="text-2xl font-semibold text-vdm-gold-800">Onboarding</div>
+          <div className="text-2xl font-semibold text-vdm-gold-800">
+            Information Complémentaire
+          </div>
           <div className="text-sm text-vdm-gold-700">
-            Completez ces informations apres validation du compte par le DSI.
+            Complétez vos informations.
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Prenom</div>
+            <div className="text-xs text-vdm-gold-600 mb-1">Prénom</div>
             <input
               value={draft.firstName ?? ""}
-              onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+              onChange={(e) =>
+                setDraft({ ...draft, firstName: e.target.value })
+              }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
             />
           </div>
@@ -226,19 +271,28 @@ export default function OnboardingPage() {
             <div className="text-xs text-vdm-gold-600 mb-1">Nom</div>
             <input
               value={draft.lastName ?? ""}
-              onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+              onChange={(e) =>
+                setDraft({ ...draft, lastName: e.target.value })
+              }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
             />
           </div>
           <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Telephone (obligatoire)</div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Téléphone (obligatoire)
+            </div>
             <div className="flex gap-2">
               <div className="w-24">
                 <input
                   value={phone.country ? `+${phone.country}` : "+"}
                   onChange={(e) => {
-                    const nextCountry = e.target.value.replace(/\D/g, "").slice(0, 3);
-                    setDraft({ ...draft, phone: composePhone(nextCountry, phone.local) });
+                    const nextCountry = e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 3);
+                    setDraft({
+                      ...draft,
+                      phone: composePhone(nextCountry, phone.local),
+                    });
                   }}
                   className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
                   placeholder="+225"
@@ -246,7 +300,12 @@ export default function OnboardingPage() {
               </div>
               <input
                 value={formatLocalPhone(phone.local)}
-                onChange={(e) => setDraft({ ...draft, phone: composePhone(phone.country, e.target.value) })}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    phone: composePhone(phone.country, e.target.value),
+                  })
+                }
                 className="flex-1 border border-vdm-gold-200 rounded-md p-2 text-sm"
                 placeholder="00 00 00 00 00"
                 inputMode="numeric"
@@ -257,52 +316,78 @@ export default function OnboardingPage() {
             <div className="text-xs text-vdm-gold-600 mb-1">Poste</div>
             <input
               value={draft.jobTitle ?? ""}
-              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+              onChange={(e) =>
+                setDraft({ ...draft, jobTitle: e.target.value })
+              }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
-              placeholder="Intitule du poste"
+              placeholder="Intitulé du poste"
             />
           </div>
           <div className="md:col-span-2">
-            <div className="text-xs text-vdm-gold-600 mb-1">Adresse precise (obligatoire)</div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Adresse précise (obligatoire)
+            </div>
             <input
               value={draft.fullAddress ?? ""}
-              onChange={(e) => setDraft({ ...draft, fullAddress: e.target.value })}
+              onChange={(e) =>
+                setDraft({ ...draft, fullAddress: e.target.value })
+              }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
               placeholder="Rue, ville, code postal, pays"
             />
           </div>
           <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Date d&apos;entrée dans l&apos;entreprise (obligatoire)</div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Date d&apos;entrée dans l&apos;entreprise (obligatoire)
+            </div>
             <input
               type="date"
               value={toDateInputValue(currentHireDateValue(draft))}
-              onChange={(e) => setDraft({ ...draft, hireDate: e.target.value, companyEntryDate: e.target.value })}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  hireDate: e.target.value,
+                  companyEntryDate: e.target.value,
+                })
+              }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
             />
           </div>
           <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Numero CNPS (obligatoire)</div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Numéro CNPS (obligatoire)
+            </div>
             <input
               value={draft.cnpsNumber ?? ""}
-              onChange={(e) => setDraft({ ...draft, cnpsNumber: e.target.value })}
+              onChange={(e) =>
+                setDraft({ ...draft, cnpsNumber: e.target.value })
+              }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
-              placeholder="Ex: CNPS-123456"
+              placeholder="Ex : CNPS-123456"
             />
           </div>
           <div className="md:col-span-2">
-            <div className="text-xs text-vdm-gold-600 mb-1">Photo de profil (obligatoire)</div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Photo de profil (obligatoire)
+            </div>
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => onProfilePhotoChange(e.target.files?.[0] ?? null)}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm bg-white"
+              onChange={(e) =>
+                onProfilePhotoChange(e.target.files?.[0] ?? null)
+              }
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm bg-white file:bg-vdm-gold-50 file:text-vdm-gold-800 file:border file:border-vdm-gold-200 file:rounded-md file:px-3 file:py-1 file:mr-3"
             />
-            {photoError ? <div className="mt-1 text-xs text-red-600">{photoError}</div> : null}
+            {photoError ? (
+              <div className="mt-1 text-xs text-red-600">
+                {photoError}
+              </div>
+            ) : null}
             {draft.profilePhotoUrl ? (
               <div className="mt-3">
                 <img
                   src={draft.profilePhotoUrl}
-                  alt="Apercu photo"
+                  alt="Aperçu photo"
                   className="h-20 w-20 rounded-full object-cover border border-vdm-gold-200"
                 />
               </div>
@@ -314,10 +399,10 @@ export default function OnboardingPage() {
           <button
             type="button"
             onClick={saveOnboarding}
-            disabled={isSaving}
+            disabled={isSaving || !canFinalize}
             className="px-4 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
           >
-            {isSaving ? "Enregistrement..." : "Finaliser l'onboarding"}
+            {isSaving ? "Enregistrement..." : "Finaliser Votre Espace"}
           </button>
         </div>
       </div>

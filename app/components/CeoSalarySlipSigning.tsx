@@ -419,7 +419,7 @@ export default function CeoSalarySlipSigning() {
                             <tr>
                               <th className="px-4 py-3 text-left font-semibold">Employé</th>
                               <th className="px-4 py-3 text-left font-semibold">Période</th>
-                              <th className="px-4 py-3 text-left font-semibold">Date d&apos;import</th>
+                              <th className="px-4 py-3 text-left font-semibold">Date d'import</th>
                               <th className="px-4 py-3 text-right font-semibold">Actions</th>
                             </tr>
                           </thead>

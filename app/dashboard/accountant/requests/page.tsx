@@ -136,7 +136,7 @@ export default function AccountantRequests() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes demandes (Comptable)</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Suivez l'état de vos demandes en cours.</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Suivez l&apos;état de vos demandes en cours.</div>
 
       <DataTable
         data={items}

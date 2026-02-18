@@ -144,7 +144,7 @@ export default function MySalarySlips() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-vdm-gold-900">Bulletins de salaire</h1>
-          <p className="text-sm text-vdm-gold-700">Retrouvez les bulletins signés par le CEO.</p>
+          <p className="text-sm text-vdm-gold-700">Retrouvez les bulletins signés par le PDG.</p>
         </div>
         <button
           type="button"
@@ -155,7 +155,11 @@ export default function MySalarySlips() {
         </button>
       </div>
 
-      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="rounded-xl border border-vdm-gold-200 bg-white overflow-hidden">
         {isLoading ? (
@@ -168,7 +172,9 @@ export default function MySalarySlips() {
               <details key={group.year} open={index === 0} className="group">
                 <summary className="list-none flex items-center justify-between gap-3 px-4 py-3 bg-vdm-gold-50 text-vdm-gold-900 font-semibold cursor-pointer">
                   <span>Année {group.year}</span>
-                  <span className="text-xs font-medium text-vdm-gold-700">{group.slips.length} bulletin(s)</span>
+                  <span className="text-xs font-medium text-vdm-gold-700">
+                    {group.slips.length} bulletin(s) de salaire
+                  </span>
                 </summary>
 
                 <div className="p-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -181,9 +187,12 @@ export default function MySalarySlips() {
                         {slip.fileName}
                       </div>
                       <div className="text-xs text-gray-600">
-                        Signé par {slip.signedBy ? `${slip.signedBy.firstName} ${slip.signedBy.lastName}` : "CEO"}
+                        Signé par{" "}
+                        {slip.signedBy ? `${slip.signedBy.firstName} ${slip.signedBy.lastName}` : "le PDG"}
                       </div>
-                      <div className="text-xs text-gray-600">{formatDateTime(String(slip.signedAt ?? slip.createdAt))}</div>
+                      <div className="text-xs text-gray-600">
+                        {formatDateTime(String(slip.signedAt ?? slip.createdAt))}
+                      </div>
                       <div>
                         <button
                           type="button"

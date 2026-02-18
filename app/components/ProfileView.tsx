@@ -166,7 +166,7 @@ export default function ProfileView() {
   const onProfilePhotoChange = (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setPhotoError("Le fichier doit etre une image.");
+      setPhotoError("Le fichier doit être une image.");
       return;
     }
     if (file.size > MAX_PROFILE_PHOTO_SIZE_BYTES) {
@@ -228,7 +228,7 @@ export default function ProfileView() {
 
       URL.revokeObjectURL(objectUrl);
     } catch {
-      setPhotoError("Impossible de télécharger la photo en format passeport.");
+      setPhotoError("Impossible de télécharger la photo au format passeport.");
     }
   };
 
@@ -244,7 +244,7 @@ export default function ProfileView() {
       }
     }
     if (draft.phone && !isCompletePhone(draft.phone)) {
-      setPasswordError("Numero invalide. Format attendu: +225 00 00 00 00 00 (indicatif modifiable)");
+      setPasswordError("Numéro invalide. Format attendu : +225 00 00 00 00 00 (indicatif modifiable)");
       return;
     }
     setPasswordError(null);
@@ -284,46 +284,45 @@ export default function ProfileView() {
     <div>
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-6">
         <div className="flex items-center gap-4 mb-5 pb-4 border-b border-vdm-gold-100">
-        {draft.profilePhotoUrl ? (
-          <button
-            type="button"
-            onClick={() => setIsPhotoPreviewOpen(true)}
-            className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            aria-label="Agrandir la photo de profil"
-          >
-            <img
-              src={draft.profilePhotoUrl}
-              alt="Photo de profil"
-              className="h-16 w-16 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
-            />
-          </button>
-        ) : (
-          <div className="h-16 w-16 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center font-semibold">
-            {(draft.firstName?.[0] ?? "").toUpperCase()}
-            {(draft.lastName?.[0] ?? "").toUpperCase()}
-          </div>
-        )}
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-vdm-gold-900">Photo de profil</div>
-          <div className="text-xs text-vdm-gold-700">
-            {draft.profilePhotoUrl && draft.fullAddress && draft.phone
-              ? "Profil complet."
-              : "Photo, adresse precise et numero de telephone obligatoires."}
-          </div>
-          {photoError ? <div className="text-xs text-red-600 mt-1">{photoError}</div> : null}
-        </div>
-        {draft.profilePhotoUrl ? (
-          <div>
+          {draft.profilePhotoUrl ? (
             <button
               type="button"
-              onClick={downloadPassportPhoto}
-              className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+              onClick={() => setIsPhotoPreviewOpen(true)}
+              className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              aria-label="Agrandir la photo de profil"
             >
-              Télécharger photo 
- 
+              <img
+                src={draft.profilePhotoUrl}
+                alt="Photo de profil"
+                className="h-16 w-16 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
+              />
             </button>
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center font-semibold">
+              {(draft.firstName?.[0] ?? "").toUpperCase()}
+              {(draft.lastName?.[0] ?? "").toUpperCase()}
+            </div>
+          )}
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-vdm-gold-900">Photo de profil</div>
+            <div className="text-xs text-vdm-gold-700">
+              {draft.profilePhotoUrl && draft.fullAddress && draft.phone
+                ? "Profil complet."
+                : "Photo, adresse précise et numéro de téléphone obligatoires."}
+            </div>
+            {photoError ? <div className="text-xs text-red-600 mt-1">{photoError}</div> : null}
           </div>
-        ) : null}
+          {draft.profilePhotoUrl ? (
+            <div>
+              <button
+                type="button"
+                onClick={downloadPassportPhoto}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+              >
+                Télécharger la photo
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-start justify-between gap-4 mb-4">
@@ -386,188 +385,184 @@ export default function ProfileView() {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-          <div className="text-xs text-vdm-gold-600">Prénom</div>
-          {isEditing ? (
-            <input
-              value={draft.firstName}
-              onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.firstName}</div>
-          )}
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Nom</div>
-          {isEditing ? (
-            <input
-              value={draft.lastName}
-              onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.lastName}</div>
-          )}
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Email</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">{draft.email}</div>
-        </div>
-        <div className="md:col-span-2">
-          <div className="text-xs text-vdm-gold-600">Photo de profil (upload image)</div>
-          {isEditing ? (
-            <div className="space-y-2">
+            <div className="text-xs text-vdm-gold-600">Prénom</div>
+            {isEditing ? (
               <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onProfilePhotoChange(e.target.files?.[0] ?? null)}
-                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                value={draft.firstName}
+                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
               />
-              <button
-                type="button"
-                onClick={() => setDraft({ ...draft, profilePhotoUrl: null })}
-                className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs hover:bg-red-50"
-              >
-                Supprimer la photo
-              </button>
-              {photoError ? <div className="text-xs text-red-600">{photoError}</div> : null}
-            </div>
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">
-              {draft.profilePhotoUrl ? "Photo chargee" : "—"}
-            </div>
-          )}
-        </div>
-        <div className="md:col-span-2">
-          <div className="text-xs text-vdm-gold-600">Adresse precise</div>
-          {isEditing ? (
-            <input
-              value={draft.fullAddress ?? ""}
-              onChange={(e) => setDraft({ ...draft, fullAddress: e.target.value })}
-              placeholder="Rue, ville, code postal, pays"
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.fullAddress ?? "—"}</div>
-          )}
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Matricule</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">{draft.matricule ?? "—"}</div>
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Poste</div>
-          {isEditing ? (
-            <input
-              value={draft.jobTitle ?? ""}
-              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.jobTitle ?? "—"}</div>
-          )}
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Téléphone</div>
-          {isEditing ? (
-            <div className="flex gap-2">
-              <div className="w-24">
-                <input
-                  value={phone.country ? `+${phone.country}` : "+"}
-                  onChange={(e) => {
-                    const nextCountry = e.target.value.replace(/\D/g, "").slice(0, 3);
-                    setDraft({ ...draft, phone: composePhone(nextCountry, phone.local) });
-                  }}
-                  placeholder="+225"
-                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                />
-              </div>
-              <input
-                value={formatLocalPhone(phone.local)}
-                onChange={(e) => setDraft({ ...draft, phone: composePhone(phone.country, e.target.value) })}
-                placeholder="00 00 00 00 00"
-                inputMode="numeric"
-                className="flex-1 border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              />
-            </div>
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.phone ?? "—"}</div>
-          )}
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Rôle</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">{roleLabel(draft.role)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Statut</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">{draft.status}</div>
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Département</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">
-            {draft.departmentId
-              ? departmentNames[draft.departmentId] ?? draft.departmentId
-              : "—"}
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.firstName}</div>
+            )}
           </div>
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Service</div>
-          <div className="text-sm text-vdm-gold-900 font-medium">{draft.serviceId ?? "—"}</div>
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Date d&apos;entrée dans l&apos;entreprise</div>
-          {isEditing ? (
-            <input
-              type="date"
-              value={toDateInputValue(currentHireDateValue(draft))}
-              onChange={(e) => setDraft({ ...draft, hireDate: e.target.value, companyEntryDate: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">
-              {toDateInputValue(currentHireDateValue(draft)) || "—"}
-            </div>
-          )}
-        </div>
-        <div>
-          <div className="text-xs text-vdm-gold-600">Numero CNPS</div>
-          {isEditing ? (
-            <input
-              value={draft.cnpsNumber ?? ""}
-              onChange={(e) => setDraft({ ...draft, cnpsNumber: e.target.value })}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              placeholder="Ex: CNPS-123456"
-            />
-          ) : (
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.cnpsNumber ?? "—"}</div>
-          )}
-        </div>
-        {isEditing ? (
+          <div>
+            <div className="text-xs text-vdm-gold-600">Nom</div>
+            {isEditing ? (
+              <input
+                value={draft.lastName}
+                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              />
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.lastName}</div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Email</div>
+            <div className="text-sm text-vdm-gold-900 font-medium">{draft.email}</div>
+          </div>
           <div className="md:col-span-2">
-            <div className="text-xs text-vdm-gold-600">Mot de passe</div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nouveau mot de passe"
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-            <div className="mt-2">
-              <div className="h-2 w-full rounded-full bg-vdm-gold-200 overflow-hidden">
-                <div
-                  className="h-2 rounded-full bg-vdm-gold-700 transition-all"
-                  style={{ width: `${Math.round((Math.min(Math.max(pw.score, 0), 4) / 4) * 100)}%` }}
+            <div className="text-xs text-vdm-gold-600">Photo de profil (upload d’image)</div>
+            {isEditing ? (
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onProfilePhotoChange(e.target.files?.[0] ?? null)}
+                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white file:bg-vdm-gold-50 file:text-vdm-gold-800 file:border file:border-vdm-gold-200 file:rounded-md file:px-3 file:py-1 file:mr-3"
+                />
+                <button
+                  type="button"
+                  onClick={() => setDraft({ ...draft, profilePhotoUrl: null })}
+                  className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs hover:bg-red-50"
+                >
+                  Supprimer la photo
+                </button>
+                {photoError ? <div className="text-xs text-red-600">{photoError}</div> : null}
+              </div>
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.profilePhotoUrl ? "Photo chargée" : "—"}</div>
+            )}
+          </div>
+          <div className="md:col-span-2">
+            <div className="text-xs text-vdm-gold-600">Adresse précise</div>
+            {isEditing ? (
+              <input
+                value={draft.fullAddress ?? ""}
+                onChange={(e) => setDraft({ ...draft, fullAddress: e.target.value })}
+                placeholder="Rue, ville, code postal, pays"
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              />
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.fullAddress ?? "—"}</div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Matricule</div>
+            <div className="text-sm text-vdm-gold-900 font-medium">{draft.matricule ?? "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Poste</div>
+            {isEditing ? (
+              <input
+                value={draft.jobTitle ?? ""}
+                onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              />
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.jobTitle ?? "—"}</div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Téléphone</div>
+            {isEditing ? (
+              <div className="flex gap-2">
+                <div className="w-24">
+                  <input
+                    value={phone.country ? `+${phone.country}` : "+"}
+                    onChange={(e) => {
+                      const nextCountry = e.target.value.replace(/\D/g, "").slice(0, 3);
+                      setDraft({ ...draft, phone: composePhone(nextCountry, phone.local) });
+                    }}
+                    placeholder="+225"
+                    className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  />
+                </div>
+                <input
+                  value={formatLocalPhone(phone.local)}
+                  onChange={(e) => setDraft({ ...draft, phone: composePhone(phone.country, e.target.value) })}
+                  placeholder="00 00 00 00 00"
+                  inputMode="numeric"
+                  className="flex-1 border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
                 />
               </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-600">
-              <span className="font-semibold">
-                {["très faible", "faible", "moyenne", "bonne", "très bonne"][pw.score] ?? "—"}
-              </span>
-            </div>
-            {passwordError ? <div className="mt-2 text-xs text-red-600">{passwordError}</div> : null}
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.phone ?? "—"}</div>
+            )}
           </div>
-        ) : null}
+          <div>
+            <div className="text-xs text-vdm-gold-600">Rôle</div>
+            <div className="text-sm text-vdm-gold-900 font-medium">{roleLabel(draft.role)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Statut</div>
+            <div className="text-sm text-vdm-gold-900 font-medium">{draft.status}</div>
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Département</div>
+            <div className="text-sm text-vdm-gold-900 font-medium">
+              {draft.departmentId ? departmentNames[draft.departmentId] ?? draft.departmentId : "—"}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Service</div>
+            <div className="text-sm text-vdm-gold-900 font-medium">{draft.serviceId ?? "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Date d&apos;entrée dans l&apos;entreprise</div>
+            {isEditing ? (
+              <input
+                type="date"
+                value={toDateInputValue(currentHireDateValue(draft))}
+                onChange={(e) => setDraft({ ...draft, hireDate: e.target.value, companyEntryDate: e.target.value })}
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              />
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">
+                {toDateInputValue(currentHireDateValue(draft)) || "—"}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600">Numéro CNPS</div>
+            {isEditing ? (
+              <input
+                value={draft.cnpsNumber ?? ""}
+                onChange={(e) => setDraft({ ...draft, cnpsNumber: e.target.value })}
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Ex : CNPS-123456"
+              />
+            ) : (
+              <div className="text-sm text-vdm-gold-900 font-medium">{draft.cnpsNumber ?? "—"}</div>
+            )}
+          </div>
+          {isEditing ? (
+            <div className="md:col-span-2">
+              <div className="text-xs text-vdm-gold-600">Mot de passe</div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Nouveau mot de passe"
+                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              />
+              <div className="mt-2">
+                <div className="h-2 w-full rounded-full bg-vdm-gold-200 overflow-hidden">
+                  <div
+                    className="h-2 rounded-full bg-vdm-gold-700 transition-all"
+                    style={{ width: `${Math.round((Math.min(Math.max(pw.score, 0), 4) / 4) * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-600">
+                <span className="font-semibold">
+                  {["très faible", "faible", "moyenne", "bonne", "très bonne"][pw.score] ?? "—"}
+                </span>
+              </div>
+              {passwordError ? <div className="mt-2 text-xs text-red-600">{passwordError}</div> : null}
+            </div>
+          ) : null}
         </div>
       </div>
       {employee.role !== "CEO" ? (
