@@ -85,8 +85,6 @@ export default function DsiDepartmentEmployees() {
       body: JSON.stringify({
         firstName: draft.firstName,
         lastName: draft.lastName,
-        email: draft.email,
-        matricule: draft.matricule,
         jobTitle: draft.jobTitle,
         departmentId: draft.department ?? null,
         serviceId: draft.service ?? null,
@@ -177,9 +175,8 @@ export default function DsiDepartmentEmployees() {
               />
               <input
                 value={draft.matricule ?? ""}
-                onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Matricule"
+                readOnly
+                className="w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-2 py-1 text-sm text-vdm-gold-800"
               />
             </div>
           );
@@ -194,8 +191,8 @@ export default function DsiDepartmentEmployees() {
           return (
             <input
               value={draft.email}
-              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              readOnly
+              className="w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-2 py-1 text-sm text-vdm-gold-800"
             />
           );
         },
@@ -225,19 +222,11 @@ export default function DsiDepartmentEmployees() {
         accessorKey: "status",
         cell: ({ row }) => {
           const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return statusLabel[row.original.status] ?? row.original.status;
+          const current = isEdit && draft ? draft.status : row.original.status;
           return (
-            <select
-              value={draft.status}
-              onChange={(e) =>
-                setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })
-              }
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="ACTIVE">Actif</option>
-              <option value="PENDING">En attente</option>
-              <option value="REJECTED">Rejeté</option>
-            </select>
+            <span className={isEdit ? "text-vdm-gold-700" : ""}>
+              {statusLabel[current] ?? current}
+            </span>
           );
         },
       },
@@ -319,7 +308,7 @@ export default function DsiDepartmentEmployees() {
         data={rows}
         columns={columns}
         searchPlaceholder="Rechercher un employé…"
-        pageSize={6}
+        pageSize={10}
         onRefresh={loadEmployees}
       />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}

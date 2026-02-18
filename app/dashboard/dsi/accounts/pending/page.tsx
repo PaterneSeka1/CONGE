@@ -329,7 +329,7 @@ export default function DsiAccountsPending() {
         data={rows}
         columns={columns}
         searchPlaceholder="Rechercher un employe..."
-        pageSize={8}
+        pageSize={10}
         onRefresh={() => window.location.reload()}
       />
 

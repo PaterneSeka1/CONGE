@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import EmployeeAvatar from "@/app/components/EmployeeAvatar";
-import { getToken } from "@/lib/auth-client";
+import { getEmployee, getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 type EmployeeRow = {
@@ -35,6 +35,7 @@ const roleLabel: Record<EmployeeRow["role"], string> = {
 };
 
 export default function CeoEmployees() {
+  const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [departments, setDepartments] = useState<Record<string, string>>({});
@@ -349,8 +350,7 @@ export default function CeoEmployees() {
       setDepartments(depMap);
       setServices(svcMap);
 
-      setRows(
-        (empData?.employees ?? []).map((e: Partial<EmployeeRow>) => ({
+      const employees = (empData?.employees ?? []).map((e: Partial<EmployeeRow>) => ({
           id: e.id,
           firstName: e.firstName,
           lastName: e.lastName,
@@ -364,12 +364,12 @@ export default function CeoEmployees() {
           annualLeaveBalance: e.annualLeaveBalance ?? e.leaveBalance ?? 25,
           departmentId: e.departmentId ?? null,
           serviceId: e.serviceId ?? null,
-        }))
-      );
+        }));
+      setRows(employees.filter((e: EmployeeRow) => e.id !== currentEmployee?.id));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentEmployee?.id]);
 
   useEffect(() => {
     loadEmployees();

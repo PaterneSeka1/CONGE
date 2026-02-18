@@ -83,11 +83,13 @@ export async function PUT(req: Request, ctx: Ctx) {
     data.lastName = v;
   }
   if (Object.prototype.hasOwnProperty.call(body, "email")) {
+    if (actor.role !== "CEO") return jsonError("Modification de l'email interdite", 403);
     const v = norm(body?.email).toLowerCase();
     if (!v) return jsonError("email invalide", 400);
     data.email = v;
   }
   if (Object.prototype.hasOwnProperty.call(body, "matricule")) {
+    if (actor.role !== "CEO") return jsonError("Modification du matricule interdite", 403);
     data.matricule = norm(body?.matricule) || null;
   }
   if (Object.prototype.hasOwnProperty.call(body, "jobTitle")) {
@@ -105,6 +107,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     data.role = v;
   }
   if (Object.prototype.hasOwnProperty.call(body, "status")) {
+    if (actor.role !== "CEO") return jsonError("Modification du statut interdite", 403);
     const v = String(body?.status ?? "");
     if (!["ACTIVE", "PENDING", "REJECTED"].includes(v)) {
       return jsonError("status invalide", 400);

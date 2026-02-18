@@ -83,10 +83,7 @@ export default function OperationsDepartmentEmployees() {
         body: JSON.stringify({
           firstName: draft.firstName,
           lastName: draft.lastName,
-          email: draft.email,
-          matricule: draft.matricule,
           jobTitle: draft.jobTitle,
-          status: draft.status,
         }),
       });
       if (!res.ok) return;
@@ -230,7 +227,7 @@ export default function OperationsDepartmentEmployees() {
         data={rows}
         columns={columns}
         searchPlaceholder="Rechercher un employé…"
-        pageSize={6}
+        pageSize={10}
         onRefresh={loadEmployees}
       />
 
@@ -266,32 +263,28 @@ export default function OperationsDepartmentEmployees() {
                 />
               </label>
               <label className="text-sm text-vdm-gold-900 sm:col-span-2">
-                E-mail
+                E-mail (géré par le PDG)
                 <input
                   value={draft.email}
-                  onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
                 />
               </label>
               <label className="text-sm text-vdm-gold-900">
-                Matricule
+                Matricule (géré par le PDG)
                 <input
                   value={draft.matricule ?? ""}
-                  onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
                 />
               </label>
               <label className="text-sm text-vdm-gold-900">
-                Statut
-                <select
-                  value={draft.status}
-                  onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
-                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm"
-                >
-                  <option value="ACTIVE">Actif</option>
-                  <option value="PENDING">En attente</option>
-                  <option value="REJECTED">Rejeté</option>
-                </select>
+                Statut (géré par le PDG)
+                <input
+                  value={statusLabel[draft.status] ?? draft.status}
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
+                />
               </label>
               <label className="text-sm text-vdm-gold-900 sm:col-span-2">
                 Poste

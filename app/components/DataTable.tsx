@@ -16,7 +16,7 @@ export default function DataTable<TData>({
   data,
   columns,
   searchPlaceholder = "Rechercher...",
-  pageSize = 8,
+  pageSize = 10,
   onRefresh,
 }: {
   data: TData[];
@@ -27,6 +27,7 @@ export default function DataTable<TData>({
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const table = useReactTable({
     data,
@@ -54,12 +55,18 @@ export default function DataTable<TData>({
   const pageCount = table.getPageCount();
 
   const emptyState = useMemo(() => totalRows === 0, [totalRows]);
-  const handleRefresh = () => {
-    if (onRefresh) {
-      onRefresh();
-      return;
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      if (onRefresh) {
+        await Promise.resolve(onRefresh());
+        return;
+      }
+      if (typeof window !== "undefined") window.location.reload();
+    } finally {
+      setIsRefreshing(false);
     }
-    if (typeof window !== "undefined") window.location.reload();
   };
 
 
@@ -79,9 +86,17 @@ export default function DataTable<TData>({
           <button
             type="button"
             onClick={handleRefresh}
+            disabled={isRefreshing}
             className="px-2 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
           >
-            Rafraichir
+            {isRefreshing ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full border-2 border-vdm-gold-700 border-t-transparent animate-spin" />
+                Chargement...
+              </span>
+            ) : (
+              "Rafraichir"
+            )}
           </button>
         </div>
 

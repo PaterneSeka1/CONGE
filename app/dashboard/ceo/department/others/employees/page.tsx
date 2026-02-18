@@ -31,73 +31,67 @@ const roleLabel: Record<EmployeeRow["role"], string> = {
 export default function CeoOthersEmployees() {
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [departments, setDepartments] = useState<Record<string, string>>({});
   const [services, setServices] = useState<Record<string, string>>({});
 
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EmployeeRow | null>(null);
 
   const startEdit = (row: EmployeeRow) => {
-    setEditingId(row.id);
     setDraft({ ...row });
   };
 
   const cancelEdit = () => {
-    setEditingId(null);
     setDraft(null);
   };
 
-  const saveEdit = async () => {
+  const saveEdit = useCallback(async () => {
     if (!draft) return;
     const token = getToken();
     if (!token) return;
-    setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
-    setEditingId(null);
-    setDraft(null);
-    await fetch(`/api/employees/${draft.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        firstName: draft.firstName,
-        lastName: draft.lastName,
-        email: draft.email,
-        matricule: draft.matricule,
-        jobTitle: draft.jobTitle,
-        departmentId: draft.department ?? null,
-        serviceId: draft.service ?? null,
-      }),
-    });
-  };
+    setIsSaving(true);
+    try {
+      setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
+      const res = await fetch(`/api/employees/${draft.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          email: draft.email,
+          matricule: draft.matricule,
+          jobTitle: draft.jobTitle,
+          role: draft.role,
+          status: draft.status,
+          departmentId: draft.department ?? null,
+          serviceId: draft.service ?? null,
+        }),
+      });
+      if (res.ok) setDraft(null);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [draft]);
 
   const loadEmployees = useCallback(async () => {
     const token = getToken();
     if (!token) return;
     setIsLoading(true);
     try {
-      const [empRes, depRes, svcRes] = await Promise.all([
-        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-
+      const empRes = await fetch("/api/departments/others/employees", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const empData = await empRes.json().catch(() => ({}));
-      const depData = await depRes.json().catch(() => ({}));
-      const svcData = await svcRes.json().catch(() => ({}));
+      if (!empRes.ok) return;
 
       const depMap: Record<string, string> = {};
-      (depData?.departments ?? []).forEach((d: any) => {
-        depMap[d.id] = d.name ?? d.type ?? d.id;
-      });
-
       const svcMap: Record<string, string> = {};
-      (svcData?.services ?? []).forEach((s: any) => {
-        svcMap[s.id] = s.name ?? s.type ?? s.id;
-      });
-
-      setDepartments(depMap);
-      setServices(svcMap);
-
-      const employees = (empData?.employees ?? []).map((e: any) => ({
+      const normalized = (empData?.employees ?? []).map((e: any) => {
+        const departmentId = e.departmentId ?? null;
+        const serviceId = e.serviceId ?? null;
+        if (departmentId) depMap[departmentId] = e.department?.name ?? e.department?.type ?? departmentId;
+        if (serviceId) svcMap[serviceId] = e.service?.name ?? e.service?.type ?? serviceId;
+        return {
         id: e.id,
         firstName: e.firstName,
         lastName: e.lastName,
@@ -107,11 +101,14 @@ export default function CeoOthersEmployees() {
         jobTitle: e.jobTitle,
         role: e.role ?? "EMPLOYEE",
         status: e.status ?? "ACTIVE",
-        department: e.departmentId ?? null,
-        service: e.serviceId ?? null,
-      })) as EmployeeRow[];
+        department: departmentId,
+        service: serviceId,
+      };
+      }) as EmployeeRow[];
 
-      setRows(employees.filter((e) => (depMap[e.department ?? ""] ?? "") === "OTHERS"));
+      setDepartments({ ...depMap });
+      setServices({ ...svcMap });
+      setRows(normalized);
     } finally {
       setIsLoading(false);
     }
@@ -127,183 +124,66 @@ export default function CeoOthersEmployees() {
         id: "employee",
         header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) {
-            return (
-              <div className="flex items-center gap-2">
-                <EmployeeAvatar
-                  firstName={row.original.firstName}
-                  lastName={row.original.lastName}
-                  profilePhotoUrl={row.original.profilePhotoUrl}
-                />
-                <div>
-                  <div className="font-semibold">
-                    {row.original.firstName} {row.original.lastName}
-                  </div>
-                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
-                </div>
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">
+                {row.original.firstName} {row.original.lastName}
               </div>
-            );
-          }
-          return (
-            <div className="grid gap-2">
-              <input
-                value={draft.firstName}
-                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Prénom"
-              />
-              <input
-                value={draft.lastName}
-                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Nom"
-              />
-              <input
-                value={draft.matricule ?? ""}
-                onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Matricule"
-              />
+              <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
             </div>
-          );
-        },
+          </div>
+        ),
       },
       {
         header: "Email",
         accessorKey: "email",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.email;
-          return (
-            <input
-              value={draft.email}
-              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.email,
       },
       {
         header: "Poste",
         accessorKey: "jobTitle",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.jobTitle ?? "—";
-          return (
-            <input
-              value={draft.jobTitle ?? ""}
-              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.jobTitle ?? "—",
       },
       {
         header: "Rôle",
         accessorKey: "role",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return roleLabel[row.original.role] ?? row.original.role;
-          return (
-            <select
-              value={draft.role}
-              onChange={(e) => setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="EMPLOYEE">EMPLOYEE</option>
-              <option value="DEPT_HEAD">DEPT_HEAD</option>
-              <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
-              <option value="ACCOUNTANT">ACCOUNTANT</option>
-            </select>
-          );
-        },
+        cell: ({ row }) => roleLabel[row.original.role] ?? row.original.role,
       },
       {
         header: "Statut",
         accessorKey: "status",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.status;
-          return (
-            <select
-              value={draft.status}
-              onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="PENDING">PENDING</option>
-              <option value="REJECTED">REJECTED</option>
-            </select>
-          );
-        },
+        cell: ({ row }) => row.original.status,
       },
       {
         header: "Département",
         accessorKey: "department",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return departments[row.original.department ?? ""] ?? "—";
-          return (
-            <input
-              value={draft.department ?? ""}
-              onChange={(e) => setDraft({ ...draft, department: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => departments[row.original.department ?? ""] ?? "—",
       },
       {
         header: "Service",
         accessorKey: "service",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return services[row.original.service ?? ""] ?? "—";
-          return (
-            <input
-              value={draft.service ?? ""}
-              onChange={(e) => setDraft({ ...draft, service: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => services[row.original.service ?? ""] ?? "—",
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit) {
-            return (
-              <button
-                onClick={() => startEdit(row.original)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Modifier
-              </button>
-            );
-          }
-          return (
-            <div className="flex gap-2">
-              <button
-                onClick={saveEdit}
-                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-              >
-                Enregistrer
-              </button>
-              <button
-                onClick={cancelEdit}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Annuler
-              </button>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <button
+            onClick={() => startEdit(row.original)}
+            className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+          >
+            Modifier
+          </button>
+        ),
       },
     ],
-    [editingId, draft, departments, services, saveEdit]
+    [departments, services]
   );
 
   return (
@@ -315,10 +195,123 @@ export default function CeoOthersEmployees() {
         data={rows}
         columns={columns}
         searchPlaceholder="Rechercher un employé..."
-        pageSize={6}
+        pageSize={10}
         onRefresh={loadEmployees}
       />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
+
+      {draft ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={cancelEdit}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Modifier employé"
+        >
+          <div
+            className="w-full max-w-2xl bg-white rounded-xl border border-vdm-gold-200 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-lg font-semibold text-vdm-gold-800 mb-1">Modifier les informations</div>
+            <div className="text-sm text-vdm-gold-700 mb-4">
+              {draft.firstName} {draft.lastName}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                value={draft.firstName}
+                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Prénom"
+              />
+              <input
+                value={draft.lastName}
+                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Nom"
+              />
+              <input
+                value={draft.email}
+                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 md:col-span-2"
+                placeholder="Email"
+              />
+              <input
+                value={draft.matricule ?? ""}
+                onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Matricule"
+              />
+              <input
+                value={draft.jobTitle ?? ""}
+                onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                placeholder="Poste"
+              />
+              <select
+                value={draft.role}
+                onChange={(e) => setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              >
+                <option value="EMPLOYEE">EMPLOYEE</option>
+                <option value="DEPT_HEAD">DEPT_HEAD</option>
+                <option value="SERVICE_HEAD">SERVICE_HEAD</option>
+                <option value="ACCOUNTANT">ACCOUNTANT</option>
+              </select>
+              <select
+                value={draft.status}
+                onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="PENDING">PENDING</option>
+                <option value="REJECTED">REJECTED</option>
+              </select>
+              <select
+                value={draft.department ?? ""}
+                onChange={(e) => setDraft({ ...draft, department: e.target.value || null })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              >
+                <option value="">Aucun département</option>
+                {Object.entries(departments).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={draft.service ?? ""}
+                onChange={(e) => setDraft({ ...draft, service: e.target.value || null })}
+                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              >
+                <option value="">Aucun service</option>
+                {Object.entries(services).map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={cancelEdit}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                disabled={isSaving}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={saveEdit}
+                className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+                disabled={isSaving}
+              >
+                {isSaving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

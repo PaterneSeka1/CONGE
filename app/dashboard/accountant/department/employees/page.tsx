@@ -115,10 +115,7 @@ export default function AccountantDepartmentEmployees() {
         body: JSON.stringify({
           firstName: draft.firstName,
           lastName: draft.lastName,
-          email: draft.email,
-          matricule: draft.matricule,
           jobTitle: draft.jobTitle,
-          status: draft.status,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -212,7 +209,7 @@ export default function AccountantDepartmentEmployees() {
         data={rows}
         columns={columns}
         searchPlaceholder="Rechercher un employé..."
-        pageSize={6}
+        pageSize={10}
         onRefresh={loadEmployees}
       />
 
@@ -250,23 +247,21 @@ export default function AccountantDepartmentEmployees() {
               </label>
 
               <label className="text-sm text-vdm-gold-900">
-                Email
+                Email (géré par le PDG)
                 <input
                   type="email"
                   value={draft.email}
-                  onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                  disabled={isSaving}
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
                 />
               </label>
 
               <label className="text-sm text-vdm-gold-900">
-                Matricule
+                Matricule (géré par le PDG)
                 <input
                   value={draft.matricule ?? ""}
-                  onChange={(e) => setDraft({ ...draft, matricule: e.target.value })}
-                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                  disabled={isSaving}
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
                 />
               </label>
 
@@ -281,17 +276,12 @@ export default function AccountantDepartmentEmployees() {
               </label>
 
               <label className="text-sm text-vdm-gold-900">
-                Statut
-                <select
+                Statut (géré par le PDG)
+                <input
                   value={draft.status}
-                  onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
-                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                  disabled={isSaving}
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="REJECTED">REJECTED</option>
-                </select>
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
+                />
               </label>
 
             </div>

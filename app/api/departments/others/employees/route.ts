@@ -13,49 +13,30 @@ export async function GET(req: Request) {
 
   const actor = await prisma.employee.findUnique({
     where: { id: actorId },
-    select: {
-      id: true,
-      role: true,
-      serviceId: true,
-      department: { select: { type: true } },
-    },
+    select: { role: true },
   });
 
   if (!actor) return jsonError("Employé introuvable", 404);
+  if (actor.role !== "CEO") return jsonError("Accès refusé", 403);
 
-  const canReadAsManager = actor.role === "DEPT_HEAD" || actor.role === "SERVICE_HEAD";
-  const inOperations = actor.department?.type === "OPERATIONS";
-
-  if (actor.role !== "CEO" && !(canReadAsManager && inOperations)) {
-    return jsonError("Accès refusé", 403);
-  }
-
-  const operationsDepartment = await prisma.department.findFirst({
-    where: { type: "OPERATIONS" },
+  const othersDepartment = await prisma.department.findFirst({
+    where: { type: "OTHERS" },
     select: { id: true },
   });
 
-  if (!operationsDepartment) return NextResponse.json({ employees: [] });
-
-  const serviceScoped =
-    actor.role === "SERVICE_HEAD"
-      ? actor.serviceId
-        ? { serviceId: actor.serviceId }
-        : { id: "__none__" }
-      : {};
+  if (!othersDepartment) return NextResponse.json({ employees: [] });
 
   const employees = await prisma.employee.findMany({
     where: {
-      departmentId: operationsDepartment.id,
-      ...serviceScoped,
-      id: { not: actor.id },
+      departmentId: othersDepartment.id,
+      id: { not: actorId },
     },
     select: {
       id: true,
       firstName: true,
       lastName: true,
-      profilePhotoUrl: true,
       email: true,
+      profilePhotoUrl: true,
       matricule: true,
       jobTitle: true,
       role: true,
