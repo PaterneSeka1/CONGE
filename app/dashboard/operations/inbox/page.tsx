@@ -225,7 +225,9 @@ export default function OperationsInbox() {
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Demandes transmises</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Demandes provenant de la comptable pour décision.
+        {currentEmployee?.role === "SERVICE_HEAD"
+          ? "Demandes provenant du Directeur des opérations pour décision."
+          : "Demandes provenant de la comptable pour décision."}
       </div>
 
       <DataTable

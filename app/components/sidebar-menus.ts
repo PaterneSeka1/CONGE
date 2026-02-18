@@ -73,6 +73,7 @@ export const managerMenu: SidebarSection[] = [
     title: "Sous-direction",
     links: [
       { label: "Demandes transmises", icon: "clipboard", to: "/dashboard/manager/inbox" },
+      { label: "Historique des employés", icon: "clock", to: "/dashboard/manager/department/employees-history" },
       { label: "Équipe", icon: "users", to: "/dashboard/manager/team" },
     ],
   },

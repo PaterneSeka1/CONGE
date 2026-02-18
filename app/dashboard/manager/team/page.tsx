@@ -48,15 +48,17 @@ export default function ManagerTeamPage() {
   const loadTeam = useCallback(async () => {
     const token = getToken();
     if (!token) return;
-    const me = getEmployee();
-    if (!me) return;
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/employees", {
+      const res = await fetch("/api/departments/operations/employees", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRows([]);
+        return;
+      }
       const employees = (data?.employees ?? []).map((e: any) => ({
         id: e.id,
         firstName: e.firstName,
@@ -69,14 +71,7 @@ export default function ManagerTeamPage() {
         service: e.serviceId ?? null,
         departmentId: e.departmentId ?? null,
       })) as TeamMember[];
-
-      const filtered = employees.filter((e) => {
-        if (me.serviceId) return e.service === me.serviceId;
-        if (me.departmentId) return e.departmentId === me.departmentId;
-        return true;
-      });
-
-      setRows(filtered);
+      setRows(employees);
     } finally {
       setIsLoading(false);
     }

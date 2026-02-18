@@ -171,7 +171,11 @@ export default function OperationsDashboard() {
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
           <div className="text-sm text-vdm-gold-700">A traiter</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{pendingLeaves.length}</div>
-          <div className="text-xs text-gray-500 mt-2">Demandes transmises par la comptable.</div>
+          <div className="text-xs text-gray-500 mt-2">
+            {employee?.role === "SERVICE_HEAD"
+              ? "Demandes transmises par le Directeur des opérations."
+              : "Demandes transmises par la comptable."}
+          </div>
         </div>
       </div>
 
