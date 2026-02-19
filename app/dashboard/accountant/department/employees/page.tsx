@@ -24,7 +24,7 @@ type EmployeeRow = {
 };
 
 const roleLabel: Record<EmployeeRow["role"], string> = {
-  CEO: "DG",
+  CEO: "PDG",
   ACCOUNTANT: "Comptable",
   DEPT_HEAD: "Directeur des opérations",
   SERVICE_HEAD: "Directeur Adjoint",

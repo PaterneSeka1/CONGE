@@ -133,7 +133,7 @@ export default function OperationsInbox() {
   const forwardToCeo = async (id: string) => {
     const token = getToken();
     if (!token) return;
-    const t = toast.loading("Transmission au CEO...");
+    const t = toast.loading("Transmission au PDG...");
     try {
       const res = await fetch(`/api/leave-requests/${id}/escalate`, {
         method: "POST",
@@ -142,7 +142,7 @@ export default function OperationsInbox() {
       });
       if (res.ok) {
         setRows((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Demande transmise au CEO.", { id: t });
+        toast.success("Demande transmise au PDG.", { id: t });
       } else {
         toast.error("Erreur lors de la transmission.", { id: t });
       }
@@ -211,7 +211,7 @@ export default function OperationsInbox() {
                 onClick={() => forwardToCeo(row.original.id)}
                 className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
               >
-                Transmettre au CEO
+                Transmettre au PDG
               </button>
             </div>
           );

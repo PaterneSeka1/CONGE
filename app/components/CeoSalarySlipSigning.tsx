@@ -347,7 +347,7 @@ export default function CeoSalarySlipSigning() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-vdm-gold-900">Signature des bulletins</h1>
-          <p className="text-sm text-vdm-gold-700">Le CEO signe les bulletins importés par la comptable.</p>
+          <p className="text-sm text-vdm-gold-700">Le PDG signe les bulletins importés par la comptable.</p>
         </div>
         <button
           type="button"
@@ -381,7 +381,7 @@ export default function CeoSalarySlipSigning() {
         </div>
         {signatureImageDataUrl && (
           <div className="rounded-md border border-vdm-gold-200 bg-white p-2 inline-block">
-            <img src={signatureImageDataUrl} alt="Signature CEO" className="max-h-20 object-contain" />
+            <img src={signatureImageDataUrl} alt="Signature PDG" className="max-h-20 object-contain" />
           </div>
         )}
       </section>

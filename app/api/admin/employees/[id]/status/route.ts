@@ -58,7 +58,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
       select: { type: true },
     });
     if (department?.type === "OTHERS") {
-      return jsonError("Le département OTHERS est réservé au CEO", 400);
+      return jsonError("Le département OTHERS est réservé au PDG", 400);
     }
   }
 

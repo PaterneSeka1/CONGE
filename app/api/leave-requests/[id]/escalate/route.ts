@@ -42,12 +42,12 @@ export async function POST(req: Request, ctx: Ctx) {
 
     if (isDirectorRequester) {
       if (toRole && toRole !== "CEO") {
-        return jsonError("toRole invalide (CEO uniquement pour les demandes de responsables)", 400);
+        return jsonError("toRole invalide (PDG uniquement pour les demandes de responsables)", 400);
       }
       target = await findActiveEmployeeByRole("CEO");
     } else {
       if (toRole && toRole !== "DEPT_HEAD" && toRole !== "CEO") {
-        return jsonError("toRole invalide (DEPT_HEAD|CEO)", 400);
+        return jsonError("toRole invalide (DEPT_HEAD|PDG)", 400);
       }
       target =
         toRole === "CEO"
@@ -56,7 +56,7 @@ export async function POST(req: Request, ctx: Ctx) {
     }
   } else if (role === "DEPT_HEAD") {
     if (toRole && toRole !== "SERVICE_HEAD" && toRole !== "CEO") {
-      return jsonError("toRole invalide (SERVICE_HEAD|CEO)", 400);
+      return jsonError("toRole invalide (SERVICE_HEAD|PDG)", 400);
     }
     if (toRole === "SERVICE_HEAD") {
       target = await findActiveEmployeeByRole("SERVICE_HEAD", leave.employee?.departmentId ?? null);
@@ -65,7 +65,7 @@ export async function POST(req: Request, ctx: Ctx) {
     }
   } else if (role === "SERVICE_HEAD") {
     if (toRole && toRole !== "CEO") {
-      return jsonError("toRole invalide (CEO uniquement)", 400);
+      return jsonError("toRole invalide (PDG uniquement)", 400);
     }
     target = await findActiveEmployeeByRole("CEO");
   } else {

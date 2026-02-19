@@ -242,7 +242,7 @@ export default function CeoBlackouts() {
       <div>
         <div className="text-xl font-semibold text-vdm-gold-800">Périodes bloquées</div>
         <div className="text-sm text-vdm-gold-700">
-          Le CEO peut bloquer certaines dates pour empêcher les demandes de congé.
+          Le PDG peut bloquer certaines dates pour empêcher les demandes de congé.
         </div>
       </div>
 

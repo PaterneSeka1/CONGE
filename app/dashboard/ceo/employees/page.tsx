@@ -27,7 +27,7 @@ type DepartmentApiItem = { id: string; name?: string | null; type?: string | nul
 type ServiceApiItem = { id: string; name?: string | null; type?: string | null };
 
 const roleLabel: Record<EmployeeRow["role"], string> = {
-  CEO: "DG",
+  CEO: "PDG",
   ACCOUNTANT: "Comptable",
   DEPT_HEAD: "Directeur des opérations",
   SERVICE_HEAD: "Directeur Adjoint",
@@ -199,7 +199,7 @@ export default function CeoEmployees() {
 
   const deleteEmployee = useCallback(async (employee: EmployeeRow) => {
     if (employee.role === "CEO") {
-      toast.error("Impossible de supprimer un compte CEO.");
+      toast.error("Impossible de supprimer un compte PDG.");
       return;
     }
     const ok = window.confirm(
@@ -405,7 +405,7 @@ export default function CeoEmployees() {
           <option value="DEPT_HEAD">DEPT_HEAD</option>
           <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
           <option value="ACCOUNTANT">ACCOUNTANT</option>
-          <option value="CEO">CEO</option>
+          <option value="CEO">PDG</option>
         </select>
 
         <select

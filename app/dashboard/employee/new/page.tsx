@@ -295,7 +295,7 @@ export default function EmployeeLeaveNew() {
       return;
     }
     if (hasBlackoutOverlap(startDate, endDate)) {
-      toast.error("La période choisie chevauche une période bloquée par le CEO.");
+      toast.error("La période choisie chevauche une période bloquée par le PDG.");
       return;
     }
 
@@ -442,7 +442,7 @@ export default function EmployeeLeaveNew() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold text-vdm-gold-800">
-                Calendrier des périodes bloquées (CEO)
+                Calendrier des périodes bloquées (PDG)
               </div>
               <div className="text-xs text-vdm-gold-600">
                 Consultez les dates bloquées avant de choisir votre période.

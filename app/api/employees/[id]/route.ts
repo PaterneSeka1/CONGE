@@ -102,7 +102,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       return jsonError("role invalide", 400);
     }
     if (v === "CEO" && existing.role !== "CEO") {
-      return jsonError("Promotion en CEO interdite", 403);
+      return jsonError("Promotion en PDG interdite", 403);
     }
     data.role = v;
   }

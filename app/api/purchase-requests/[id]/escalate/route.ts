@@ -34,7 +34,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const body = await req.json().catch(() => ({}));
   const toRole = body?.toRole as string | undefined;
-  if (toRole && toRole !== "CEO") return jsonError("toRole invalide (CEO uniquement)", 400);
+  if (toRole && toRole !== "CEO") return jsonError("toRole invalide (PDG uniquement)", 400);
 
   const target = await findActiveEmployeeByRole("CEO");
   if (!target) return jsonError("Aucun assignataire actif disponible", 409);

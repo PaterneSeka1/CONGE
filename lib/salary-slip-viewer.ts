@@ -50,7 +50,7 @@ export function openSalarySlipViewer(
     <div class="wrap">
       <div class="fallback">Si la page reste blanche: <a href="${safePdf}" target="_self">ouvrir le PDF</a></div>
       <iframe class="pdf" src="${safePdf}" title="Bulletin de salaire"></iframe>
-      ${hasSignature ? `<img class="sig" src="${safeSignature}" alt="Signature CEO" />` : ""}
+      ${hasSignature ? `<img class="sig" src="${safeSignature}" alt="Signature PDG" />` : ""}
     </div>
   </body>
 </html>`;

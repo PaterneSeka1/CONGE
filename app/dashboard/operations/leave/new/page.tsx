@@ -288,7 +288,7 @@ export default function OperationsLeaveNew() {
       return;
     }
     if (hasBlackoutOverlap(startDate, endDate)) {
-      toast.error("La periode choisie chevauche une periode bloquee par le CEO.");
+      toast.error("La periode choisie chevauche une periode bloquee par le PDG.");
       return;
     }
 
@@ -434,7 +434,7 @@ export default function OperationsLeaveNew() {
         <div className="md:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-vdm-gold-800">Calendrier des periodes bloquees (CEO)</div>
+              <div className="text-sm font-semibold text-vdm-gold-800">Calendrier des periodes bloquees (PDG)</div>
               <div className="text-xs text-vdm-gold-600">
                 Consultez les dates bloquees avant de choisir votre periode.
               </div>

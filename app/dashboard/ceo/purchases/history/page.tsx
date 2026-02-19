@@ -150,7 +150,7 @@ export default function CeoPurchaseHistory() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Historique des achats futurs</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité globale des décisions (CEO et autres valideurs).</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Traçabilité globale des décisions (PDG et autres valideurs).</div>
 
       <DataTable
         data={rows}

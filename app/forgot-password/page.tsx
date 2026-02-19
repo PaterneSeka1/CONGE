@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="ex : admin@domaine.com ou CEO-001"
+                    placeholder="ex : admin@domaine.com ou PDG-001"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     onKeyDown={handleKeyDown}

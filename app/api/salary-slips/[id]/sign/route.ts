@@ -45,7 +45,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (!authRes.ok) return authRes.error;
 
   const { id: actorId, role } = authRes.auth;
-  if (role !== "CEO") return jsonError("Seul le CEO peut signer un bulletin", 403);
+  if (role !== "CEO") return jsonError("Seul le PDG peut signer un bulletin", 403);
 
   const { id } = await ctx.params;
   const force = new URL(req.url).searchParams.get("force") === "1";
@@ -71,7 +71,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
     throw error;
   }
-  if (!ceo) return jsonError("CEO introuvable", 404);
+  if (!ceo) return jsonError("PDG introuvable", 404);
   if (!ceo.ceoSignatureImageDataUrl || !ceo.ceoSignatureImageMimeType) {
     return jsonError("Veuillez d'abord définir votre image de signature", 400);
   }

@@ -62,7 +62,7 @@ export async function GET(req: Request) {
     throw error;
   }
 
-  if (!employee) return jsonError("CEO introuvable", 404);
+  if (!employee) return jsonError("PDG introuvable", 404);
 
   return NextResponse.json({
     signatureImageDataUrl: employee.ceoSignatureImageDataUrl ?? null,

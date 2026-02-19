@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const { id: actorId, role, departmentId } = authRes.auth;
 
   if (role === "CEO") {
-    return jsonError("Le CEO ne peut pas créer de demande", 403);
+    return jsonError("Le PDG ne peut pas créer de demande", 403);
   }
 
   const body = await req.json().catch(() => ({}));
@@ -177,7 +177,7 @@ export async function POST(req: Request) {
         actorId,
         type: "ESCALATE",
         toEmployeeId: autoCeo.id,
-        comment: "Auto-escalation CEO (DEPT_HEAD/SERVICE_HEAD).",
+        comment: "Auto-escalation PDG (DEPT_HEAD/SERVICE_HEAD).",
       },
     });
   }

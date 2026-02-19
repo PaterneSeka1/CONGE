@@ -43,7 +43,7 @@ const statusLabel: Record<EmployeeRow["status"], string> = {
 };
 
 const roleLabel: Record<EmployeeRow["role"], string> = {
-  CEO: "DG",
+  CEO: "PDG",
   ACCOUNTANT: "Comptable",
   DEPT_HEAD: "Chef de département",
   SERVICE_HEAD: "Directeur Adjoint",

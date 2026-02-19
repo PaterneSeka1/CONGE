@@ -51,7 +51,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   }
 
   if (isOwner && !isPrivileged && !slip.signedAt) {
-    return jsonError("Le bulletin n'est pas encore signé par le CEO", 403);
+    return jsonError("Le bulletin n'est pas encore signé par le PDG", 403);
   }
 
   return NextResponse.json({ slip });
