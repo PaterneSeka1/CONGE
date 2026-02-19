@@ -12,7 +12,7 @@ export default function Home() {
             Bienvenue chez Veilleur des médias
           </h1>
           <p className="text-base text-gray-600 sm:text-lg">
-            Connectez-vous pour accéder à votre espace et gérer vos demandes de congé.
+            Connectez-vous pour accéder à votre espace personnel RH.
           </p>
           <a
             href="/login"

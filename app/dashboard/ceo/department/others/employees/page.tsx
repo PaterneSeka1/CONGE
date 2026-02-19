@@ -188,8 +188,8 @@ export default function CeoOthersEmployees() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés (OTHERS)</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">Gestion des employés du département OTHERS.</div>
+      <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Employés (Autres)</div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Gestion des employés du département Autres.</div>
 
       <DataTable
         data={rows}
@@ -253,19 +253,19 @@ export default function CeoOthersEmployees() {
                 onChange={(e) => setDraft({ ...draft, role: e.target.value as EmployeeRow["role"] })}
                 className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
               >
-                <option value="EMPLOYEE">EMPLOYEE</option>
-                <option value="DEPT_HEAD">DEPT_HEAD</option>
-                <option value="SERVICE_HEAD">SERVICE_HEAD</option>
-                <option value="ACCOUNTANT">ACCOUNTANT</option>
+                <option value="EMPLOYEE">Employé</option>
+                <option value="DEPT_HEAD">Chef de département</option>
+                <option value="SERVICE_HEAD">Directeur adjoint</option>
+                <option value="ACCOUNTANT">Comptable</option>
               </select>
               <select
                 value={draft.status}
                 onChange={(e) => setDraft({ ...draft, status: e.target.value as EmployeeRow["status"] })}
                 className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="PENDING">PENDING</option>
-                <option value="REJECTED">REJECTED</option>
+                <option value="ACTIVE">Actif</option>
+                <option value="PENDING">En attente</option>
+                <option value="REJECTED">Rejeté</option>
               </select>
               <select
                 value={draft.department ?? ""}

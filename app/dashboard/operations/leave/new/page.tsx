@@ -352,7 +352,8 @@ export default function OperationsLeaveNew() {
           <div className="space-y-0.5">
             <div>Solde restant annuel : {formatLeaveDays(balance)} / {formatLeaveDays(baseAllowance)} JOURS</div>
             <div className="text-xs text-vdm-gold-600">
-              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)} JOURS
+              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)}{" "}
+              {Number(seniorityBonusDays) === 1 ? "jour" : "jours"}
             </div>
           </div>
           <button

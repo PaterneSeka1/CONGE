@@ -40,6 +40,13 @@ function toDataUrl(mimeType: string, bytes: Uint8Array) {
   return `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
+function parseNormalizedRatio(value: unknown) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return null;
+  if (num < 0 || num > 1) return null;
+  return num;
+}
+
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const authRes = authFromRequest(req);
   if (!authRes.ok) return authRes.error;
@@ -49,6 +56,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const { id } = await ctx.params;
   const force = new URL(req.url).searchParams.get("force") === "1";
+  const body = await req.json().catch(() => null);
+  const placementX = parseNormalizedRatio((body as { placementX?: unknown } | null)?.placementX);
+  const placementYTop = parseNormalizedRatio((body as { placementYTop?: unknown } | null)?.placementYTop);
+  const hasPlacementPayload = Boolean(
+    body &&
+      typeof body === "object" &&
+      ("placementX" in body || "placementYTop" in body)
+  );
+
+  if (hasPlacementPayload && (placementX == null || placementYTop == null)) {
+    return jsonError("placementX et placementYTop doivent être entre 0 et 1", 400);
+  }
 
   let ceo: {
     id: string;
@@ -121,10 +140,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const drawWidth = embeddedImage.width * scale;
     const drawHeight = embeddedImage.height * scale;
 
-    // Place la signature en bas à droite du bulletin.
+    let drawX = width - drawWidth - 24;
+    let drawY = 18;
+
+    // Position personnalisée depuis l'aperçu (ratios normalisés).
+    if (placementX != null && placementYTop != null) {
+      const maxX = Math.max(0, width - drawWidth);
+      const maxY = Math.max(0, height - drawHeight);
+      drawX = Math.min(Math.max(width * placementX, 0), maxX);
+      drawY = Math.min(Math.max(height - height * placementYTop - drawHeight, 0), maxY);
+    }
+
     targetPage.drawImage(embeddedImage, {
-      x: width - drawWidth - 24,
-      y: 18,
+      x: drawX,
+      y: drawY,
       width: drawWidth,
       height: drawHeight,
     });

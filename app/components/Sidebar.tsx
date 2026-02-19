@@ -32,7 +32,7 @@ const sidebarIconMap: Record<SidebarIconKey, React.ComponentType<React.SVGProps<
 };
 
 export function Sidebar({
-  brandTitle = "CONGÉS",
+  brandTitle = "Mon espace RH",
   brandSubtitle = "Gestion des demandes",
   sections,
   showOrgSwitcher = false,

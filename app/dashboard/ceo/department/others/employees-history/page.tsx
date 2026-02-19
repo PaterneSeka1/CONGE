@@ -101,7 +101,7 @@ export default function CeoOthersEmployeesHistory() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">
-        Historique — Employés OTHERS
+        Historique — Employés Autres
       </div>
       <div className="text-sm text-vdm-gold-700 mb-4">Entrées / sorties du département.</div>
 

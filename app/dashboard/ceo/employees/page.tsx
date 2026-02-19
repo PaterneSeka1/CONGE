@@ -328,7 +328,7 @@ export default function CeoEmployees() {
     setIsLoading(true);
     try {
       const [empRes, depRes, svcRes] = await Promise.all([
-        fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/employees?fast=1", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/services", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
@@ -391,8 +391,8 @@ export default function CeoEmployees() {
           <option value="ALL">Tous les départements</option>
           <option value="DSI">DSI</option>
           <option value="DAF">DAF</option>
-          <option value="OPERATIONS">OPERATIONS</option>
-          <option value="OTHERS">OTHERS</option>
+          <option value="OPERATIONS">Opérations</option>
+          <option value="OTHERS">Autres</option>
         </select>
 
         <select
@@ -401,10 +401,10 @@ export default function CeoEmployees() {
           className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
           <option value="ALL">Tous les rôles</option>
-          <option value="EMPLOYEE">EMPLOYEE</option>
-          <option value="DEPT_HEAD">DEPT_HEAD</option>
-          <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
-          <option value="ACCOUNTANT">ACCOUNTANT</option>
+          <option value="EMPLOYEE">Employé</option>
+          <option value="DEPT_HEAD">Chef de département</option>
+          <option value="SERVICE_HEAD">Directeur adjoint</option>
+          <option value="ACCOUNTANT">Comptable</option>
           <option value="CEO">PDG</option>
         </select>
 
@@ -414,9 +414,9 @@ export default function CeoEmployees() {
           className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
         >
           <option value="ALL">Tous les statuts</option>
-          <option value="ACTIVE">ACTIVE</option>
-          <option value="PENDING">PENDING</option>
-          <option value="REJECTED">REJECTED</option>
+          <option value="ACTIVE">Actif</option>
+          <option value="PENDING">En attente</option>
+          <option value="REJECTED">Rejeté</option>
         </select>
 
         <select
@@ -542,10 +542,10 @@ export default function CeoEmployees() {
                   onChange={(e) => setEditForm((p) => ({ ...p, role: e.target.value }))}
                   className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white"
                 >
-                  <option value="EMPLOYEE">EMPLOYEE</option>
-                  <option value="DEPT_HEAD">DEPT_HEAD</option>
-                  <option value="SERVICE_HEAD">DIRECTEUR_ADJOINT</option>
-                  <option value="ACCOUNTANT">ACCOUNTANT</option>
+                  <option value="EMPLOYEE">Employé</option>
+                  <option value="DEPT_HEAD">Chef de département</option>
+                  <option value="SERVICE_HEAD">Directeur adjoint</option>
+                  <option value="ACCOUNTANT">Comptable</option>
                 </select>
               </div>
               <div>
@@ -555,9 +555,9 @@ export default function CeoEmployees() {
                   onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
                   className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white"
                 >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="REJECTED">REJECTED</option>
+                  <option value="ACTIVE">Actif</option>
+                  <option value="PENDING">En attente</option>
+                  <option value="REJECTED">Rejeté</option>
                 </select>
               </div>
               <div>

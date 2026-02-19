@@ -143,7 +143,7 @@ export default function AccountantHome() {
 
   return (
     <div className="p-6">
-      <div className="text-xl font-semibold text-vdm-gold-800">Dashboard Comptable</div>
+      <div className="text-xl font-semibold text-vdm-gold-800">Tableau de bord Comptable</div>
       <div className="text-sm text-vdm-gold-700 mt-1">Gestion des demandes de congé.</div>
 
       <div className="grid gap-4 mt-6 md:grid-cols-3">

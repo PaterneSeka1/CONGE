@@ -10,11 +10,27 @@ function getDeptHeadDelayDays() {
   return Number.isFinite(parsed) ? parsed : 5;
 }
 
+function parseTakeParam(value: string | null) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return 100;
+  return Math.min(parsed, 300);
+}
+
+function parsePageParam(value: string | null) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return 1;
+  return parsed;
+}
+
 export async function GET(req: Request) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
 
   const { id: actorId, role } = authRes.auth;
+  const url = new URL(req.url);
+  const take = parseTakeParam(url.searchParams.get("take"));
+  const page = parsePageParam(url.searchParams.get("page"));
+  const skip = (page - 1) * take;
 
   if (role === "DEPT_HEAD" || role === "SERVICE_HEAD") {
     await autoApproveOverdueForDeptHead(actorId, getDeptHeadDelayDays());
@@ -33,6 +49,8 @@ export async function GET(req: Request) {
 
   const leaves = await prisma.leaveRequest.findMany({
     where,
+    skip,
+    take,
     select: {
       id: true,
       type: true,
@@ -57,5 +75,5 @@ export async function GET(req: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ leaves });
+  return NextResponse.json({ leaves, page, take });
 }

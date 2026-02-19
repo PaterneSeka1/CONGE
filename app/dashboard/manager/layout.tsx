@@ -8,7 +8,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
   return (
     <RequireManagerDeptHead>
       <div className="min-h-screen bg-gray-50">
-        <Sidebar brandTitle="CONGES" brandSubtitle="Espace Sous-Directeur" sections={managerMenu} />
+        <Sidebar brandTitle="Mon espace RH" brandSubtitle="Espace Sous-Directeur" sections={managerMenu} />
         <div className="lg:pl-64 pt-[72px] lg:pt-0">{children}</div>
       </div>
     </RequireManagerDeptHead>

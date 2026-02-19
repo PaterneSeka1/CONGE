@@ -6,7 +6,7 @@ export default function OperationsLayout({ children }: { children: React.ReactNo
   return (
     <RequireOperationsDirector>
       <div className="min-h-screen bg-gray-50">
-        <Sidebar brandTitle="CONGES" brandSubtitle="Espace Operations" sections={operationsMenu} />
+        <Sidebar brandTitle="Mon espace RH" brandSubtitle="Espace Operations" sections={operationsMenu} />
         <div className="lg:pl-64 pt-[72px] lg:pt-0">{children}</div>
       </div>
     </RequireOperationsDirector>

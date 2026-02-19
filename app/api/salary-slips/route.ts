@@ -21,6 +21,20 @@ function parseOptionalMonth(value: string | null) {
   return month;
 }
 
+function parsePositivePage(value: string | null) {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function parsePositiveTake(value: string | null) {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) return null;
+  return Math.min(parsed, 300);
+}
+
 function authFromRequest(req: Request) {
   const v = verifyJwt(req);
   if (!v.ok) return { ok: false as const, error: v.error };
@@ -47,9 +61,13 @@ export async function GET(req: Request) {
   const mineOnly = url.searchParams.get("mine") === "1";
   const unsignedOnly = url.searchParams.get("unsigned") === "1";
   const signedOnly = url.searchParams.get("signed") === "1";
+  const page = parsePositivePage(url.searchParams.get("page"));
+  const take = parsePositiveTake(url.searchParams.get("take"));
 
   if (url.searchParams.get("year") && !year) return jsonError("Année invalide", 400);
   if (url.searchParams.get("month") && month == null) return jsonError("Mois invalide", 400);
+  if (url.searchParams.get("page") && !page) return jsonError("Page invalide", 400);
+  if (url.searchParams.get("take") && !take) return jsonError("Taille de page invalide", 400);
 
   if (!isAccountant && !isCeo && employeeId && employeeId !== actorId) {
     return jsonError("Accès refusé", 403);
@@ -95,9 +113,13 @@ export async function GET(req: Request) {
       signedBy: { select: { firstName: true, lastName: true, role: true } },
     },
     orderBy,
+    ...(page && take ? { skip: (page - 1) * take, take } : {}),
   });
 
-  return NextResponse.json({ slips });
+  return NextResponse.json({
+    slips,
+    ...(page && take ? { page, take } : {}),
+  });
 }
 
 export async function POST(req: Request) {
@@ -117,6 +139,10 @@ export async function POST(req: Request) {
 
   if (!employeeId || !year || !Number.isInteger(month) || month < 1 || month > 12 || !fileName || !fileDataUrl) {
     return jsonError("Champs requis: employeeId, year, month, fileName, fileDataUrl", 400);
+  }
+  const currentYear = new Date().getFullYear();
+  if (year > currentYear) {
+    return jsonError(`Année invalide: ${year}. L'année ne doit pas dépasser ${currentYear}`, 400);
   }
 
   if (fileDataUrl.length > MAX_DATA_URL_LENGTH) {

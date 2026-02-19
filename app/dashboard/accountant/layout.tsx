@@ -8,7 +8,7 @@ export default function AccountantLayout({ children }: { children: React.ReactNo
   return (
     <RequireRole allow={["ACCOUNTANT"]}>
       <div className="min-h-screen bg-gray-50">
-        <Sidebar brandTitle="CONGÉS" brandSubtitle="Espace Comptable" sections={accountantMenu} />
+        <Sidebar brandTitle="Mon espace RH" brandSubtitle="Espace Comptable" sections={accountantMenu} />
         <div className="lg:pl-64 pt-[72px] lg:pt-0">{children}</div>
       </div>
     </RequireRole>

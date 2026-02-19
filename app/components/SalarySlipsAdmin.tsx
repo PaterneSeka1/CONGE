@@ -119,6 +119,7 @@ function groupSlipsByYearMonth(slips: Slip[]): YearGroup[] {
 
 export default function SalarySlipsAdmin() {
   const now = new Date();
+  const currentYear = now.getFullYear();
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [slips, setSlips] = useState<Slip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,6 +133,8 @@ export default function SalarySlipsAdmin() {
   const [historyYearFilter, setHistoryYearFilter] = useState("ALL");
   const [recentPage, setRecentPage] = useState(1);
   const [file, setFile] = useState<File | null>(null);
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
+  const [isUploadPreviewOpen, setIsUploadPreviewOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -140,7 +143,7 @@ export default function SalarySlipsAdmin() {
     const token = getToken();
     if (!token) return;
 
-    const res = await fetch("/api/employees", {
+    const res = await fetch("/api/employees/options?take=150", {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json().catch(() => ({}));
@@ -202,6 +205,18 @@ export default function SalarySlipsAdmin() {
     refreshAll();
   }, [refreshAll]);
 
+  useEffect(() => {
+    if (!file || file.type !== "application/pdf") {
+      setUploadPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setUploadPreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
+
   const upload = useCallback(async () => {
     const token = getToken();
     if (!token) return;
@@ -213,6 +228,11 @@ export default function SalarySlipsAdmin() {
 
     if (file.type !== "application/pdf") {
       setError("Le bulletin doit être au format PDF.");
+      return;
+    }
+    const yearNumber = Number(year);
+    if (!Number.isInteger(yearNumber) || yearNumber > currentYear) {
+      setError(`L'année du bulletin ne doit pas dépasser ${currentYear}.`);
       return;
     }
 
@@ -232,7 +252,7 @@ export default function SalarySlipsAdmin() {
         body: JSON.stringify({
           employeeId,
           month: Number(month),
-          year: Number(year),
+          year: yearNumber,
           fileName: file.name,
           fileDataUrl,
         }),
@@ -246,13 +266,14 @@ export default function SalarySlipsAdmin() {
 
       setSuccess("Bulletin importé avec succès.");
       setFile(null);
+      setIsUploadPreviewOpen(false);
       await refreshSlips();
     } catch {
       setError("Erreur réseau");
     } finally {
       setIsSubmitting(false);
     }
-  }, [employeeId, month, year, file, refreshSlips]);
+  }, [employeeId, month, year, file, refreshSlips, currentYear]);
 
   const downloadSlip = useCallback(async (id: string) => {
     const token = getToken();
@@ -438,7 +459,7 @@ export default function SalarySlipsAdmin() {
               onChange={(e) => setYear(e.target.value)}
               className="mt-1 w-full rounded-lg border border-vdm-gold-300 px-3 py-2"
               min={2000}
-              max={2100}
+              max={currentYear}
               disabled={isSubmitting}
             />
           </label>
@@ -498,11 +519,40 @@ export default function SalarySlipsAdmin() {
           <input
             type="file"
             accept="application/pdf"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              setFile(e.target.files?.[0] ?? null);
+              setIsUploadPreviewOpen(false);
+            }}
             className="mt-1 block w-full rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-900 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white hover:file:bg-blue-700"
             disabled={isSubmitting}
           />
         </label>
+
+        {file ? (
+          <div className="rounded-lg border border-vdm-gold-200 bg-white p-3">
+            <div className="text-sm font-medium text-vdm-gold-900">Fichier sélectionné: {file.name}</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setIsUploadPreviewOpen(true)}
+                disabled={!uploadPreviewUrl}
+                className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+              >
+                Aperçu du bulletin
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFile(null);
+                  setIsUploadPreviewOpen(false);
+                }}
+                className="px-3 py-1.5 rounded-md border border-red-300 text-red-700 text-sm hover:bg-red-50"
+              >
+                Retirer le fichier
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <div>
           <button
@@ -515,6 +565,32 @@ export default function SalarySlipsAdmin() {
           </button>
         </div>
       </section>
+
+      {isUploadPreviewOpen && uploadPreviewUrl ? (
+        <div className="fixed inset-0 z-50 bg-black/60 p-4 md:p-8" onClick={() => setIsUploadPreviewOpen(false)}>
+          <div
+            className="mx-auto h-full w-full max-w-6xl rounded-xl bg-white shadow-xl flex flex-col"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-vdm-gold-100 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-vdm-gold-900">Aperçu du bulletin avant import</h3>
+                <p className="text-xs text-vdm-gold-700">{file?.name ?? "Bulletin PDF"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUploadPreviewOpen(false)}
+                className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50"
+              >
+                Fermer
+              </button>
+            </div>
+            <div className="p-4 h-full min-h-0">
+              <iframe className="h-full w-full rounded-lg border border-vdm-gold-200 bg-white" src={uploadPreviewUrl} title="Aperçu bulletin avant import" />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <section className="rounded-xl border border-vdm-gold-200 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-vdm-gold-100">
@@ -621,8 +697,8 @@ export default function SalarySlipsAdmin() {
           <div className="p-4 text-sm text-gray-600">Aucun bulletin signé.</div>
         ) : (
           <div className="divide-y divide-vdm-gold-100">
-            {filteredSignedSlipsByYear.map((group, index) => (
-              <details key={group.year} open={index === 0}>
+            {filteredSignedSlipsByYear.map((group) => (
+              <details key={group.year}>
                 <summary className="list-none px-4 py-3 bg-vdm-gold-50 text-vdm-gold-900 font-semibold flex items-center justify-between">
                   <span>Année {group.year}</span>
                   <span className="text-xs text-vdm-gold-700">
@@ -631,8 +707,8 @@ export default function SalarySlipsAdmin() {
                 </summary>
 
                 <div className="divide-y divide-vdm-gold-100">
-                  {group.months.map((monthGroup, monthIndex) => (
-                    <details key={`${group.year}-${monthGroup.month}`} open={monthIndex === 0}>
+                  {group.months.map((monthGroup) => (
+                    <details key={`${group.year}-${monthGroup.month}`}>
                       <summary className="list-none px-4 py-3 bg-vdm-gold-50/40 text-vdm-gold-900 font-medium flex items-center justify-between">
                         <span>{MONTH_LABELS[monthGroup.month - 1] ?? `Mois ${monthGroup.month}`}</span>
                         <span className="text-xs text-vdm-gold-700">{monthGroup.slips.length} bulletin(s)</span>

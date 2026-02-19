@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/leave-requests";
 import {
   calculateEntitledLeaveDaysForYear,
-  consumedLeaveDaysForYear,
+  consumedLeaveDaysForYearFromLeaves,
   syncEmployeeLeaveBalance,
 } from "@/lib/leave-balance";
 
@@ -67,7 +67,14 @@ export async function GET(req: Request) {
         monthsWorkedThisYear: 0,
         seniorityYears: 0,
       };
-  const consumedCurrentYear = await consumedLeaveDaysForYear(prisma, actorId, currentYear);
+  const consumedCurrentYear = consumedLeaveDaysForYearFromLeaves(
+    leaves.map((leave) => ({
+      startDate: leave.startDate,
+      endDate: leave.endDate,
+      status: leave.status,
+    })),
+    currentYear
+  );
   const remainingCurrentYear = Math.max(0, annualLeaveBalance - consumedCurrentYear);
   const nextYearLeaveBalance = employee
     ? calculateEntitledLeaveDaysForYear(

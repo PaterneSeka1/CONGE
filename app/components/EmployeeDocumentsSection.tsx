@@ -34,7 +34,7 @@ type EmployeeDocument = {
   childOrder?: number | null;
   fileName: string;
   mimeType: string;
-  fileDataUrl: string;
+  fileDataUrl?: string;
   createdAt: string;
   updatedAt?: string;
   employee?: EmployeeOption;
@@ -114,6 +114,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [editFileInputKey, setEditFileInputKey] = useState(0);
   const [isEditingBusy, setIsEditingBusy] = useState(false);
+  const [openingDocId, setOpeningDocId] = useState<string | null>(null);
   const [deleteModalDoc, setDeleteModalDoc] = useState<EmployeeDocument | null>(null);
 
   const isEditingChildType = editType === "CHILD_BIRTH_CERTIFICATE";
@@ -183,7 +184,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     if (!token) return;
 
     const loadEmployees = async () => {
-      const res = await fetch("/api/employees", {
+      const res = await fetch("/api/employees/options?take=150", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => ({}));
@@ -423,6 +424,37 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     setDeleteModalDoc(doc);
   };
 
+  const openDocument = async (doc: EmployeeDocument) => {
+    const token = getToken();
+    if (!token) return;
+
+    setOpeningDocId(doc.id);
+    try {
+      const res = await fetch(`/api/employee-documents/${doc.id}/file`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(String(data?.error ?? "Impossible d'ouvrir le document"));
+        setOpeningDocId(null);
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = doc.fileName;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+      setOpeningDocId(null);
+    } catch {
+      toast.error("Erreur réseau lors de l'ouverture du document");
+      setOpeningDocId(null);
+    }
+  };
+
   const confirmDeleteDocument = async () => {
     if (!deleteModalDoc) return;
     const token = getToken();
@@ -641,6 +673,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
                           className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
                           aria-label={`Agrandir la photo de ${employeeLabel(doc.employee)}`}
                         >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={doc.employee.profilePhotoUrl}
                             alt={`Photo de ${employeeLabel(doc.employee)}`}
@@ -675,15 +708,14 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <a
-                        href={doc.fileDataUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        download={doc.fileName}
+                      <button
+                        type="button"
+                        onClick={() => openDocument(doc)}
+                        disabled={openingDocId === doc.id}
                         className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
                       >
-                        Ouvrir / Télécharger
-                      </a>
+                        {openingDocId === doc.id ? "Ouverture..." : "Ouvrir / Télécharger"}
+                      </button>
                       {canManageDocument(doc) ? (
                         <>
                           <button
@@ -811,6 +843,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
             >
               Fermer
             </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photoPreviewUrl} alt={photoPreviewLabel} className="w-full max-h-[85vh] object-contain bg-black" />
           </div>
         </div>

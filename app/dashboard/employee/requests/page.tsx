@@ -21,6 +21,7 @@ type HistoryItem = {
   type: string;
   startDate: string;
   endDate: string;
+  year: number | null;
   status: "APPROVED" | "REJECTED" | "CANCELLED";
   decidedAt: string;
   days: number;
@@ -57,8 +58,12 @@ function statusClass(status: LeaveItem["status"] | HistoryItem["status"]) {
 }
 
 export default function EmployeeRequests() {
+  const HISTORY_PAGE_SIZE = 120;
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [historyYearFilter, setHistoryYearFilter] = useState("PAST");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasNext, setHistoryHasNext] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
@@ -95,15 +100,17 @@ export default function EmployeeRequests() {
     const loadHistory = async () => {
       setIsHistoryLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/history?mine=1", {
+        const res = await fetch(`/api/leave-requests/history?mine=1&page=${historyPage}&take=${HISTORY_PAGE_SIZE}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          setHistoryItems(
-            (data?.leaves ?? []).map((x: any) => {
+          const mapped = (data?.leaves ?? []).map((x: any) => {
               const startRaw = x.startDate ?? "";
               const endRaw = x.endDate ?? "";
+              const startRawDate = startRaw ? new Date(startRaw) : null;
+              const leaveYear =
+                startRawDate && !Number.isNaN(startRawDate.getTime()) ? startRawDate.getUTCFullYear() : null;
               const start = formatDateDMY(startRaw);
               const end = formatDateDMY(endRaw);
               return {
@@ -111,24 +118,42 @@ export default function EmployeeRequests() {
                 type: x.type,
                 startDate: start,
                 endDate: end,
+                year: leaveYear,
                 status: x.status,
                 decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
                 days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
               };
-            })
-          );
+            });
+          setHistoryItems(mapped);
+          setHistoryHasNext(mapped.length === HISTORY_PAGE_SIZE);
         }
       } finally {
         setIsHistoryLoading(false);
       }
     };
     loadHistory();
-  }, []);
+  }, [historyPage]);
 
   const activeItems = useMemo(
     () => items.filter((item) => ["SUBMITTED", "PENDING"].includes(item.status)),
     [items]
   );
+  const historyYears = useMemo(
+    () =>
+      Array.from(new Set(historyItems.map((item) => item.year).filter((value): value is number => value != null))).sort(
+        (a, b) => b - a
+      ),
+    [historyItems]
+  );
+
+  const filteredHistoryItems = useMemo(() => {
+    const currentYear = new Date().getUTCFullYear();
+    if (historyYearFilter === "ALL") return historyItems;
+    if (historyYearFilter === "PAST") return historyItems.filter((item) => item.year != null && item.year < currentYear);
+    const selectedYear = Number(historyYearFilter);
+    if (!Number.isInteger(selectedYear)) return historyItems;
+    return historyItems.filter((item) => item.year === selectedYear);
+  }, [historyItems, historyYearFilter]);
 
   const cancelRequest = async (id: string) => {
     const token = getToken();
@@ -244,14 +269,54 @@ export default function EmployeeRequests() {
 
       <div className="mt-8">
         <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique</div>
-        <div className="text-sm text-vdm-gold-700 mb-4">Historique complet de vos demandes.</div>
+        <div className="text-sm text-vdm-gold-700 mb-4">Demandes traitées, avec visibilité par année passée.</div>
+
+        <div className="mb-3">
+          <label className="text-sm text-vdm-gold-900">
+            Filtrer par année
+            <select
+              value={historyYearFilter}
+              onChange={(e) => setHistoryYearFilter(e.target.value)}
+              className="mt-1 w-full sm:w-72 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
+            >
+              <option value="PAST">Années passées</option>
+              <option value="ALL">Toutes</option>
+              {historyYears.map((y) => (
+                <option key={y} value={String(y)}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <DataTable
-          data={historyItems}
+          data={filteredHistoryItems}
           columns={historyColumns}
           searchPlaceholder="Rechercher une demande..."
           onRefresh={() => window.location.reload()}
         />
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-xs text-vdm-gold-700">Page {historyPage}</div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+              disabled={historyPage <= 1 || isHistoryLoading}
+              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+            >
+              Précédent
+            </button>
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => p + 1)}
+              disabled={!historyHasNext || isHistoryLoading}
+              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l'historique...</div>
         ) : null}

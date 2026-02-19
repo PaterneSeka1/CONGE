@@ -1,7 +1,7 @@
 "use client";
 import { formatDateDMY } from "@/lib/date-format";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import EmployeeAvatar from "@/app/components/EmployeeAvatar";
@@ -83,26 +83,34 @@ function daysBetweenInclusive(start: string, end: string) {
 }
 
 export default function AccountantInbox() {
+  const PENDING_PAGE_SIZE = 100;
+  const HISTORY_PAGE_SIZE = 100;
   const [rows, setRows] = useState<Req[]>([]);
   const [historyRows, setHistoryRows] = useState<HistoryItem[]>([]);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingHasNext, setPendingHasNext] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasNext, setHistoryHasNext] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const pendingPageCacheRef = useRef<Record<number, { rows: Req[]; hasNext: boolean }>>({});
+  const historyPageCacheRef = useRef<Record<number, { rows: HistoryItem[]; hasNext: boolean }>>({});
 
   useEffect(() => {
     const token = getToken();
     if (!token) return;
+    let cancelled = false;
 
-    const load = async () => {
-      setIsLoading(true);
+    const fetchPendingPage = async (targetPage: number, options: { applyResult: boolean; showLoader: boolean }) => {
+      if (options.showLoader && !cancelled) setIsLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/pending", {
+        const res = await fetch(`/api/leave-requests/pending?page=${targetPage}&take=${PENDING_PAGE_SIZE}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          setRows(
-            (data?.leaves ?? []).map((x: any) => ({
+          const mapped = (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
               firstName: x.employee?.firstName ?? "",
               lastName: x.employee?.lastName ?? "",
@@ -118,24 +126,55 @@ export default function AccountantInbox() {
                   : x.employee?.role === "SERVICE_HEAD"
                   ? "SERVICE_HEAD"
                   : "EMPLOYEE",
-            }))
-          );
+            }));
+          const entry = { rows: mapped, hasNext: mapped.length === PENDING_PAGE_SIZE };
+          pendingPageCacheRef.current[targetPage] = entry;
+          if (options.applyResult && !cancelled) {
+            setRows(entry.rows);
+            setPendingHasNext(entry.hasNext);
+          }
         }
       } finally {
-        setIsLoading(false);
+        if (options.showLoader && !cancelled) setIsLoading(false);
       }
     };
 
-    const loadHistory = async () => {
-      setIsHistoryLoading(true);
+    const load = async () => {
+      const cached = pendingPageCacheRef.current[pendingPage];
+      if (cached) {
+        setRows(cached.rows);
+        setPendingHasNext(cached.hasNext);
+      } else {
+        await fetchPendingPage(pendingPage, { applyResult: true, showLoader: true });
+      }
+
+      const current = pendingPageCacheRef.current[pendingPage];
+      const nextPage = pendingPage + 1;
+      if (current?.hasNext && !pendingPageCacheRef.current[nextPage]) {
+        void fetchPendingPage(nextPage, { applyResult: false, showLoader: false });
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingPage]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    let cancelled = false;
+
+    const fetchHistoryPage = async (targetPage: number, options: { applyResult: boolean; showLoader: boolean }) => {
+      if (options.showLoader && !cancelled) setIsHistoryLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/history?scope=actor", {
+        const res = await fetch(`/api/leave-requests/history?scope=actor&page=${targetPage}&take=${HISTORY_PAGE_SIZE}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          setHistoryRows(
-            (data?.decisions ?? []).map((d: any) => {
+          const mapped = (data?.decisions ?? []).map((d: any) => {
               const startRaw = d.leaveRequest?.startDate ?? "";
               const endRaw = d.leaveRequest?.endDate ?? "";
               const start = formatDateDMY(startRaw);
@@ -159,17 +198,40 @@ export default function AccountantInbox() {
                 target: d.toEmployee?.role ?? "-",
                 days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
               };
-            })
-          );
+            });
+          const entry = { rows: mapped, hasNext: mapped.length === HISTORY_PAGE_SIZE };
+          historyPageCacheRef.current[targetPage] = entry;
+          if (options.applyResult && !cancelled) {
+            setHistoryRows(entry.rows);
+            setHistoryHasNext(entry.hasNext);
+          }
         }
       } finally {
-        setIsHistoryLoading(false);
+        if (options.showLoader && !cancelled) setIsHistoryLoading(false);
       }
     };
 
-    load();
-    loadHistory();
-  }, []);
+    const loadHistory = async () => {
+      const cached = historyPageCacheRef.current[historyPage];
+      if (cached) {
+        setHistoryRows(cached.rows);
+        setHistoryHasNext(cached.hasNext);
+      } else {
+        await fetchHistoryPage(historyPage, { applyResult: true, showLoader: true });
+      }
+
+      const current = historyPageCacheRef.current[historyPage];
+      const nextPage = historyPage + 1;
+      if (current?.hasNext && !historyPageCacheRef.current[nextPage]) {
+        void fetchHistoryPage(nextPage, { applyResult: false, showLoader: false });
+      }
+    };
+
+    void loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [historyPage]);
 
   const departments = useMemo(
     () =>
@@ -414,6 +476,27 @@ export default function AccountantInbox() {
         searchPlaceholder="Rechercher une demande..."
         onRefresh={() => window.location.reload()}
       />
+      <div className="mt-3 flex items-center justify-between">
+        <div className="text-xs text-vdm-gold-700">Page {pendingPage}</div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPendingPage((p) => Math.max(1, p - 1))}
+            disabled={pendingPage <= 1 || isLoading}
+            className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+          >
+            Précédent
+          </button>
+          <button
+            type="button"
+            onClick={() => setPendingPage((p) => p + 1)}
+            disabled={!pendingHasNext || isLoading}
+            className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div> : null}
 
       <div className="mt-8">
@@ -425,6 +508,27 @@ export default function AccountantInbox() {
           searchPlaceholder="Rechercher une décision..."
           onRefresh={() => window.location.reload()}
         />
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-xs text-vdm-gold-700">Page {historyPage}</div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+              disabled={historyPage <= 1 || isHistoryLoading}
+              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+            >
+              Précédent
+            </button>
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => p + 1)}
+              disabled={!historyHasNext || isHistoryLoading}
+              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
         {isHistoryLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l’historique...</div> : null}
       </div>
     </div>

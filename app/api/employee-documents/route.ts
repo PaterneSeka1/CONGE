@@ -57,6 +57,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const employeeId = norm(url.searchParams.get("employeeId"));
   const type = norm(url.searchParams.get("type"));
+  const includeFileData = url.searchParams.get("includeFileData") === "1";
 
   if (type && !DOCUMENT_TYPES.has(type)) {
     return jsonError("Type de document invalide", 400);
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
       childOrder: true,
       fileName: true,
       mimeType: true,
-      fileDataUrl: true,
+      ...(includeFileData ? { fileDataUrl: true } : {}),
       createdAt: true,
       employee: {
         select: {

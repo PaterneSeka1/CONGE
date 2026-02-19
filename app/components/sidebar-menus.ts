@@ -48,13 +48,6 @@ export const accountantMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Achats",
-    links: [
-      { label: "Inbox", icon: "clipboard", to: "/dashboard/accountant/purchases/inbox" },
-      { label: "Historique", icon: "clock", to: "/dashboard/accountant/purchases/history" },
-    ],
-  },
-  {
     title: "Paie",
     links: [
       { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/accountant/payslips" },
@@ -75,13 +68,6 @@ export const managerMenu: SidebarSection[] = [
       { label: "Demandes transmises", icon: "clipboard", to: "/dashboard/manager/inbox" },
       { label: "Historique des employés", icon: "clock", to: "/dashboard/manager/department/employees-history" },
       { label: "Équipe", icon: "users", to: "/dashboard/manager/team" },
-    ],
-  },
-  {
-    title: "Achats",
-    links: [
-      { label: "Nouvelle demande", icon: "clipboard", to: "/dashboard/manager/purchases/new" },
-      { label: "Mes demandes", icon: "clock", to: "/dashboard/manager/purchases" },
     ],
   },
   {
@@ -112,7 +98,7 @@ export const ceoMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Département OTHERS",
+    title: "Département Autres",
     links: [
       { label: "Employés (actuels)", icon: "users", to: "/dashboard/ceo/department/others/employees" },
       {
@@ -120,13 +106,6 @@ export const ceoMenu: SidebarSection[] = [
         icon: "users",
         to: "/dashboard/ceo/department/others/employees-history",
       },
-    ],
-  },
-  {
-    title: "Achats",
-    links: [
-      { label: "Inbox", icon: "clipboard", to: "/dashboard/ceo/purchases/inbox" },
-      { label: "Historique", icon: "clock", to: "/dashboard/ceo/purchases/history" },
     ],
   },
   {

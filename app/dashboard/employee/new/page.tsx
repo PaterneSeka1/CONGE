@@ -359,7 +359,8 @@ export default function EmployeeLeaveNew() {
           <div className="space-y-0.5">
             Solde restant annuel : {formatLeaveDays(balance)} / {formatLeaveDays(baseAllowance)} JOURS
             <div className="text-xs text-vdm-gold-600">
-              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)} JOURS
+              Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)}{" "}
+              {Number(seniorityBonusDays) === 1 ? "jour" : "jours"}
             </div>
           </div>
           <button

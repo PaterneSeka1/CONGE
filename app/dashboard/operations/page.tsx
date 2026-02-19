@@ -133,7 +133,7 @@ export default function OperationsDashboard() {
         { name: "Refusees", value: rejectedCount },
       ],
       barData: [
-        { name: "Inbox", value: pendingLeaves.length },
+        { name: "Boîte de réception", value: pendingLeaves.length },
         { name: "Solde", value: balance },
       ],
     };

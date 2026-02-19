@@ -21,6 +21,7 @@ type HistoryItem = {
   type: string;
   startDate: string;
   endDate: string;
+  year: number | null;
   status: "APPROVED" | "REJECTED" | "CANCELLED";
   decidedAt: string;
   days: number;
@@ -70,12 +71,16 @@ function statusClass(status: LeaveItem["status"] | HistoryItem["status"]) {
 }
 
 export default function OperationsLeaveHistory() {
+  const HISTORY_PAGE_SIZE = 120;
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
+  const [historyYearFilter, setHistoryYearFilter] = useState("PAST");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyHasNext, setHistoryHasNext] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -120,16 +125,20 @@ export default function OperationsLeaveHistory() {
     const loadHistory = async () => {
       setIsHistoryLoading(true);
       try {
-        const result = await fetchFromRoutes(HISTORY_ROUTES);
+        const result = await fetchFromRoutes(
+          HISTORY_ROUTES.map((route) => `${route}&page=${historyPage}&take=${HISTORY_PAGE_SIZE}`)
+        );
         if (!result.ok) {
           toast.error("Impossible de charger l'historique des demandes.");
           return;
         }
         const data = result.data;
-        setHistoryItems(
-          (data?.leaves ?? []).map((x: ApiLeave) => {
+        const mapped = (data?.leaves ?? []).map((x: ApiLeave) => {
             const startRaw = x.startDate ?? "";
             const endRaw = x.endDate ?? "";
+            const startRawDate = startRaw ? new Date(startRaw) : null;
+            const leaveYear =
+              startRawDate && !Number.isNaN(startRawDate.getTime()) ? startRawDate.getUTCFullYear() : null;
             const start = formatDateDMY(startRaw);
             const end = formatDateDMY(endRaw);
             return {
@@ -137,12 +146,14 @@ export default function OperationsLeaveHistory() {
               type: x.type,
               startDate: start,
               endDate: end,
+              year: leaveYear,
               status: x.status,
               decidedAt: formatDateDMY(x.decisions?.[0]?.createdAt),
               days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
             };
-          })
-        );
+          });
+        setHistoryItems(mapped);
+        setHistoryHasNext(mapped.length === HISTORY_PAGE_SIZE);
       } finally {
         setIsHistoryLoading(false);
       }
@@ -150,7 +161,7 @@ export default function OperationsLeaveHistory() {
 
     void load();
     void loadHistory();
-  }, []);
+  }, [historyPage]);
 
   const activeItems = useMemo(
     () => items.filter((item) => ["SUBMITTED", "PENDING"].includes(item.status)),
@@ -161,11 +172,28 @@ export default function OperationsLeaveHistory() {
     if (activeStatusFilter === "ALL") return activeItems;
     return activeItems.filter((item) => item.status === activeStatusFilter);
   }, [activeItems, activeStatusFilter]);
+  const historyYears = useMemo(
+    () =>
+      Array.from(new Set(historyItems.map((item) => item.year).filter((value): value is number => value != null))).sort(
+        (a, b) => b - a
+      ),
+    [historyItems]
+  );
 
   const filteredHistoryItems = useMemo(() => {
-    if (historyStatusFilter === "ALL") return historyItems;
-    return historyItems.filter((item) => item.status === historyStatusFilter);
-  }, [historyItems, historyStatusFilter]);
+    const currentYear = new Date().getUTCFullYear();
+    let itemsByYear = historyItems;
+    if (historyYearFilter === "PAST") {
+      itemsByYear = itemsByYear.filter((item) => item.year != null && item.year < currentYear);
+    } else if (historyYearFilter !== "ALL") {
+      const selectedYear = Number(historyYearFilter);
+      if (Number.isInteger(selectedYear)) {
+        itemsByYear = itemsByYear.filter((item) => item.year === selectedYear);
+      }
+    }
+    if (historyStatusFilter === "ALL") return itemsByYear;
+    return itemsByYear.filter((item) => item.status === historyStatusFilter);
+  }, [historyItems, historyStatusFilter, historyYearFilter]);
 
   const cancelRequest = async (id: string) => {
     const token = getToken();
@@ -309,6 +337,24 @@ export default function OperationsLeaveHistory() {
             <option value="CANCELLED">Annulée</option>
           </select>
         </div>
+        <div className="mb-3">
+          <label className="text-sm text-vdm-gold-900">
+            Filtrer par année
+            <select
+              value={historyYearFilter}
+              onChange={(e) => setHistoryYearFilter(e.target.value)}
+              className="mt-1 w-full sm:w-72 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
+            >
+              <option value="PAST">Années passées</option>
+              <option value="ALL">Toutes</option>
+              {historyYears.map((y) => (
+                <option key={y} value={String(y)}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         <DataTable
           data={filteredHistoryItems}
@@ -316,6 +362,27 @@ export default function OperationsLeaveHistory() {
           searchPlaceholder="Rechercher une demande..."
           onRefresh={() => window.location.reload()}
         />
+        <div className="mt-3 flex items-center justify-between">
+          <div className="text-xs text-vdm-gold-700">Page {historyPage}</div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+              disabled={historyPage <= 1 || isHistoryLoading}
+              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+            >
+              Précédent
+            </button>
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => p + 1)}
+              disabled={!historyHasNext || isHistoryLoading}
+              className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
         {isHistoryLoading ? (
           <div className="mt-3 text-xs text-vdm-gold-700">Chargement de l&apos;historique...</div>
         ) : null}

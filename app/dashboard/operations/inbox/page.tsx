@@ -1,7 +1,7 @@
 "use client";
 import { formatDateDMY } from "@/lib/date-format";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import DataTable from "@/app/components/DataTable";
 import EmployeeAvatar from "@/app/components/EmployeeAvatar";
@@ -32,23 +32,28 @@ function statusClass(status: Req["status"]) {
 }
 
 export default function OperationsInbox() {
+  const PENDING_PAGE_SIZE = 100;
   const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<Req[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const pendingPageCacheRef = useRef<Record<number, { rows: Req[]; hasNext: boolean }>>({});
 
   useEffect(() => {
     const token = getToken();
     if (!token) return;
-    const load = async () => {
-      setIsLoading(true);
+    let cancelled = false;
+
+    const fetchPendingPage = async (targetPage: number, options: { applyResult: boolean; showLoader: boolean }) => {
+      if (options.showLoader && !cancelled) setIsLoading(true);
       try {
-        const res = await fetch("/api/leave-requests/pending", {
+        const res = await fetch(`/api/leave-requests/pending?page=${targetPage}&take=${PENDING_PAGE_SIZE}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          setRows(
-            (data?.leaves ?? []).map((x: any) => ({
+          const mapped = (data?.leaves ?? []).map((x: any) => ({
               id: x.id,
               firstName: x.employee?.firstName ?? "",
               lastName: x.employee?.lastName ?? "",
@@ -57,15 +62,40 @@ export default function OperationsInbox() {
               period: `${formatDateDMY(x.startDate)} - ${formatDateDMY(x.endDate)}`,
               status: x.status,
               note: x.reason ?? "",
-            }))
-          );
+            }));
+          const entry = { rows: mapped, hasNext: mapped.length === PENDING_PAGE_SIZE };
+          pendingPageCacheRef.current[targetPage] = entry;
+          if (options.applyResult && !cancelled) {
+            setRows(entry.rows);
+            setHasNext(entry.hasNext);
+          }
         }
       } finally {
-        setIsLoading(false);
+        if (options.showLoader && !cancelled) setIsLoading(false);
       }
     };
-    load();
-  }, []);
+
+    const load = async () => {
+      const cached = pendingPageCacheRef.current[page];
+      if (cached) {
+        setRows(cached.rows);
+        setHasNext(cached.hasNext);
+      } else {
+        await fetchPendingPage(page, { applyResult: true, showLoader: true });
+      }
+
+      const current = pendingPageCacheRef.current[page];
+      const nextPage = page + 1;
+      if (current?.hasNext && !pendingPageCacheRef.current[nextPage]) {
+        void fetchPendingPage(nextPage, { applyResult: false, showLoader: false });
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
 
   const approve = async (id: string) => {
     const token = getToken();
@@ -236,6 +266,27 @@ export default function OperationsInbox() {
         searchPlaceholder="Rechercher une demande..."
         onRefresh={() => window.location.reload()}
       />
+      <div className="mt-3 flex items-center justify-between">
+        <div className="text-xs text-vdm-gold-700">Page {page}</div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1 || isLoading}
+            className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+          >
+            Précédent
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!hasNext || isLoading}
+            className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
       {isLoading ? (
         <div className="mt-3 text-xs text-vdm-gold-700">Chargement des demandes...</div>
       ) : null}

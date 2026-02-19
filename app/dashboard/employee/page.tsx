@@ -169,7 +169,7 @@ export default function EmployeeDashboard() {
   return (
     <RequireAuth>
       <RoleGate allow={["EMPLOYEE", "SERVICE_HEAD"]}>
-        <DashboardShell title="Dashboard Employé">
+        <DashboardShell title="Tableau de bord Employé">
           <div className="grid gap-6">
             <section className="grid gap-4 md:grid-cols-3">
               <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">

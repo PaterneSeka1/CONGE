@@ -62,19 +62,9 @@ export async function POST(req: Request) {
     return jsonError("startDate doit être avant endDate", 400);
   }
 
-  await syncEmployeeLeaveBalance(prisma, actorId);
-  const employee = await prisma.employee.findUnique({
-    where: { id: actorId },
-    select: {
-      id: true,
-      leaveBalance: true,
-      leaveBalanceAdjustment: true,
-      hireDate: true,
-      companyEntryDate: true,
-      createdAt: true,
-    },
-  });
-  if (!employee) return jsonError("Employé introuvable", 404);
+  const synced = await syncEmployeeLeaveBalance(prisma, actorId);
+  if (!synced) return jsonError("Employé introuvable", 404);
+  const employee = synced.employee;
 
   const currentYear = new Date().getUTCFullYear();
   const consumed = await consumedLeaveDaysForYear(prisma, actorId, currentYear);

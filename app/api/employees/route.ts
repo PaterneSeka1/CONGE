@@ -10,10 +10,14 @@ import { syncAllActiveEmployeesLeaveBalance } from "@/lib/leave-balance";
 export async function GET(req: Request) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
-  await syncAllActiveEmployeesLeaveBalance();
 
   const url = new URL(req.url);
   const q = norm(url.searchParams.get("q"));
+  const fast = url.searchParams.get("fast") === "1";
+
+  if (!fast) {
+    await syncAllActiveEmployeesLeaveBalance();
+  }
 
   const employees = await prisma.employee.findMany({
     where: q

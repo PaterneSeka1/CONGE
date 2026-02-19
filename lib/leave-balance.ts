@@ -123,10 +123,16 @@ export async function consumedLeaveDaysForYear(
   employeeId: string,
   year: number
 ) {
+  const yearStart = new Date(Date.UTC(year, 0, 1));
+  const nextYearStart = new Date(Date.UTC(year + 1, 0, 1));
+
   const leaves = await db.leaveRequest.findMany({
     where: {
       employeeId,
       status: { in: ["SUBMITTED", "PENDING", "APPROVED"] },
+      // Garder uniquement les congés qui chevauchent l'année demandée.
+      startDate: { lt: nextYearStart },
+      endDate: { gte: yearStart },
     },
     select: {
       startDate: true,
@@ -135,6 +141,18 @@ export async function consumedLeaveDaysForYear(
   });
 
   return leaves.reduce((acc, leave) => acc + overlapDaysInYear(leave.startDate, leave.endDate, year), 0);
+}
+
+export function consumedLeaveDaysForYearFromLeaves(
+  leaves: Array<{ startDate: Date; endDate: Date; status: string }>,
+  year: number
+) {
+  return leaves.reduce((acc, leave) => {
+    if (leave.status !== "SUBMITTED" && leave.status !== "PENDING" && leave.status !== "APPROVED") {
+      return acc;
+    }
+    return acc + overlapDaysInYear(leave.startDate, leave.endDate, year);
+  }, 0);
 }
 
 export async function syncEmployeeLeaveBalance(db: PrismaLike, employeeId: string, asOf: Date = new Date()) {

@@ -244,7 +244,7 @@ export default function CeoHome() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <div className="text-xl font-semibold text-vdm-gold-800">Dashboard PDG</div>
+        <div className="text-xl font-semibold text-vdm-gold-800">Tableau de bord PDG</div>
         <div className="text-sm text-vdm-gold-700 mt-1">
           Décision finale sur les demandes escaladées.
         </div>

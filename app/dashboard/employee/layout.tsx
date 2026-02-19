@@ -9,7 +9,7 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
     <RequireAuth>
       <div className="min-h-screen bg-gray-50">
         <Sidebar
-          brandTitle="CONGÉS"
+          brandTitle="Mon espace RH"
           brandSubtitle="Espace Employé"
           sections={employeeMenu}
         />

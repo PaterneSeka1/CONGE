@@ -352,7 +352,7 @@ export default function AccountantLeaveNew() {
             Solde restant annuel : {formatLeaveDays(balance)} / {formatLeaveDays(baseAllowance)} JOURS
             <div className="text-xs text-vdm-gold-600">
               Ancienneté : {seniorityYears} an{seniorityYears > 1 ? "s" : ""} | Bonus : +{formatLeaveDays(seniorityBonusDays)}{" "}
-              JOURS
+              {Number(seniorityBonusDays) === 1 ? "jour" : "jours"}
             </div>
           </div>
           <button
