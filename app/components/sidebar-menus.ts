@@ -10,7 +10,7 @@ export const employeeMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Paie",
+    title: "Documents",
     links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/employee/payslips" }],
   },
   { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/employee/profile" }] },
@@ -48,10 +48,17 @@ export const accountantMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Paie",
+    title: "Documents",
     links: [
       { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/accountant/payslips" },
       { label: "Bulletins importés", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
+      { label: "Contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
+    ],
+  },
+  {
+    title: "Administration",
+    links: [
+      { label: "Contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
     ],
   },
   {
@@ -71,7 +78,7 @@ export const managerMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Paie",
+    title: "Documents",
     links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/manager/payslips" }],
   },
   {
@@ -109,7 +116,7 @@ export const ceoMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Paie",
+    title: "Documents",
     links: [{ label: "Signer les bulletins", icon: "shield", to: "/dashboard/ceo/payslips/sign" }],
   },
   {

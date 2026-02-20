@@ -1,3 +1,5 @@
+import { EmployeeGender } from "@/lib/employee-gender";
+
 export type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
 export type EmployeeStatus = "PENDING" | "ACTIVE" | "REJECTED";
 
@@ -13,6 +15,7 @@ export type EmployeeSession = {
   hireDate?: string | null;
   companyEntryDate?: string | null;
   cnpsNumber?: string | null;
+  gender?: EmployeeGender | null;
   role: EmployeeRole;
   status: EmployeeStatus;
   leaveBalance?: number;

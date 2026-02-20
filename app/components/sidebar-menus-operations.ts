@@ -25,8 +25,11 @@ export const operationsMenu: SidebarSection[] = [
     ],
   },
   {
-    title: "Paie",
-    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/operations/payslips" }],
+    title: "Documents",
+    links: [
+      { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/operations/payslips" },
+      { label: "Contrats", icon: "shield", to: "/dashboard/operations/documents/contracts" },
+    ],
   },
   {
     title: "Compte",

@@ -11,6 +11,12 @@ import {
   type EmployeeSession,
 } from "@/lib/auth-client";
 import { isCompletePhone } from "@/lib/phone";
+import {
+  EmployeeGender,
+  EMPLOYEE_GENDER_LABELS,
+  EMPLOYEE_GENDERS,
+  isEmployeeGender,
+} from "@/lib/employee-gender";
 
 type EditableEmployee = EmployeeSession & {
   jobTitle?: string | null;
@@ -204,6 +210,7 @@ export default function OnboardingPage() {
           hireDate: hireDate ?? null,
           companyEntryDate: hireDate ?? null,
           cnpsNumber: draft.cnpsNumber ?? null,
+          gender: draft.gender ?? null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -236,6 +243,7 @@ export default function OnboardingPage() {
   const canFinalize =
     Boolean(String(draft.firstName ?? "").trim()) &&
     Boolean(String(draft.lastName ?? "").trim()) &&
+    Boolean(draft.gender) &&
     Boolean(String(draft.profilePhotoUrl ?? "").trim()) &&
     !photoError &&
     Boolean(String(draft.phone ?? "").trim()) &&
@@ -276,6 +284,29 @@ export default function OnboardingPage() {
               }
               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
             />
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Genre (obligatoire)
+            </div>
+            <select
+              value={draft.gender ?? ""}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDraft({
+                  ...draft,
+                  gender: isEmployeeGender(next) ? (next as EmployeeGender) : null,
+                });
+              }}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm bg-white"
+            >
+              <option value="">Sélectionner</option>
+              {EMPLOYEE_GENDERS.map((gender) => (
+                <option key={gender} value={gender}>
+                  {EMPLOYEE_GENDER_LABELS[gender]}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <div className="text-xs text-vdm-gold-600 mb-1">

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { jsonError, verifyJwt } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { isEmployeeGender } from "@/lib/employee-gender";
 import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 function isValidHttpUrl(value: string) {
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
       phone: true,
       profilePhotoUrl: true,
       fullAddress: true,
+      gender: true,
       hireDate: true,
       companyEntryDate: true,
       cnpsNumber: true,
@@ -137,6 +139,16 @@ export async function PUT(req: Request) {
       data.cnpsNumber = value;
     }
   }
+  if (Object.prototype.hasOwnProperty.call(body, "gender")) {
+    const value = norm(body?.gender);
+    if (!value) {
+      data.gender = null;
+    } else if (!isEmployeeGender(value)) {
+      return jsonError("gender invalide", 400);
+    } else {
+      data.gender = value;
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(body, "password")) {
     const value = norm(body?.password);
     if (!value || value.length < 6) {
@@ -165,6 +177,7 @@ export async function PUT(req: Request) {
       phone: true,
       profilePhotoUrl: true,
       fullAddress: true,
+      gender: true,
       hireDate: true,
       companyEntryDate: true,
       cnpsNumber: true,

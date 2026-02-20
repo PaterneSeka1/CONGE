@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PAID_LEAVE_VALUES, isPaidLeaveType } from "@/lib/leave-types";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 
 const BASE_ANNUAL_DAYS = 25;
@@ -130,6 +131,7 @@ export async function consumedLeaveDaysForYear(
     where: {
       employeeId,
       status: { in: ["SUBMITTED", "PENDING", "APPROVED"] },
+      type: { in: PAID_LEAVE_VALUES },
       // Garder uniquement les congés qui chevauchent l'année demandée.
       startDate: { lt: nextYearStart },
       endDate: { gte: yearStart },
@@ -144,11 +146,14 @@ export async function consumedLeaveDaysForYear(
 }
 
 export function consumedLeaveDaysForYearFromLeaves(
-  leaves: Array<{ startDate: Date; endDate: Date; status: string }>,
+  leaves: Array<{ startDate: Date; endDate: Date; status: string; type?: string }>,
   year: number
 ) {
   return leaves.reduce((acc, leave) => {
     if (leave.status !== "SUBMITTED" && leave.status !== "PENDING" && leave.status !== "APPROVED") {
+      return acc;
+    }
+    if (!isPaidLeaveType(leave.type)) {
       return acc;
     }
     return acc + overlapDaysInYear(leave.startDate, leave.endDate, year);
@@ -165,6 +170,7 @@ export async function syncEmployeeLeaveBalance(db: PrismaLike, employeeId: strin
       hireDate: true,
       companyEntryDate: true,
       createdAt: true,
+      gender: true,
     },
   });
 
@@ -191,6 +197,7 @@ export async function syncEmployeeLeaveBalance(db: PrismaLike, employeeId: strin
       hireDate: true,
       companyEntryDate: true,
       createdAt: true,
+      gender: true,
     },
   });
 

@@ -72,6 +72,7 @@ export async function GET(req: Request) {
       startDate: leave.startDate,
       endDate: leave.endDate,
       status: leave.status,
+      type: leave.type,
     })),
     currentYear
   );

@@ -13,6 +13,7 @@ const DOCUMENT_TYPES = new Set([
   "CURRICULUM_VITAE",
   "COVER_LETTER",
   "GEOGRAPHIC_LOCATION",
+  "CONTRACT",
 ]);
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -139,10 +140,13 @@ export async function POST(req: Request) {
   const relatedPersonName = norm(body?.relatedPersonName) || null;
   const childOrderParsed = parsePositiveIntResult(body?.childOrder);
   const requestedEmployeeId = norm(body?.employeeId);
+  let employeeId = actorId;
   if (requestedEmployeeId && requestedEmployeeId !== actorId) {
-    return jsonError("Vous ne pouvez ajouter que vos propres documents", 403);
+    if (role !== "ACCOUNTANT") {
+      return jsonError("Vous ne pouvez ajouter que vos propres documents", 403);
+    }
+    employeeId = requestedEmployeeId;
   }
-  const employeeId = actorId;
 
   if (!DOCUMENT_TYPES.has(type)) {
     return jsonError("Type de document invalide", 400);
@@ -191,7 +195,8 @@ export async function POST(req: Request) {
         | "CHILD_BIRTH_CERTIFICATE"
         | "CURRICULUM_VITAE"
         | "COVER_LETTER"
-        | "GEOGRAPHIC_LOCATION",
+        | "GEOGRAPHIC_LOCATION"
+        | "CONTRACT",
       relatedPersonName,
       childOrder: childOrderParsed.value,
       fileName,

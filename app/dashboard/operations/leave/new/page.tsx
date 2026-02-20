@@ -2,8 +2,9 @@
 import { formatDateDMY } from "@/lib/date-format";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getToken } from "@/lib/auth-client";
+import { getEmployee, getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
+import { DEFAULT_LEAVE_TYPE, leaveOptionsForGender, type LeaveTypeValue } from "@/lib/leave-types";
 
 type LeaveItem = {
   startDate: string;
@@ -108,7 +109,7 @@ function formatLeaveDays(value: number) {
 }
 
 export default function OperationsLeaveNew() {
-  const [type, setType] = useState("ANNUAL");
+  const [type, setType] = useState<LeaveTypeValue>(DEFAULT_LEAVE_TYPE);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
@@ -129,6 +130,14 @@ export default function OperationsLeaveNew() {
     [startDate, endDate]
   );
   const isExhausted = balance <= 0;
+  const employeeGender = getEmployee()?.gender ?? null;
+  const leaveOptions = useMemo(() => leaveOptionsForGender(employeeGender), [employeeGender]);
+
+  useEffect(() => {
+    if (leaveOptions.length && !leaveOptions.some((option) => option.value === type)) {
+      setType(leaveOptions[0].value);
+    }
+  }, [leaveOptions, type]);
 
   const refreshBalance = useCallback(async () => {
     const token = getToken();
@@ -311,7 +320,7 @@ export default function OperationsLeaveNew() {
         setStartDate("");
         setEndDate("");
         setReason("");
-        setType("ANNUAL");
+        setType(DEFAULT_LEAVE_TYPE);
         refreshBalance();
         window.dispatchEvent(new Event("leave-requests-updated"));
       } else {
@@ -337,14 +346,15 @@ export default function OperationsLeaveNew() {
           <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Type</label>
           <select
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={(e) => setType(e.target.value as LeaveTypeValue)}
             disabled={isExhausted}
             className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
           >
-            <option value="ANNUAL">Conge annuel</option>
-            <option value="SICK">Maladie</option>
-            <option value="UNPAID">Sans solde</option>
-            <option value="OTHER">Autre</option>
+            {leaveOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 

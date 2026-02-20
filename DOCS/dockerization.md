@@ -11,3 +11,4 @@
   1. Libérer `:3000` sur l’hôte ou changer la mappage avant de relancer `docker compose up --build`.
   2. Garder `@next/swc-linux-x64-gnu` dans `optionalDependencies` pour garantir la cohérence Linux/Docker.
   3. Suivre les logs Prisma/Next lors de chaque build pour s’assurer qu’OpenSSL et Turbopack détectent bien les binaires natifs.
+  4. Pour Docker + Compass (Mongo local), démarre `mongod` via `--replSet rs0`, valide `rs.initiate()` et expose l’URL `mongodb://host.docker.internal:27017/conge?replicaSet=rs0` dans un fichier `.env` utilisé par Compose afin que le conteneur puisse exécuter les transactions et la seed qui fonctionnent dans Compass.

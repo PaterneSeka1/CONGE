@@ -11,6 +11,7 @@ import {
   requestedLeaveDays,
   syncEmployeeLeaveBalance,
 } from "@/lib/leave-balance";
+import { isLeaveType, isMenstrualLeaveType } from "@/lib/leave-types";
 
 function supportsLeaveBlackoutEmployeeIds() {
   const client = prisma as unknown as {
@@ -48,11 +49,7 @@ export async function POST(req: Request) {
   const reason = norm(body?.reason) || null;
   const startDate = parseDate(body?.startDate);
   const endDate = parseDate(body?.endDate);
-  const allowedTypes = new Set(["ANNUAL", "SICK", "UNPAID", "OTHER"] as const);
-  const leaveType =
-    type && allowedTypes.has(type as "ANNUAL" | "SICK" | "UNPAID" | "OTHER")
-      ? (type as "ANNUAL" | "SICK" | "UNPAID" | "OTHER")
-      : null;
+  const leaveType = isLeaveType(type) ? type : null;
 
   if (!leaveType || !startDate || !endDate) {
     return jsonError("Champs requis: type, startDate, endDate", 400);
@@ -65,32 +62,37 @@ export async function POST(req: Request) {
   const synced = await syncEmployeeLeaveBalance(prisma, actorId);
   if (!synced) return jsonError("Employé introuvable", 404);
   const employee = synced.employee;
+  if (isMenstrualLeaveType(leaveType) && employee.gender !== "FEMALE") {
+    return jsonError("Congé menstruel réservé aux collaboratrices", 403);
+  }
 
   const currentYear = new Date().getUTCFullYear();
-  const consumed = await consumedLeaveDaysForYear(prisma, actorId, currentYear);
-  const nextYearEntitlement = calculateEntitledLeaveDaysForYear(
-    {
-      id: employee.id,
-      leaveBalance: Number(employee.leaveBalance ?? 0),
-      leaveBalanceAdjustment: Number(employee.leaveBalanceAdjustment ?? 0),
-      hireDate: employee.hireDate ?? null,
-      companyEntryDate: employee.companyEntryDate ?? null,
-      createdAt: employee.createdAt,
-    },
-    currentYear + 1
-  ).entitlement;
-  const availableCurrentYear = Math.max(0, Number(employee.leaveBalance ?? 0) - consumed);
-  const available = Math.max(0, availableCurrentYear + nextYearEntitlement);
   const requested = requestedLeaveDays(startDate, endDate);
-  if (requested > available) {
-    return jsonError("La demande dépasse votre solde de congés disponible", 409, {
-      available,
-      availableCurrentYear,
-      nextYearAdvance: nextYearEntitlement,
-      requested,
-      consumed,
-      entitlement: employee.leaveBalance,
-    });
+  if (leaveType === "ANNUAL_PAID") {
+    const consumed = await consumedLeaveDaysForYear(prisma, actorId, currentYear);
+    const nextYearEntitlement = calculateEntitledLeaveDaysForYear(
+      {
+        id: employee.id,
+        leaveBalance: Number(employee.leaveBalance ?? 0),
+        leaveBalanceAdjustment: Number(employee.leaveBalanceAdjustment ?? 0),
+        hireDate: employee.hireDate ?? null,
+        companyEntryDate: employee.companyEntryDate ?? null,
+        createdAt: employee.createdAt,
+      },
+      currentYear + 1
+    ).entitlement;
+    const availableCurrentYear = Math.max(0, Number(employee.leaveBalance ?? 0) - consumed);
+    const available = Math.max(0, availableCurrentYear + nextYearEntitlement);
+    if (requested > available) {
+      return jsonError("La demande dépasse votre solde de congés disponible", 409, {
+        available,
+        availableCurrentYear,
+        nextYearAdvance: nextYearEntitlement,
+        requested,
+        consumed,
+        entitlement: employee.leaveBalance,
+      });
+    }
   }
 
   const supportsEmployeeIds = supportsLeaveBlackoutEmployeeIds();

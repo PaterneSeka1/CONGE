@@ -1,6 +1,4 @@
 "use client";
-// app/(dashboard)/dsi/leave-history/page.tsx (ou ton chemin exact)
-// ✅ FICHIER COMPLET
 
 import { formatDateDMY } from "@/lib/date-format";
 
@@ -186,7 +184,7 @@ export default function DsiLeaveHistory() {
       <DataTable
         data={filteredItems}
         columns={columns}
-        searchPlaceholder="Rechercher un cong?..."
+        searchPlaceholder="Rechercher..."
         onRefresh={() => window.location.reload()}
       />
       <div className="mt-3 flex items-center justify-between">

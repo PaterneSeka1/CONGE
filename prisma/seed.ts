@@ -1,6 +1,8 @@
   /* prisma/seed.ts */
   import bcrypt from "bcryptjs";
-  import { PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "../generated/prisma/client";
+
+type EmployeeGender = "FEMALE" | "MALE" | "OTHER";
 
   const prisma = new PrismaClient();
 
@@ -45,6 +47,7 @@
     departmentId?: string | null;
     serviceId?: string | null;
     jobTitle?: string | null;
+    gender?: EmployeeGender | null;
   }) {
     const email = data.email.toLowerCase().trim();
 
@@ -65,6 +68,7 @@
           departmentId: data.departmentId ?? null,
           serviceId: data.serviceId ?? null,
           jobTitle: data.jobTitle ?? null,
+          gender: data.gender ?? existing.gender ?? null,
         },
       });
     }
@@ -81,6 +85,7 @@
         departmentId: data.departmentId ?? null,
         serviceId: data.serviceId ?? null,
         jobTitle: data.jobTitle ?? null,
+        gender: data.gender ?? null,
       },
     });
   }
@@ -138,6 +143,8 @@
       return arr[Math.floor(Math.random() * arr.length)];
     }
 
+    const genders: EmployeeGender[] = ["FEMALE", "MALE", "OTHER"];
+
     for (let i = 1; i <= params.total; i++) {
       const firstName = pick(firstNames);
       const lastName = pick(lastNames);
@@ -192,6 +199,7 @@
         status: "ACTIVE",
         departmentId,
         serviceId,
+        gender: pick(genders),
       });
     }
   }
@@ -250,6 +258,7 @@
       role: "DEPT_HEAD",
       status: "ACTIVE",
       departmentId: dsi.id,
+      gender: "FEMALE",
     });
 
     // Comptable (ACCOUNTANT) + ACTIVE
@@ -263,6 +272,7 @@
       status: "ACTIVE",
       departmentId: daf.id,
       jobTitle: "Comptable",
+      gender: "FEMALE",
     });
 
     // PDG (CEO) + ACTIVE
@@ -275,6 +285,7 @@
       role: "CEO",
       status: "ACTIVE",
       jobTitle: "PDG",
+      gender: "MALE",
     });
 
     // Directeur des opérations (DEPT_HEAD) + ACTIVE
@@ -288,6 +299,7 @@
       status: "ACTIVE",
       departmentId: ops.id,
       jobTitle: "Directeur des opérations",
+      gender: "MALE",
     });
 
     // Directeurs adjoints (SERVICE_HEAD) + ACTIVE
@@ -302,6 +314,7 @@
       departmentId: ops.id,
       serviceId: infoSvc.id,
       jobTitle: "Directeur Adjoint Information",
+      gender: "FEMALE",
     });
 
     const repHead = await ensureEmployee({
@@ -315,6 +328,7 @@
       departmentId: ops.id,
       serviceId: repSvc.id,
       jobTitle: "Directeur Adjoint Réputation",
+      gender: "MALE",
     });
 
     await ensureEmployee({
@@ -328,18 +342,19 @@
       departmentId: ops.id,
       serviceId: quaSvc.id,
       jobTitle: "Directeur Adjoint Qualité",
+      gender: "FEMALE",
     });
 
     // 4) Responsabilité active DSI pour l’admin
     await ensureActiveDsiResponsibility(dsi.id, admin.id);
 
-    // // 5) Génération d’employés génériques
-    // await generateEmployees({
-    //   total: 100,
-    //   passwordPlain: "Passw0rd!",
-    //   departments: { daf, dsi, ops, oth },
-    //   services: { information: infoSvc, reputation: repSvc, qualite: quaSvc },
-    // });
+    // 5) Génération d’employés génériques (limité à 50)
+    await generateEmployees({
+      total: 50,
+      passwordPlain: "Passw0rd!",
+      departments: { daf, dsi, ops, oth },
+      services: { information: infoSvc, reputation: repSvc, qualite: quaSvc },
+    });
 
   
 

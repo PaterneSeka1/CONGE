@@ -5,6 +5,7 @@ import { getToken, type EmployeeSession } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
 const DOCUMENT_TYPES = [
+  { value: "CONTRACT", label: "Contrat / avenant" },
   { value: "ID_CARD", label: "CNI" },
   { value: "BIRTH_CERTIFICATE", label: "Extrait de naissance" },
   { value: "SPOUSE_BIRTH_CERTIFICATE", label: "Extrait du conjoint" },

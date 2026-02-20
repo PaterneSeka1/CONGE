@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwt, jsonError } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { isLeaveType, isMenstrualLeaveType } from "@/lib/leave-types";
 
 function parseDate(value: string | null) {
   if (!value) return null;
@@ -57,10 +58,7 @@ export async function POST(req: Request) {
   const remainingTasks = norm(body?.remainingTasks) || null;
   const startDate = parseDate(body?.startDate);
   const endDate = parseDate(body?.endDate);
-  const allowedTypes = ["ANNUAL", "SICK", "UNPAID", "OTHER"] as const;
-  const leaveType = allowedTypes.includes(type as any)
-    ? (type as (typeof allowedTypes)[number])
-    : null;
+  const leaveType = isLeaveType(type) ? type : null;
 
   if (!leaveType || !startDate || !endDate) {
     return jsonError("Champs requis: type, startDate, endDate", 400);
@@ -68,6 +66,17 @@ export async function POST(req: Request) {
 
   if (startDate > endDate) {
     return jsonError("startDate doit être avant endDate", 400);
+  }
+
+  const actor = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { gender: true },
+  });
+  if (!actor) {
+    return jsonError("Employé introuvable", 404);
+  }
+  if (isMenstrualLeaveType(leaveType) && actor.gender !== "FEMALE") {
+    return jsonError("Congé menstruel réservé aux collaboratrices", 403);
   }
 
   const accountant = await prisma.employee.findFirst({

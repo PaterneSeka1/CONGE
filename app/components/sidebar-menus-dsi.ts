@@ -22,11 +22,16 @@ export const dsiMenu: SidebarSection[] = [
   },
   {
     title: "Administration",
-    links: [{ label: "Validation des comptes", icon: "shield", to: "/dashboard/dsi/accounts/pending" }],
+    links: [
+      { label: "Validation des comptes", icon: "shield", to: "/dashboard/dsi/accounts/pending" },
+    ],
   },
   {
-    title: "Paie",
-    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/dsi/payslips" }],
+    title: "Documents",
+    links: [
+      { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/dsi/payslips" },
+      { label: "Contrats", icon: "shield", to: "/dashboard/dsi/administration/contracts" },
+    ],
   },
   {
     title: "Compte",

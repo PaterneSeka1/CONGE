@@ -43,12 +43,19 @@ enum EmployeeDocumentType {
   CURRICULUM_VITAE
   COVER_LETTER
   GEOGRAPHIC_LOCATION
+  CONTRACT
 }
 
 enum EmployeeStatus {
   PENDING
   ACTIVE
   REJECTED
+}
+
+enum EmployeeGender {
+  FEMALE
+  MALE
+  OTHER
 }
 
 enum LeaveStatus {
@@ -60,9 +67,16 @@ enum LeaveStatus {
 }
 
 enum LeaveType {
+  ANNUAL_PAID
   ANNUAL
+  FAMILY_EXCEPTIONAL
+  MENSTRUAL
+  CONGE_M
+  MATERNITY_PATERNITY
   SICK
+  SICKNESS
   UNPAID
+  TRAINING
   OTHER
 }
 
@@ -119,6 +133,7 @@ model Employee {
   phone String?
   profilePhotoUrl String?
   fullAddress String?
+  gender EmployeeGender?
   hireDate DateTime?
   companyEntryDate DateTime?
   cnpsNumber String?
