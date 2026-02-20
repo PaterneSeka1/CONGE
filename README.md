@@ -67,6 +67,24 @@ npm run dev
 ```
 Puis ouvrir http://localhost:3000
 
+## Docker
+### Developpement (hot reload)
+```bash
+docker compose up --build
+```
+Puis ouvrir http://localhost:3000
+
+### Production
+```bash
+docker build -t conge:latest --target runner .
+docker run --rm -p 3000:3000 --env-file .env conge:latest
+```
+
+### Seed dans le conteneur
+```bash
+docker compose exec app npm run seed
+```
+
 ## Notes importantes
 - Le solde annuel par defaut est 25 jours.
 - Le CEO peut augmenter ou reinitialiser le solde d'un employe.
