@@ -5,7 +5,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists/* \
+  && npm ci
 
 FROM deps AS dev
 ENV NODE_ENV=development

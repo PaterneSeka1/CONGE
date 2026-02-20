@@ -41,5 +41,8 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "@next/swc-linux-x64-gnu": "16.1.4"
   }
 }
