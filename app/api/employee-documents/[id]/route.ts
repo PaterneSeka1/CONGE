@@ -13,6 +13,7 @@ const DOCUMENT_TYPES = new Set([
   "CURRICULUM_VITAE",
   "COVER_LETTER",
   "GEOGRAPHIC_LOCATION",
+  "CONTRACT",
 ]);
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -67,6 +68,13 @@ export async function PUT(req: Request, ctx: Ctx) {
       type: true,
       relatedPersonName: true,
       childOrder: true,
+      contractDocumentTypeId: true,
+      contractDocumentType: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       fileName: true,
       employee: { select: { role: true } },
     },
@@ -79,7 +87,19 @@ export async function PUT(req: Request, ctx: Ctx) {
 
   const body = await req.json().catch(() => ({}));
   const nextType = norm(body?.type) || existing.type;
+  const hasContractDocumentTypeParam = Object.prototype.hasOwnProperty.call(body, "contractDocumentTypeId");
+  const providedContractDocumentTypeId = hasContractDocumentTypeParam ? norm(body?.contractDocumentTypeId) || null : null;
+  let nextContractDocumentTypeId = hasContractDocumentTypeParam
+    ? providedContractDocumentTypeId
+    : existing.contractDocumentTypeId ?? null;
   if (!DOCUMENT_TYPES.has(nextType)) return jsonError("Type de document invalide", 400);
+  const nextIsContractType = nextType === "CONTRACT";
+  if (actorRole === "CEO" && !nextIsContractType) {
+    return jsonError("Le PDG ne peut pas modifier de documents RH autres que les contrats", 403);
+  }
+  if (nextIsContractType && actorRole !== "ACCOUNTANT" && actorRole !== "CEO") {
+    return jsonError("Seule la comptable (ou le PDG) peut gérer les documents de contrats", 403);
+  }
 
   const needsRelated = nextType === SPOUSE_TYPE || nextType === CHILD_TYPE;
   const nextRelatedNameRaw = Object.prototype.hasOwnProperty.call(body, "relatedPersonName")
@@ -99,6 +119,18 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   if (nextType !== CHILD_TYPE && childOrderParsed.provided && childOrderParsed.value != null) {
     return jsonError("childOrder est autorisé uniquement pour un document enfant", 400);
+  }
+
+  if (nextType !== "CONTRACT") {
+    nextContractDocumentTypeId = null;
+  } else if (nextContractDocumentTypeId) {
+    const contractType = await prisma.contractDocumentType.findUnique({
+      where: { id: nextContractDocumentTypeId },
+      select: { id: true },
+    });
+    if (!contractType) {
+      return jsonError("Type de contrat introuvable", 404);
+    }
   }
 
   const nextChildOrder = nextType === CHILD_TYPE ? childOrderParsed.value : null;
@@ -144,6 +176,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       childOrder: nextChildOrder,
       fileName: nextFileName,
       ...(nextMimeType && nextFileDataUrl ? { mimeType: nextMimeType, fileDataUrl: nextFileDataUrl } : {}),
+      contractDocumentTypeId: nextContractDocumentTypeId,
     },
     select: {
       id: true,
@@ -151,6 +184,13 @@ export async function PUT(req: Request, ctx: Ctx) {
       type: true,
       relatedPersonName: true,
       childOrder: true,
+      contractDocumentTypeId: true,
+      contractDocumentType: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       fileName: true,
       mimeType: true,
       createdAt: true,

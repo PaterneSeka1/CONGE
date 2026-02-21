@@ -93,6 +93,13 @@ export async function GET(req: Request) {
       type: true,
       relatedPersonName: true,
       childOrder: true,
+      contractDocumentTypeId: true,
+      contractDocumentType: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
       fileName: true,
       mimeType: true,
       ...(includeFileData ? { fileDataUrl: true } : {}),
@@ -128,9 +135,6 @@ export async function POST(req: Request) {
   if (!authRes.ok) return authRes.error;
 
   const { id: actorId, role } = authRes.auth;
-  if (role === "CEO") {
-    return jsonError("Le PDG ne peut pas ajouter de documents administratifs", 403);
-  }
 
   const body = await req.json().catch(() => ({}));
 
@@ -139,6 +143,7 @@ export async function POST(req: Request) {
   const fileDataUrl = norm(body?.fileDataUrl);
   const relatedPersonName = norm(body?.relatedPersonName) || null;
   const childOrderParsed = parsePositiveIntResult(body?.childOrder);
+  const contractDocumentTypeId = norm(body?.contractDocumentTypeId) || null;
   const requestedEmployeeId = norm(body?.employeeId);
   let employeeId = actorId;
   if (requestedEmployeeId && requestedEmployeeId !== actorId) {
@@ -152,6 +157,14 @@ export async function POST(req: Request) {
     return jsonError("Type de document invalide", 400);
   }
 
+  const isContractType = type === "CONTRACT";
+  if (role === "CEO" && !isContractType) {
+    return jsonError("Le PDG ne peut pas ajouter de documents RH autres que les contrats", 403);
+  }
+  if (isContractType && role !== "ACCOUNTANT" && role !== "CEO") {
+    return jsonError("Seule la comptable (ou le PDG) peut ajouter des documents de contrats", 403);
+  }
+
   if (!fileName || !fileDataUrl) {
     return jsonError("Champs requis: type, fileName, fileDataUrl", 400);
   }
@@ -163,6 +176,18 @@ export async function POST(req: Request) {
   }
   if (type !== CHILD_TYPE && childOrderParsed.provided) {
     return jsonError("childOrder est autorisé uniquement pour un document enfant", 400);
+  }
+
+  if (contractDocumentTypeId && type !== "CONTRACT") {
+    return jsonError("contractDocumentTypeId est réservé aux contrats", 400);
+  }
+
+  if (contractDocumentTypeId && type === "CONTRACT") {
+    const contractType = await prisma.contractDocumentType.findUnique({
+      where: { id: contractDocumentTypeId },
+      select: { id: true },
+    });
+    if (!contractType) return jsonError("Type de contrat introuvable", 404);
   }
 
   if (fileDataUrl.length > MAX_DATA_URL_LENGTH) {
@@ -203,6 +228,7 @@ export async function POST(req: Request) {
       mimeType,
       fileDataUrl,
       uploadedById: actorId,
+      contractDocumentTypeId: type === "CONTRACT" ? contractDocumentTypeId : null,
     },
     select: {
       id: true,
@@ -210,6 +236,7 @@ export async function POST(req: Request) {
       type: true,
       relatedPersonName: true,
       childOrder: true,
+      contractDocumentTypeId: true,
       fileName: true,
       mimeType: true,
       createdAt: true,

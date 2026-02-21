@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { jsonError, verifyJwt } from "@/lib/auth";
 import { norm } from "@/lib/validators";
 import { isEmployeeGender } from "@/lib/employee-gender";
+import { isMaritalStatus } from "@/lib/marital-status";
 import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 function isValidHttpUrl(value: string) {
@@ -19,15 +20,6 @@ function isValidHttpUrl(value: string) {
 
 function isValidImageDataUrl(value: string) {
   return /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(value);
-}
-
-function parseCompanyEntryDate(value: unknown) {
-  const raw = norm(value);
-  if (!raw) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
-  const date = new Date(`${raw}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date;
 }
 
 export async function GET(req: Request) {
@@ -58,6 +50,9 @@ export async function GET(req: Request) {
       status: true,
       departmentId: true,
       serviceId: true,
+      maritalStatus: true,
+      childrenCount: true,
+      hireDateFormatted: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -76,6 +71,13 @@ export async function PUT(req: Request) {
   if (!id) return jsonError("Token invalide", 401);
 
   const body = await req.json().catch(() => ({}));
+
+  if (
+    Object.prototype.hasOwnProperty.call(body, "hireDate") ||
+    Object.prototype.hasOwnProperty.call(body, "companyEntryDate")
+  ) {
+    return jsonError("Date d'embauche non modifiable", 400);
+  }
 
   const data: Record<string, unknown> = {};
 
@@ -113,22 +115,6 @@ export async function PUT(req: Request) {
     const value = norm(body?.fullAddress);
     data.fullAddress = value || null;
   }
-  if (Object.prototype.hasOwnProperty.call(body, "companyEntryDate")) {
-    const parsed = parseCompanyEntryDate(body?.companyEntryDate);
-    if (parsed === undefined) {
-      return jsonError("Date d'entrée invalide (format YYYY-MM-DD)", 400);
-    }
-    data.companyEntryDate = parsed;
-    data.hireDate = parsed;
-  }
-  if (Object.prototype.hasOwnProperty.call(body, "hireDate")) {
-    const parsed = parseCompanyEntryDate(body?.hireDate);
-    if (parsed === undefined) {
-      return jsonError("Date d'embauche invalide (format YYYY-MM-DD)", 400);
-    }
-    data.hireDate = parsed;
-    data.companyEntryDate = parsed;
-  }
   if (Object.prototype.hasOwnProperty.call(body, "cnpsNumber")) {
     const value = norm(body?.cnpsNumber);
     if (!value) {
@@ -147,6 +133,28 @@ export async function PUT(req: Request) {
       return jsonError("gender invalide", 400);
     } else {
       data.gender = value;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "maritalStatus")) {
+    const value = norm(body?.maritalStatus);
+    if (!value) {
+      data.maritalStatus = null;
+    } else if (!isMaritalStatus(value)) {
+      return jsonError("maritalStatus invalide", 400);
+    } else {
+      data.maritalStatus = value;
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "childrenCount")) {
+    const raw = body?.childrenCount;
+    if (raw === "" || raw === null || raw === undefined) {
+      data.childrenCount = null;
+    } else {
+      const parsed = Number(raw);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        return jsonError("childrenCount invalide", 400);
+      }
+      data.childrenCount = parsed;
     }
   }
   if (Object.prototype.hasOwnProperty.call(body, "password")) {
@@ -187,6 +195,8 @@ export async function PUT(req: Request) {
       leaveBalance: true,
       departmentId: true,
       serviceId: true,
+      maritalStatus: true,
+      childrenCount: true,
     },
   });
 

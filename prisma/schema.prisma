@@ -52,6 +52,11 @@ enum EmployeeStatus {
   REJECTED
 }
 
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+}
+
 enum EmployeeGender {
   FEMALE
   MALE
@@ -134,8 +139,11 @@ model Employee {
   profilePhotoUrl String?
   fullAddress String?
   gender EmployeeGender?
+  maritalStatus MaritalStatus?
+  childrenCount Int?
   hireDate DateTime?
   companyEntryDate DateTime?
+  hireDateFormatted String?
   cnpsNumber String?
   password  String
 
@@ -162,6 +170,7 @@ model Employee {
   signedSalarySlips SalarySlip[] @relation("SalarySlipSigner")
   documents EmployeeDocument[] @relation("EmployeeDocuments")
   uploadedDocuments EmployeeDocument[] @relation("EmployeeDocumentUploader")
+  createdContractDocumentTypes ContractDocumentType[] @relation("EmployeeCreatedContractDocumentTypes")
   ceoSignatureImageDataUrl String?
   ceoSignatureImageMimeType String?
 
@@ -225,6 +234,9 @@ model EmployeeDocument {
   mimeType String
   fileDataUrl String
 
+  contractDocumentTypeId String? @db.ObjectId
+  contractDocumentType ContractDocumentType? @relation("ContractDocumentTypeDocuments", fields: [contractDocumentTypeId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
   uploadedById String   @db.ObjectId
   uploadedBy   Employee @relation("EmployeeDocumentUploader", fields: [uploadedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -234,7 +246,24 @@ model EmployeeDocument {
   @@index([employeeId])
   @@index([uploadedById])
   @@index([type])
+  @@index([contractDocumentTypeId])
   @@index([createdAt])
+}
+
+model ContractDocumentType {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  name String @unique
+
+  createdById String    @db.ObjectId
+  createdBy   Employee  @relation("EmployeeCreatedContractDocumentTypes", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  documents EmployeeDocument[] @relation("ContractDocumentTypeDocuments")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdById])
 }
 
 model DepartmentResponsibility {

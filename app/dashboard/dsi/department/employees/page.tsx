@@ -55,14 +55,15 @@ export default function DsiDepartmentEmployees() {
   const currentEmployee = useMemo(() => getEmployee(), []);
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<EmployeeRow | null>(null);
 
-  const startEdit = (row: EmployeeRow) => {
+  const startEdit = useCallback((row: EmployeeRow) => {
     setEditingId(row.id);
     setDraft({ ...row });
-  };
+  }, []);
 
   const cancelEdit = () => {
     setEditingId(null);
@@ -74,22 +75,27 @@ export default function DsiDepartmentEmployees() {
     const token = getToken();
     if (!token) return;
 
+    setIsSaving(true);
     // optimistic update
     setRows((prev) => prev.map((r) => (r.id === draft.id ? draft : r)));
     setEditingId(null);
     setDraft(null);
 
-    await fetch(`/api/employees/${draft.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        firstName: draft.firstName,
-        lastName: draft.lastName,
-        jobTitle: draft.jobTitle,
-        departmentId: draft.department ?? null,
-        serviceId: draft.service ?? null,
-      }),
-    });
+    try {
+      await fetch(`/api/employees/${draft.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          firstName: draft.firstName,
+          lastName: draft.lastName,
+          jobTitle: draft.jobTitle,
+          departmentId: draft.department ?? null,
+          serviceId: draft.service ?? null,
+        }),
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }, [draft]);
 
   const loadEmployees = useCallback(async () => {
@@ -140,77 +146,31 @@ export default function DsiDepartmentEmployees() {
         id: "employee",
         header: "Employé",
         accessorFn: (row) => `${row.firstName} ${row.lastName}`,
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) {
-            return (
-              <div className="flex items-center gap-2">
-                <EmployeeAvatar
-                  firstName={row.original.firstName}
-                  lastName={row.original.lastName}
-                  profilePhotoUrl={row.original.profilePhotoUrl}
-                />
-                <div>
-                  <div className="font-semibold">
-                    {row.original.firstName} {row.original.lastName}
-                  </div>
-                  <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
-                </div>
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <EmployeeAvatar
+              firstName={row.original.firstName}
+              lastName={row.original.lastName}
+              profilePhotoUrl={row.original.profilePhotoUrl}
+            />
+            <div>
+              <div className="font-semibold">
+                {row.original.firstName} {row.original.lastName}
               </div>
-            );
-          }
-          return (
-            <div className="grid gap-2">
-              <input
-                value={draft.firstName}
-                onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Prénom"
-              />
-              <input
-                value={draft.lastName}
-                onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
-                className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                placeholder="Nom"
-              />
-              <input
-                value={draft.matricule ?? ""}
-                readOnly
-                className="w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-2 py-1 text-sm text-vdm-gold-800"
-              />
+              <div className="text-xs text-vdm-gold-700">{row.original.matricule ?? ""}</div>
             </div>
-          );
-        },
+          </div>
+        ),
       },
       {
         header: "E-mail",
         accessorKey: "email",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.email;
-          return (
-            <input
-              value={draft.email}
-              readOnly
-              className="w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-2 py-1 text-sm text-vdm-gold-800"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.email,
       },
       {
         header: "Poste",
         accessorKey: "jobTitle",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.jobTitle ?? "—";
-          return (
-            <input
-              value={draft.jobTitle ?? ""}
-              onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.jobTitle ?? "—",
       },
       {
         header: "Rôle",
@@ -220,81 +180,32 @@ export default function DsiDepartmentEmployees() {
       {
         header: "Statut",
         accessorKey: "status",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          const current = isEdit && draft ? draft.status : row.original.status;
-          return (
-            <span className={isEdit ? "text-vdm-gold-700" : ""}>
-              {statusLabel[current] ?? current}
-            </span>
-          );
-        },
+        cell: ({ row }) => <span>{statusLabel[row.original.status] ?? row.original.status}</span>,
       },
       {
         header: "Département",
         accessorKey: "department",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.departmentName ?? "—";
-          return (
-            <input
-              value={draft.department ?? ""}
-              onChange={(e) => setDraft({ ...draft, department: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.departmentName ?? "—",
       },
       {
         header: "Service",
         accessorKey: "service",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit || !draft) return row.original.serviceName ?? "—";
-          return (
-            <input
-              value={draft.service ?? ""}
-              onChange={(e) => setDraft({ ...draft, service: e.target.value })}
-              className="w-full rounded-md border border-vdm-gold-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            />
-          );
-        },
+        cell: ({ row }) => row.original.serviceName ?? "—",
       },
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }) => {
-          const isEdit = row.original.id === editingId;
-          if (!isEdit) {
-            return (
-              <button
-                onClick={() => startEdit(row.original)}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Modifier
-              </button>
-            );
-          }
-          return (
-            <div className="flex gap-2">
-              <button
-                onClick={saveEdit}
-                className="px-2 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800"
-              >
-                Enregistrer
-              </button>
-              <button
-                onClick={cancelEdit}
-                className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-              >
-                Annuler
-              </button>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <button
+            onClick={() => startEdit(row.original)}
+            className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+          >
+            Modifier
+          </button>
+        ),
       },
     ],
-    [editingId, draft, saveEdit]
+    [startEdit]
   );
 
   return (
@@ -312,6 +223,105 @@ export default function DsiDepartmentEmployees() {
         onRefresh={loadEmployees}
       />
       {isLoading ? <div className="mt-3 text-xs text-vdm-gold-700">Chargement des employés...</div> : null}
+
+      {editingId && draft ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl border border-vdm-gold-200 bg-white p-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-vdm-gold-900">Modifier l&apos;employé</h2>
+              <p className="text-sm text-vdm-gold-700">
+                {draft.firstName} {draft.lastName}
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm text-vdm-gold-900">
+                Prénom
+                <input
+                  value={draft.firstName}
+                  onChange={(e) => setDraft({ ...draft, firstName: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Nom
+                <input
+                  value={draft.lastName}
+                  onChange={(e) => setDraft({ ...draft, lastName: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Poste
+                <input
+                  value={draft.jobTitle ?? ""}
+                  onChange={(e) => setDraft({ ...draft, jobTitle: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Département (ID)
+                <input
+                  value={draft.department ?? ""}
+                  onChange={(e) => setDraft({ ...draft, department: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Service (ID)
+                <input
+                  value={draft.service ?? ""}
+                  onChange={(e) => setDraft({ ...draft, service: e.target.value })}
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                E-mail
+                <input
+                  value={draft.email}
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Matricule
+                <input
+                  value={draft.matricule ?? ""}
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
+                />
+              </label>
+              <label className="text-sm text-vdm-gold-900">
+                Statut
+                <input
+                  value={statusLabel[draft.status] ?? draft.status}
+                  readOnly
+                  className="mt-1 w-full rounded-md border border-vdm-gold-200 bg-vdm-gold-50 px-3 py-2 text-sm text-vdm-gold-800"
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={isSaving}
+                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={isSaving}
+                className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+              >
+                {isSaving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

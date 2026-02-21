@@ -1,4 +1,5 @@
 import { EmployeeGender } from "@/lib/employee-gender";
+import { MaritalStatus } from "@/lib/marital-status";
 
 export type EmployeeRole = "CEO" | "ACCOUNTANT" | "DEPT_HEAD" | "SERVICE_HEAD" | "EMPLOYEE";
 export type EmployeeStatus = "PENDING" | "ACTIVE" | "REJECTED";
@@ -16,6 +17,8 @@ export type EmployeeSession = {
   companyEntryDate?: string | null;
   cnpsNumber?: string | null;
   gender?: EmployeeGender | null;
+  maritalStatus?: MaritalStatus | null;
+  childrenCount?: number | null;
   role: EmployeeRole;
   status: EmployeeStatus;
   leaveBalance?: number;
@@ -23,6 +26,7 @@ export type EmployeeSession = {
   serviceId?: string | null;
   isDsiAdmin?: boolean;
   departmentType?: "DAF" | "DSI" | "OPERATIONS" | "OTHERS" | string | null;
+  hireDateFormatted?: string | null;
 };
 
 export function getToken(): string | null {
@@ -104,12 +108,23 @@ export function hasCnpsNumber(employee?: EmployeeSession | null) {
   return Boolean(employee?.cnpsNumber && String(employee.cnpsNumber).trim().length > 0);
 }
 
+export function hasMaritalStatus(employee?: EmployeeSession | null) {
+  return Boolean(employee?.maritalStatus);
+}
+
+export function hasChildrenCount(employee?: EmployeeSession | null) {
+  const value = employee?.childrenCount;
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
 export function hasRequiredProfileData(employee?: EmployeeSession | null) {
   return (
     hasProfilePhoto(employee) &&
     hasPreciseAddress(employee) &&
     hasPhoneNumber(employee) &&
     hasCompanyEntryDate(employee) &&
-    hasCnpsNumber(employee)
+    hasCnpsNumber(employee) &&
+    hasMaritalStatus(employee) &&
+    hasChildrenCount(employee)
   );
 }

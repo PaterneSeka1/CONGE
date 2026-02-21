@@ -28,7 +28,7 @@ export const operationsMenu: SidebarSection[] = [
     title: "Documents",
     links: [
       { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/operations/payslips" },
-      { label: "Contrats", icon: "shield", to: "/dashboard/operations/documents/contracts" },
+      { label: "Mes contrats", icon: "shield", to: "/dashboard/operations/documents/contracts" },
     ],
   },
   {

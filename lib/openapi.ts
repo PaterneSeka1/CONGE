@@ -159,6 +159,7 @@ export const openapiSpec = {
                 "CURRICULUM_VITAE",
                 "COVER_LETTER",
                 "GEOGRAPHIC_LOCATION",
+                "CONTRACT",
               ],
             },
           },
@@ -186,6 +187,7 @@ export const openapiSpec = {
                       "CURRICULUM_VITAE",
                       "COVER_LETTER",
                       "GEOGRAPHIC_LOCATION",
+                      "CONTRACT",
                     ],
                   },
                   relatedPersonName: {
@@ -197,6 +199,11 @@ export const openapiSpec = {
                     type: "integer",
                     nullable: true,
                     description: "Rang de l'enfant (optionnel, uniquement pour CHILD_BIRTH_CERTIFICATE)",
+                  },
+                  contractDocumentTypeId: {
+                    type: "string",
+                    nullable: true,
+                    description: "Identifiant du type spécifique pour les documents de type CONTRACT.",
                   },
                   fileName: { type: "string" },
                   fileDataUrl: {
@@ -211,6 +218,45 @@ export const openapiSpec = {
         responses: {
           "201": { description: "Créé" },
           "403": { description: "Ajout interdit (PDG) ou tentative d'ajout pour un autre employé" },
+        },
+      },
+    },
+    "/api/contract-document-types": {
+      get: {
+        summary: "Lister les catégories spécifiques de documents de contrats",
+        responses: { "200": { description: "OK" } },
+      },
+      post: {
+        summary: "Créer un type de document de contrat (comptable uniquement)",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name"],
+                properties: {
+                  name: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "201": { description: "Créé" },
+          "403": { description: "Accès refusé" },
+          "409": { description: "Doublon" },
+        },
+      },
+    },
+    "/api/contract-document-types/{id}": {
+      delete: {
+        summary: "Supprimer un type de document de contrat (comptable uniquement)",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: {
+          "200": { description: "Supprimé" },
+          "403": { description: "Accès refusé" },
+          "404": { description: "Introuvable" },
         },
       },
     },

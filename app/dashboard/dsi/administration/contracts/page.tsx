@@ -1,9 +1,5 @@
-"use client";
-
-import ContractsPage from "@/app/components/ContractsPage";
+import { redirect } from "next/navigation";
 
 export default function DsiAdministrationContractsPage() {
-  return (
-    <ContractsPage description="Consultez tous les contrats, avenants et documents administratifs déposés par la comptable." />
-  );
+  redirect("/dashboard/employee/documents/contracts");
 }

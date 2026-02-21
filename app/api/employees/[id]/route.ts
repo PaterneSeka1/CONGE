@@ -9,15 +9,6 @@ import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-function parseDateInput(value: unknown) {
-  const raw = norm(value);
-  if (!raw) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
-  const date = new Date(`${raw}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  return date;
-}
-
 export async function DELETE(req: Request, ctx: Ctx) {
   const authRes = requireAuth(req);
   if (!authRes.ok) return authRes.error;
@@ -135,10 +126,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     data.serviceId = v || null;
   }
   if (Object.prototype.hasOwnProperty.call(body, "hireDate")) {
-    const parsed = parseDateInput(body?.hireDate);
-    if (parsed === undefined) return jsonError("hireDate invalide (YYYY-MM-DD)", 400);
-    data.hireDate = parsed;
-    data.companyEntryDate = parsed;
+    return jsonError("Modification de la date d'embauche interdite", 403);
   }
 
   if (Object.keys(data).length === 0) {

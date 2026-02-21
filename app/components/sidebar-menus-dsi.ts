@@ -30,7 +30,7 @@ export const dsiMenu: SidebarSection[] = [
     title: "Documents",
     links: [
       { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/dsi/payslips" },
-      { label: "Contrats", icon: "shield", to: "/dashboard/dsi/administration/contracts" },
+      { label: "Mes contrats", icon: "shield", to: "/dashboard/dsi/administration/contracts" },
     ],
   },
   {

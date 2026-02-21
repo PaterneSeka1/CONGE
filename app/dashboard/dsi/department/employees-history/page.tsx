@@ -22,6 +22,7 @@ type HistoryItem = {
   decidedBy: string;
   decidedAt: string;
   days: number;
+  year: number | null;
 };
 
 type LeaveApiItem = {
@@ -68,6 +69,7 @@ export default function DsiDeptEmployeesHistory() {
   const [rows, setRows] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
+  const [historyYearFilter, setHistoryYearFilter] = useState("CURRENT");
 
   const loadHistory = useCallback(async () => {
     const token = getToken();
@@ -94,6 +96,9 @@ export default function DsiDeptEmployeesHistory() {
           const endRaw = item.endDate ?? "";
           const decidedAtRaw = item.decisions?.[0]?.createdAt;
           const actor = item.decisions?.[0]?.actor;
+          const startRawDate = startRaw ? new Date(startRaw) : null;
+          const leaveYear =
+            startRawDate && !Number.isNaN(startRawDate.getTime()) ? startRawDate.getUTCFullYear() : null;
 
           return {
             id: item.id,
@@ -114,6 +119,7 @@ export default function DsiDeptEmployeesHistory() {
               "-",
             decidedAt: decidedAtRaw ? formatDateDMY(decidedAtRaw) : "-",
             days: startRaw && endRaw ? daysBetweenInclusive(startRaw, endRaw) : 0,
+            year: leaveYear,
           };
         });
 
@@ -130,10 +136,32 @@ export default function DsiDeptEmployeesHistory() {
     return () => window.cancelAnimationFrame(frame);
   }, [loadHistory]);
 
+  const historyYears = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows
+            .map((item) => item.year)
+            .filter((value): value is number => value != null)
+        )
+      ).sort((a, b) => b - a),
+    [rows]
+  );
+
   const filteredHistoryItems = useMemo(() => {
-    if (historyStatusFilter === "ALL") return rows;
-    return rows.filter((item) => item.status === historyStatusFilter);
-  }, [rows, historyStatusFilter]);
+    const currentYear = new Date().getUTCFullYear();
+    return rows.filter((item) => {
+      const statusMatched =
+        historyStatusFilter === "ALL" ? true : item.status === historyStatusFilter;
+      if (!statusMatched) return false;
+
+      if (historyYearFilter === "ALL") return true;
+      if (historyYearFilter === "CURRENT") return item.year === currentYear;
+      const selectedYear = Number(historyYearFilter);
+      if (!Number.isInteger(selectedYear)) return true;
+      return item.year === selectedYear;
+    });
+  }, [rows, historyStatusFilter, historyYearFilter]);
 
   const columns = useMemo<ColumnDef<HistoryItem>[]>(
     () => [
@@ -194,17 +222,35 @@ export default function DsiDeptEmployeesHistory() {
       </div>
 
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-vdm-gold-700">Filtrer par statut</div>
-        <select
-          value={historyStatusFilter}
-          onChange={(e) => setHistoryStatusFilter(e.target.value)}
-          className="w-full sm:w-56 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-        >
-          <option value="ALL">Tous</option>
-          <option value="APPROVED">Validée</option>
-          <option value="REJECTED">Refusée</option>
-          <option value="CANCELLED">Annulée</option>
-        </select>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+          <span className="text-xs text-vdm-gold-700">Filtrer par statut</span>
+          <select
+            value={historyStatusFilter}
+            onChange={(e) => setHistoryStatusFilter(e.target.value)}
+            className="w-full sm:w-48 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+          >
+            <option value="ALL">Tous</option>
+            <option value="APPROVED">Validée</option>
+            <option value="REJECTED">Refusée</option>
+            <option value="CANCELLED">Annulée</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+          <span className="text-xs text-vdm-gold-700">Filtrer par année</span>
+          <select
+            value={historyYearFilter}
+            onChange={(e) => setHistoryYearFilter(e.target.value)}
+            className="w-full sm:w-48 rounded-md border border-vdm-gold-200 bg-white px-3 py-2 text-sm text-vdm-gold-900 focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+          >
+            <option value="CURRENT">Année en cours</option>
+            <option value="ALL">Toutes</option>
+            {historyYears.map((y) => (
+              <option key={y} value={String(y)}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <DataTable

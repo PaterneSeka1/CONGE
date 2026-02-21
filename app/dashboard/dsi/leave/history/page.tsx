@@ -52,7 +52,7 @@ export default function DsiLeaveHistory() {
   const HISTORY_PAGE_SIZE = 120;
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [historyYearFilter, setHistoryYearFilter] = useState("PAST");
+  const [historyYearFilter, setHistoryYearFilter] = useState("CURRENT");
   const [historyPage, setHistoryPage] = useState(1);
   const [historyHasNext, setHistoryHasNext] = useState(false);
 
@@ -120,7 +120,7 @@ export default function DsiLeaveHistory() {
   const filteredItems = useMemo(() => {
     const currentYear = new Date().getUTCFullYear();
     if (historyYearFilter === "ALL") return items;
-    if (historyYearFilter === "PAST") return items.filter((item) => item.year != null && item.year < currentYear);
+    if (historyYearFilter === "CURRENT") return items.filter((item) => item.year === currentYear);
     const selectedYear = Number(historyYearFilter);
     if (!Number.isInteger(selectedYear)) return items;
     return items.filter((item) => item.year === selectedYear);
@@ -170,7 +170,7 @@ export default function DsiLeaveHistory() {
             onChange={(e) => setHistoryYearFilter(e.target.value)}
             className="mt-1 w-full sm:w-72 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
           >
-            <option value="PAST">Années passées</option>
+            <option value="CURRENT">Année en cours</option>
             <option value="ALL">Toutes</option>
             {historyYears.map((y) => (
               <option key={y} value={String(y)}>

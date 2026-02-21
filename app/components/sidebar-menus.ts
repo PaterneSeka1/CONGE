@@ -52,13 +52,17 @@ export const accountantMenu: SidebarSection[] = [
     links: [
       { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/accountant/payslips" },
       { label: "Bulletins importés", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
-      { label: "Contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
     ],
   },
   {
     title: "Administration",
     links: [
-      { label: "Contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
+      { label: "Mes contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
+      {
+        label: "Contrats des employés",
+        icon: "shield",
+        to: "/dashboard/accountant/administration/contracts/employees",
+      },
     ],
   },
   {
