@@ -45,6 +45,7 @@ type Props = {
   isContractDocumentTypesLoading?: boolean;
   showUploader?: boolean;
   showEmployeeFilter?: boolean;
+  filterContractDocumentTypeId?: string;
 };
 
 export default function ContractDocumentsSection({
@@ -53,9 +54,12 @@ export default function ContractDocumentsSection({
   isContractDocumentTypesLoading = false,
   showUploader = true,
   showEmployeeFilter = true,
+  filterContractDocumentTypeId = "",
 }: Props) {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
-  const [filterEmployeeId, setFilterEmployeeId] = useState<string>(ALL_EMPLOYEES_VALUE);
+  const [filterEmployeeId, setFilterEmployeeId] = useState<string>(() =>
+    showEmployeeFilter ? ALL_EMPLOYEES_VALUE : employee.id
+  );
   const [uploadEmployeeId, setUploadEmployeeId] = useState(employee.id);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [selectedContractDocumentTypeId, setSelectedContractDocumentTypeId] = useState("");
@@ -64,6 +68,10 @@ export default function ContractDocumentsSection({
   const [isUploading, setIsUploading] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [openingDocId, setOpeningDocId] = useState<string | null>(null);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
+  const [isEditingDoc, setIsEditingDoc] = useState(false);
   useEffect(() => {
     if (contractDocumentTypes.length === 0) {
       setSelectedContractDocumentTypeId("");
@@ -93,6 +101,44 @@ export default function ContractDocumentsSection({
 
     loadEmployees();
   }, [employee.id, showEmployeeFilter, showUploader]);
+
+  const employeesWithSelectedType = useMemo(() => {
+    const set = new Set<string>();
+    for (const doc of documents) {
+      if (selectedContractDocumentTypeId) {
+        if (doc.contractDocumentType?.id === selectedContractDocumentTypeId) {
+          set.add(doc.employeeId);
+        }
+      } else if (!doc.contractDocumentTypeId) {
+        set.add(doc.employeeId);
+      }
+    }
+    return set;
+  }, [documents, selectedContractDocumentTypeId]);
+
+  const availableUploadEmployees = useMemo(
+    () => employees.filter((item) => !employeesWithSelectedType.has(item.id)),
+    [employees, employeesWithSelectedType]
+  );
+
+  useEffect(() => {
+    if (!showUploader) return;
+    if (availableUploadEmployees.length === 0) {
+      setUploadEmployeeId("");
+      return;
+    }
+    setUploadEmployeeId((prev) =>
+      availableUploadEmployees.some((item) => item.id === prev) ? prev : availableUploadEmployees[0]?.id ?? ""
+    );
+  }, [availableUploadEmployees, showUploader]);
+
+  useEffect(() => {
+    if (!showEmployeeFilter) {
+      setFilterEmployeeId(employee.id);
+    } else if (filterEmployeeId === employee.id) {
+      setFilterEmployeeId(ALL_EMPLOYEES_VALUE);
+    }
+  }, [employee.id, showEmployeeFilter, filterEmployeeId]);
 
   const fetchDocuments = useCallback(async () => {
     const token = getToken();
@@ -124,9 +170,14 @@ export default function ContractDocumentsSection({
     fetchDocuments();
   }, [fetchDocuments]);
 
+  const filteredDocuments = useMemo(() => {
+    if (!filterContractDocumentTypeId) return documents;
+    return documents.filter((doc) => doc.contractDocumentType?.id === filterContractDocumentTypeId);
+  }, [documents, filterContractDocumentTypeId]);
+
   const groupedDocuments = useMemo(() => {
     const buckets = new Map<string, ContractDocument[]>();
-    for (const doc of documents) {
+    for (const doc of filteredDocuments) {
       const key = doc.contractDocumentType?.name ?? "Sans catégorie";
       if (!buckets.has(key)) buckets.set(key, []);
       buckets.get(key)!.push(doc);
@@ -215,6 +266,81 @@ export default function ContractDocumentsSection({
     }
   };
 
+  const deleteDocument = async (doc: ContractDocument) => {
+    if (!window.confirm(`Supprimer "${doc.fileName}" ?`)) return;
+    const token = getToken();
+    if (!token) return;
+    setDeletingDocId(doc.id);
+    try {
+      const res = await fetch(`/api/employee-documents/${doc.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(String(data?.error ?? "Erreur lors de la suppression"));
+        return;
+      }
+      toast.success("Document supprimé.");
+      fetchDocuments();
+    } catch {
+      toast.error("Erreur réseau lors de la suppression");
+    } finally {
+      setDeletingDocId(null);
+    }
+  };
+
+  const startEditDocument = (doc: ContractDocument) => {
+    setEditingDocId(doc.id);
+    setEditSelectedFile(null);
+  };
+
+  const cancelEditDocument = () => {
+    if (isEditingDoc) return;
+    setEditingDocId(null);
+    setEditSelectedFile(null);
+  };
+
+  const saveDocumentEdit = async (doc: ContractDocument) => {
+    if (!editSelectedFile) {
+      toast.error("Sélectionnez un fichier avant d'enregistrer.");
+      return;
+    }
+    setIsEditingDoc(true);
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+        reader.onerror = () => reject(new Error("Impossible de lire le fichier"));
+        reader.readAsDataURL(editSelectedFile);
+      });
+      const token = getToken();
+      if (!token) return;
+      const payload = {
+        fileName: editSelectedFile.name,
+        fileDataUrl: dataUrl,
+      };
+      const res = await fetch(`/api/employee-documents/${doc.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(String(data?.error ?? "Erreur lors de la modification"));
+        return;
+      }
+      toast.success("Document modifié.");
+      setEditingDocId(null);
+      setEditSelectedFile(null);
+      fetchDocuments();
+    } catch {
+      toast.error("Erreur réseau lors de la modification");
+    } finally {
+      setIsEditingDoc(false);
+    }
+  };
+
   return (
     <div className="bg-white border border-vdm-gold-200 rounded-xl p-6 space-y-6">
       <div>
@@ -249,11 +375,15 @@ export default function ContractDocumentsSection({
                     onChange={(e) => setUploadEmployeeId(e.target.value)}
                     className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
                   >
-                    {employees.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {employeeLabel(item)}
-                      </option>
-                    ))}
+                    {availableUploadEmployees.length === 0 ? (
+                      <option value="">Aucun collaborateur disponible</option>
+                    ) : (
+                      availableUploadEmployees.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {employeeLabel(item)}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
               ) : null}
@@ -327,15 +457,61 @@ export default function ContractDocumentsSection({
                           {employeeLabel(doc.employee)} · ajouté le {formatDate(doc.createdAt)}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => openDocument(doc)}
-                        disabled={openingDocId === doc.id}
-                        className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                      >
-                        {openingDocId === doc.id ? "Ouverture..." : "Ouvrir"}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openDocument(doc)}
+                          disabled={openingDocId === doc.id}
+                          className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                        >
+                          {openingDocId === doc.id ? "Ouverture..." : "Ouvrir"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startEditDocument(doc)}
+                          disabled={editingDocId === doc.id}
+                          className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteDocument(doc)}
+                          disabled={deletingDocId === doc.id}
+                          className="px-3 py-1 rounded-md border border-red-300 text-xs text-red-700 hover:bg-red-50 disabled:opacity-60"
+                        >
+                          {deletingDocId === doc.id ? "Suppression..." : "Supprimer"}
+                        </button>
+                      </div>
                     </div>
+                    {editingDocId === doc.id ? (
+                      <div className="flex flex-col gap-2">
+                        <input
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png,image/webp"
+                          onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
+                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => saveDocumentEdit(doc)}
+                            disabled={isEditingDoc || !editSelectedFile}
+                            className="px-3 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800 disabled:opacity-60"
+                          >
+                            {isEditingDoc ? "Enregistrement..." : "Sauvegarder"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditDocument}
+                            disabled={isEditingDoc}
+                            className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

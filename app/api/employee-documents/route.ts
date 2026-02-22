@@ -24,6 +24,8 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 const DATA_URL_RE = /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,[A-Za-z0-9+/=]+$/;
 const MAX_DATA_URL_LENGTH = 12 * 1024 * 1024;
+const DEFAULT_PAGE_SIZE = 30;
+const MAX_PAGE_SIZE = 90;
 const SPOUSE_TYPE = "SPOUSE_BIRTH_CERTIFICATE";
 const CHILD_TYPE = "CHILD_BIRTH_CERTIFICATE";
 
@@ -67,6 +69,15 @@ export async function GET(req: Request) {
   const employeeId = norm(url.searchParams.get("employeeId"));
   const type = norm(url.searchParams.get("type"));
   const includeFileData = url.searchParams.get("includeFileData") === "1";
+  const excludeEmployeeId = norm(url.searchParams.get("excludeEmployeeId"));
+  const skipParam = url.searchParams.get("skip");
+  const takeParam = url.searchParams.get("take");
+  const requestedSkip = Number(skipParam);
+  const requestedTake = Number(takeParam);
+  const skip = Number.isInteger(requestedSkip) && requestedSkip >= 0 ? requestedSkip : 0;
+  const normalizedTake =
+    Number.isInteger(requestedTake) && requestedTake > 0 ? requestedTake : DEFAULT_PAGE_SIZE + 1;
+  const take = Math.min(normalizedTake, MAX_PAGE_SIZE + 1);
 
   if (type && !DOCUMENT_TYPES.has(type)) {
     return jsonError("Type de document invalide", 400);
@@ -82,6 +93,8 @@ export async function GET(req: Request) {
     where.employeeId = actorId;
   } else if (employeeId) {
     where.employeeId = employeeId;
+  } else if (excludeEmployeeId) {
+    where.employeeId = { not: excludeEmployeeId };
   }
 
   if (type) {
@@ -95,6 +108,8 @@ export async function GET(req: Request) {
         role: { not: "CEO" },
       },
     },
+    skip,
+    take,
     select: {
       id: true,
       employeeId: true,

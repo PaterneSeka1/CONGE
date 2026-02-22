@@ -61,7 +61,7 @@ export const accountantMenu: SidebarSection[] = [
       {
         label: "Contrats des employés",
         icon: "shield",
-        to: "/dashboard/accountant/administration/contracts/employees",
+        to: "/dashboard/accountant/administration/contracts/types",
       },
     ],
   },

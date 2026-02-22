@@ -18,6 +18,7 @@ export const DEFAULT_DOCUMENT_TYPES = [
 
 export type DocumentTypeItem = (typeof DEFAULT_DOCUMENT_TYPES)[number];
 export type DocumentType = DocumentTypeItem["value"];
+export const PROFILE_DOCUMENT_TYPES = DEFAULT_DOCUMENT_TYPES.filter((item) => item.value !== "CONTRACT");
 
 type EmployeeOption = {
   id: string;
@@ -51,6 +52,7 @@ type EmployeeDocument = {
 };
 
 const ALL_EMPLOYEES_VALUE = "__ALL__";
+const PAGE_SIZE = 30;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -123,6 +125,9 @@ export default function EmployeeDocumentsSection({
   const [uploadOwnerDocuments, setUploadOwnerDocuments] = useState<EmployeeDocument[]>([]);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMoreDocuments, setHasMoreDocuments] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employee.id);
   const [selectedType, setSelectedType] = useState<DocumentType>("ID_CARD");
@@ -163,12 +168,25 @@ export default function EmployeeDocumentsSection({
     setSelectedEmployeeId(ALL_EMPLOYEES_VALUE);
   }, [employee.id, hasGlobalAccess, isSelfScope]);
 
-  const refreshDocuments = useCallback(
-    async (signal?: AbortSignal) => {
+  const loadDocuments = useCallback(
+    async ({
+      pageNumber,
+      append = false,
+      signal,
+    }: {
+      pageNumber: number;
+      append?: boolean;
+      signal?: AbortSignal;
+    }) => {
       const token = getToken();
       if (!token) return;
 
-      setIsLoading(true);
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+
       const params = new URLSearchParams();
       if (isSelfScope) {
         params.set("employeeId", employee.id);
@@ -177,28 +195,51 @@ export default function EmployeeDocumentsSection({
       } else if (!hasGlobalAccess) {
         params.set("employeeId", employee.id);
       }
-
-      const query = params.toString();
-      const url = query ? `/api/employee-documents?${query}` : "/api/employee-documents";
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal,
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(String(data?.error ?? "Impossible de charger les documents"));
-        setIsLoading(false);
-        return;
-      }
-      let nextDocuments = Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : [];
       if (isEmployeesScope) {
-        nextDocuments = nextDocuments.filter((doc) => doc.employeeId !== employee.id);
+        params.set("excludeEmployeeId", employee.id);
       }
-      setDocuments(nextDocuments);
-      setIsLoading(false);
+
+      params.set("take", String(PAGE_SIZE + 1));
+      params.set("skip", String(pageNumber * PAGE_SIZE));
+
+      try {
+        const res = await fetch(`/api/employee-documents?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          toast.error(String(data?.error ?? "Impossible de charger les documents"));
+          return;
+        }
+        const nextDocuments = Array.isArray(data?.documents) ? (data.documents as EmployeeDocument[]) : [];
+        const hasMore = nextDocuments.length > PAGE_SIZE;
+        const trimmed = hasMore ? nextDocuments.slice(0, PAGE_SIZE) : nextDocuments;
+        if (append) {
+          setDocuments((prev) => [...prev, ...trimmed]);
+        } else {
+          setDocuments(trimmed);
+        }
+        setHasMoreDocuments(hasMore);
+        setPage(pageNumber + 1);
+      } catch (error) {
+        if ((error as Error)?.name === "AbortError") return;
+        toast.error("Impossible de charger les documents");
+      } finally {
+        if (append) {
+          setIsLoadingMore(false);
+        } else {
+          setIsLoading(false);
+        }
+      }
     },
     [employee.id, hasGlobalAccess, isEmployeesScope, isSelfScope, selectedEmployeeId]
   );
+
+  const loadMoreDocuments = useCallback(() => {
+    if (isLoadingMore || !hasMoreDocuments) return;
+    loadDocuments({ pageNumber: page, append: true });
+  }, [hasMoreDocuments, isLoadingMore, loadDocuments, page]);
 
   const refreshUploadOwnerDocuments = useCallback(async () => {
     const token = getToken();
@@ -231,12 +272,12 @@ export default function EmployeeDocumentsSection({
   }, [employee.id, hasGlobalAccess, isEmployeesScope]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) return;
-
     const controller = new AbortController();
     const frame = window.requestAnimationFrame(() => {
-      refreshDocuments(controller.signal).catch((e: unknown) => {
+      setPage(0);
+      setDocuments([]);
+      setHasMoreDocuments(false);
+      loadDocuments({ pageNumber: 0, append: false, signal: controller.signal }).catch((e: unknown) => {
         if ((e as Error)?.name === "AbortError") return;
         toast.error("Impossible de charger les documents");
         setIsLoading(false);
@@ -247,7 +288,7 @@ export default function EmployeeDocumentsSection({
       window.cancelAnimationFrame(frame);
       controller.abort();
     };
-  }, [refreshDocuments]);
+  }, [loadDocuments]);
 
   useEffect(() => {
     if (!canUploadDocuments) return;
@@ -389,7 +430,7 @@ export default function EmployeeDocumentsSection({
       setChildOrder("");
       setValidUntil("");
       setFileInputKey((prev) => prev + 1);
-      await refreshDocuments();
+      await loadDocuments({ pageNumber: 0, append: false });
       await refreshUploadOwnerDocuments();
       setIsUploading(false);
     } catch {
@@ -486,7 +527,7 @@ export default function EmployeeDocumentsSection({
       toast.success("Document modifié avec succès.");
       setEditingId(null);
       setEditSelectedFile(null);
-      await refreshDocuments();
+      await loadDocuments({ pageNumber: 0, append: false });
       await refreshUploadOwnerDocuments();
       setIsEditingBusy(false);
     } catch {
@@ -550,7 +591,7 @@ export default function EmployeeDocumentsSection({
       toast.success("Document supprimé.");
       if (editingId === deleteModalDoc.id) setEditingId(null);
       setDeleteModalDoc(null);
-      await refreshDocuments();
+      await loadDocuments({ pageNumber: 0, append: false });
       await refreshUploadOwnerDocuments();
       setIsEditingBusy(false);
     } catch {
@@ -927,6 +968,18 @@ export default function EmployeeDocumentsSection({
               ))}
             </div>
           ))}
+          {hasMoreDocuments ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={loadMoreDocuments}
+                disabled={isLoadingMore}
+                className="px-4 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
+              >
+                {isLoadingMore ? "Chargement..." : "Charger plus de documents"}
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 
