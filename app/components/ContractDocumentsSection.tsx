@@ -43,12 +43,16 @@ type Props = {
   employee: EmployeeSession;
   contractDocumentTypes: ContractDocumentType[];
   isContractDocumentTypesLoading?: boolean;
+  showUploader?: boolean;
+  showEmployeeFilter?: boolean;
 };
 
 export default function ContractDocumentsSection({
   employee,
   contractDocumentTypes,
   isContractDocumentTypesLoading = false,
+  showUploader = true,
+  showEmployeeFilter = true,
 }: Props) {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [filterEmployeeId, setFilterEmployeeId] = useState<string>(ALL_EMPLOYEES_VALUE);
@@ -71,6 +75,7 @@ export default function ContractDocumentsSection({
   }, [contractDocumentTypes]);
 
   useEffect(() => {
+    if (!showEmployeeFilter && !showUploader) return;
     const token = getToken();
     if (!token) return;
 
@@ -87,7 +92,7 @@ export default function ContractDocumentsSection({
     };
 
     loadEmployees();
-  }, [employee.id]);
+  }, [employee.id, showEmployeeFilter, showUploader]);
 
   const fetchDocuments = useCallback(async () => {
     const token = getToken();
@@ -217,79 +222,88 @@ export default function ContractDocumentsSection({
         <p className="text-sm text-vdm-gold-700">Envoyez ici les contrats et avenants par employé.</p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="md:col-span-3 grid gap-3 md:grid-cols-2">
-          <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Afficher les documents de</div>
-            <select
-              value={filterEmployeeId}
-              onChange={(e) => setFilterEmployeeId(e.target.value)}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
-              {employees.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {employeeLabel(item)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Ajouter pour l'employé</div>
-            <select
-              value={uploadEmployeeId}
-              onChange={(e) => setUploadEmployeeId(e.target.value)}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              {employees.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {employeeLabel(item)}
-                </option>
-              ))}
-            </select>
-          </div>
+      {(showEmployeeFilter || showUploader) && (
+        <div className="space-y-3">
+          {showEmployeeFilter && (
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <div className="text-xs text-vdm-gold-600 mb-1">Afficher les documents de</div>
+                <select
+                  value={filterEmployeeId}
+                  onChange={(e) => setFilterEmployeeId(e.target.value)}
+                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                >
+                  <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
+                  {employees.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {employeeLabel(item)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {showUploader ? (
+                <div>
+                  <div className="text-xs text-vdm-gold-600 mb-1">Ajouter pour l'employé</div>
+                  <select
+                    value={uploadEmployeeId}
+                    onChange={(e) => setUploadEmployeeId(e.target.value)}
+                    className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                  >
+                    {employees.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {employeeLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </div>
+          )}
+          {showUploader && (
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <div className="text-xs text-vdm-gold-600 mb-1">Catégorie du contrat</div>
+                <select
+                  value={selectedContractDocumentTypeId}
+                  onChange={(e) => setSelectedContractDocumentTypeId(e.target.value)}
+                  disabled={isContractDocumentTypesLoading}
+                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                >
+                  <option value="">Sans catégorie</option>
+                  {contractDocumentTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="text-xs text-vdm-gold-600 mb-1">Fichier (PDF ou image)</div>
+                <input
+                  key={fileInputKey}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                />
+              </div>
+            </div>
+          )}
         </div>
+      )}
 
-        <div className="md:col-span-3 grid gap-3 md:grid-cols-2">
-          <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Catégorie du contrat</div>
-            <select
-              value={selectedContractDocumentTypeId}
-              onChange={(e) => setSelectedContractDocumentTypeId(e.target.value)}
-              disabled={isContractDocumentTypesLoading}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-            >
-              <option value="">Sans catégorie</option>
-              {contractDocumentTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Fichier (PDF ou image)</div>
-            <input
-              key={fileInputKey}
-              type="file"
-              accept="application/pdf,image/jpeg,image/png,image/webp"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
-            />
-          </div>
+      {showUploader ? (
+        <div>
+          <button
+            type="button"
+            onClick={uploadDocument}
+            disabled={isUploading || !selectedFile || !uploadEmployeeId}
+            className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+          >
+            {isUploading ? "Envoi..." : "Ajouter le document"}
+          </button>
         </div>
-      </div>
-
-      <div>
-        <button
-          type="button"
-          onClick={uploadDocument}
-          disabled={isUploading || !selectedFile || !uploadEmployeeId}
-          className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
-        >
-          {isUploading ? "Envoi..." : "Ajouter le document"}
-        </button>
-      </div>
+      ) : null}
 
       <div className="space-y-4">
         {isLoading ? (

@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken, type EmployeeSession } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 
-const DOCUMENT_TYPES = [
+export const DEFAULT_DOCUMENT_TYPES = [
   { value: "CONTRACT", label: "Contrat / avenant" },
   { value: "ID_CARD", label: "CNI" },
+  { value: "DRIVING_LICENSE", label: "Permis de conduire" },
   { value: "BIRTH_CERTIFICATE", label: "Extrait de naissance" },
   { value: "SPOUSE_BIRTH_CERTIFICATE", label: "Extrait du conjoint" },
   { value: "CHILD_BIRTH_CERTIFICATE", label: "Extrait de naissance d’un enfant" },
@@ -15,7 +16,8 @@ const DOCUMENT_TYPES = [
   { value: "GEOGRAPHIC_LOCATION", label: "Localisation géographique" },
 ] as const;
 
-type DocumentType = (typeof DOCUMENT_TYPES)[number]["value"];
+export type DocumentTypeItem = (typeof DEFAULT_DOCUMENT_TYPES)[number];
+export type DocumentType = DocumentTypeItem["value"];
 
 type EmployeeOption = {
   id: string;
@@ -33,6 +35,7 @@ type EmployeeDocument = {
   type: DocumentType;
   relatedPersonName?: string | null;
   childOrder?: number | null;
+  validUntil?: string | null;
   fileName: string;
   mimeType: string;
   fileDataUrl?: string;
@@ -58,8 +61,23 @@ function formatDate(value: string) {
   });
 }
 
-function typeLabel(type: string) {
-  return DOCUMENT_TYPES.find((item) => item.value === type)?.label ?? type;
+function toDateInputString(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function formatValidityDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("fr-FR", {
+    dateStyle: "medium",
+  });
+}
+
+function typeLabel(type: string, documentTypes: readonly DocumentTypeItem[]) {
+  return documentTypes.find((item) => item.value === type)?.label ?? type;
 }
 
 function employeeLabel(employee?: EmployeeOption) {
@@ -85,11 +103,17 @@ async function toDataUrl(file: File) {
 type Props = {
   employee: EmployeeSession;
   scope?: "default" | "self" | "employees";
+  documentTypes?: readonly DocumentTypeItem[];
 };
 
-export default function EmployeeDocumentsSection({ employee, scope = "default" }: Props) {
+export default function EmployeeDocumentsSection({
+  employee,
+  scope = "default",
+  documentTypes: documentTypesProp,
+}: Props) {
   const isSelfScope = scope === "self";
   const isEmployeesScope = scope === "employees";
+  const documentTypes = documentTypesProp ?? DEFAULT_DOCUMENT_TYPES;
   const isReadAllRole = canReadAll(employee.role);
   const hasGlobalAccess = isReadAllRole && !isSelfScope;
   const canUploadDocuments = employee.role !== "CEO" && !isEmployeesScope;
@@ -104,6 +128,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
   const [selectedType, setSelectedType] = useState<DocumentType>("ID_CARD");
   const [relatedPersonName, setRelatedPersonName] = useState("");
   const [childOrder, setChildOrder] = useState("");
+  const [validUntil, setValidUntil] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
@@ -112,6 +137,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
   const [editType, setEditType] = useState<DocumentType>("ID_CARD");
   const [editRelatedPersonName, setEditRelatedPersonName] = useState("");
   const [editChildOrder, setEditChildOrder] = useState("");
+  const [editValidUntil, setEditValidUntil] = useState("");
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [editFileInputKey, setEditFileInputKey] = useState(0);
   const [isEditingBusy, setIsEditingBusy] = useState(false);
@@ -121,6 +147,13 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
   const isEditingChildType = editType === "CHILD_BIRTH_CERTIFICATE";
   const isEditingNeedsRelatedName =
     editType === "SPOUSE_BIRTH_CERTIFICATE" || editType === "CHILD_BIRTH_CERTIFICATE";
+  const isEditingNeedsValidityDate =
+    editType === "ID_CARD" || editType === "DRIVING_LICENSE";
+  useEffect(() => {
+    if (!isEditingNeedsValidityDate) {
+      setEditValidUntil("");
+    }
+  }, [isEditingNeedsValidityDate]);
 
   useEffect(() => {
     if (isSelfScope || !hasGlobalAccess) {
@@ -244,10 +277,29 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     return set;
   }, [uploadOwnerDocuments]);
 
+  const hasChildren = typeof employee.childrenCount === "number" && employee.childrenCount > 0;
+  const isMarried = employee.maritalStatus === "MARRIED";
+  const childDocumentCount = useMemo(
+    () => uploadOwnerDocuments.filter((doc) => doc.type === "CHILD_BIRTH_CERTIFICATE").length,
+    [uploadOwnerDocuments]
+  );
   const availableUploadTypes = useMemo(
     () =>
-      DOCUMENT_TYPES.filter((item) => item.value === "CHILD_BIRTH_CERTIFICATE" || !uploadOwnerTypeSet.has(item.value)),
-    [uploadOwnerTypeSet]
+      documentTypes.filter(
+        (item) => {
+          if (item.value === "CHILD_BIRTH_CERTIFICATE" && !hasChildren) return false;
+          if (
+            item.value === "CHILD_BIRTH_CERTIFICATE" &&
+            typeof employee.childrenCount === "number" &&
+            childDocumentCount >= employee.childrenCount
+          ) {
+            return false;
+          }
+          if (item.value === "SPOUSE_BIRTH_CERTIFICATE" && !isMarried) return false;
+          return item.value === "CHILD_BIRTH_CERTIFICATE" || !uploadOwnerTypeSet.has(item.value);
+        }
+      ),
+    [uploadOwnerTypeSet, documentTypes, hasChildren, isMarried, childDocumentCount, employee.childrenCount]
   );
   const effectiveSelectedType = useMemo(
     () =>
@@ -259,6 +311,13 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
   const needsRelatedName =
     effectiveSelectedType === "SPOUSE_BIRTH_CERTIFICATE" || effectiveSelectedType === "CHILD_BIRTH_CERTIFICATE";
   const isChildType = effectiveSelectedType === "CHILD_BIRTH_CERTIFICATE";
+  const needsValidityDate =
+    effectiveSelectedType === "ID_CARD" || effectiveSelectedType === "DRIVING_LICENSE";
+  useEffect(() => {
+    if (!needsValidityDate) {
+      setValidUntil("");
+    }
+  }, [needsValidityDate]);
 
   const uploadDocument = async () => {
     if (!canUploadDocuments) {
@@ -276,6 +335,11 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
 
     if (needsRelatedName && !relatedPersonName.trim()) {
       toast.error("Le nom du conjoint ou de l’enfant est obligatoire.");
+      setIsUploading(false);
+      return;
+    }
+    if (needsValidityDate && !validUntil) {
+      toast.error("La date de validité est obligatoire pour ce document.");
       setIsUploading(false);
       return;
     }
@@ -305,6 +369,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
         }
         payload.childOrder = parsedChildOrder;
       }
+      payload.validUntil = validUntil || null;
 
       const res = await fetch("/api/employee-documents", {
         method: "POST",
@@ -322,6 +387,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
       setSelectedFile(null);
       setRelatedPersonName("");
       setChildOrder("");
+      setValidUntil("");
       setFileInputKey((prev) => prev + 1);
       await refreshDocuments();
       await refreshUploadOwnerDocuments();
@@ -347,6 +413,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
     setEditChildOrder(doc.childOrder ? String(doc.childOrder) : "");
     setEditSelectedFile(null);
     setEditFileInputKey((v) => v + 1);
+    setEditValidUntil(toDateInputString(doc.validUntil ?? null));
   };
 
   const cancelEditDocument = () => {
@@ -385,6 +452,13 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
       } else {
         payload.childOrder = null;
       }
+
+      if (isEditingNeedsValidityDate && !editValidUntil) {
+        toast.error("La date de validité est obligatoire pour ce document.");
+        setIsEditingBusy(false);
+        return;
+      }
+      payload.validUntil = isEditingNeedsValidityDate ? editValidUntil : null;
 
       if (editSelectedFile) {
         const fileDataUrl = await toDataUrl(editSelectedFile);
@@ -496,14 +570,17 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
         )
         .map((item) => item.type)
     );
-    return DOCUMENT_TYPES.filter(
-      (item) => item.value === "CHILD_BIRTH_CERTIFICATE" || item.value === doc.type || !occupied.has(item.value)
-    );
+    return documentTypes.filter((item) => {
+      if (item.value === "SPOUSE_BIRTH_CERTIFICATE" && !isMarried && doc.type !== "SPOUSE_BIRTH_CERTIFICATE") {
+        return false;
+      }
+      return item.value === "CHILD_BIRTH_CERTIFICATE" || item.value === doc.type || !occupied.has(item.value);
+    });
   };
 
   const documentsByCategory = useMemo(() => {
     const grouped = new Map<DocumentType, EmployeeDocument[]>();
-    for (const item of DOCUMENT_TYPES) grouped.set(item.value, []);
+    for (const item of documentTypes) grouped.set(item.value, []);
     for (const doc of documents) {
       const bucket = grouped.get(doc.type);
       if (bucket) bucket.push(doc);
@@ -515,10 +592,10 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
         return bt - at;
       });
     }
-    return DOCUMENT_TYPES
+    return documentTypes
       .map((item) => ({ type: item.value, label: item.label, documents: grouped.get(item.value) ?? [] }))
       .filter((group) => group.documents.length > 0);
-  }, [documents]);
+  }, [documents, documentTypes]);
 
   return (
     <div className="bg-white border border-vdm-gold-200 rounded-xl p-6 mt-6">
@@ -615,6 +692,17 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
                 />
               </div>
             ) : null}
+            {needsValidityDate ? (
+              <div>
+                <div className="text-xs text-vdm-gold-600 mb-1">Date de validité</div>
+                <input
+                  type="date"
+                  value={validUntil}
+                  onChange={(e) => setValidUntil(e.target.value)}
+                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                />
+              </div>
+            ) : null}
 
             <div className={needsRelatedName || isChildType ? "md:col-span-3" : "md:col-span-2"}>
               <div className="text-xs text-vdm-gold-600 mb-1">Fichier (PDF ou image)</div>
@@ -688,7 +776,7 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
                         </div>
                       )}
                       <div>
-                        <div className="text-sm font-semibold text-vdm-gold-900">{typeLabel(doc.type)}</div>
+                        <div className="text-sm font-semibold text-vdm-gold-900">{typeLabel(doc.type, documentTypes)}</div>
                         <div className="text-xs text-vdm-gold-700">
                           Fichier: {doc.fileName} | Ajouté le: {formatDate(doc.createdAt)}
                         </div>
@@ -698,6 +786,11 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
                             {doc.type === "CHILD_BIRTH_CERTIFICATE" && doc.childOrder
                               ? ` (rang ${doc.childOrder})`
                               : ""}
+                          </div>
+                        ) : null}
+                        {doc.validUntil ? (
+                          <div className="text-xs text-vdm-gold-700">
+                            Valide jusqu&apos;au {formatValidityDate(doc.validUntil)}
                           </div>
                         ) : null}
                         {hasGlobalAccess ? (
@@ -779,6 +872,18 @@ export default function EmployeeDocumentsSection({ employee, scope = "default" }
                             <input
                               value={editChildOrder}
                               onChange={(e) => setEditChildOrder(e.target.value.replace(/\D/g, ""))}
+                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                              disabled={isEditingBusy}
+                            />
+                          </div>
+                        ) : null}
+                        {isEditingNeedsValidityDate ? (
+                          <div>
+                            <div className="text-xs text-vdm-gold-600 mb-1">Date de validité</div>
+                            <input
+                              type="date"
+                              value={editValidUntil}
+                              onChange={(e) => setEditValidUntil(e.target.value)}
                               className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
                               disabled={isEditingBusy}
                             />

@@ -7,7 +7,9 @@ import { zxcvbn, zxcvbnOptions } from "@zxcvbn-ts/core";
 import { adjacencyGraphs, dictionary as commonDictionary } from "@zxcvbn-ts/language-common";
 import { dictionary as frDictionary } from "@zxcvbn-ts/language-fr";
 import { isCompletePhone } from "@/lib/phone";
-import EmployeeDocumentsSection from "@/app/components/EmployeeDocumentsSection";
+import EmployeeDocumentsSection, {
+  type DocumentTypeItem,
+} from "@/app/components/EmployeeDocumentsSection";
 import { formatDateDMY } from "@/lib/date-format";
 import {
   MARITAL_STATUS_LABELS,
@@ -96,7 +98,11 @@ function roleLabel(role?: string | null) {
   return role;
 }
 
-export default function ProfileView() {
+type ProfileViewProps = {
+  documentTypes?: readonly DocumentTypeItem[];
+};
+
+export default function ProfileView({ documentTypes }: ProfileViewProps) {
   const employee = useMemo(() => getEmployee() as EditableEmployee | null, []);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<EditableEmployee | null>(employee);
@@ -508,7 +514,11 @@ export default function ProfileView() {
         </div>
       </div>
         {draft.role !== "CEO" ? (
-          <EmployeeDocumentsSection employee={draft} scope={employee.role === "ACCOUNTANT" ? "self" : "default"} />
+          <EmployeeDocumentsSection
+            employee={draft}
+            scope={employee.role === "ACCOUNTANT" ? "self" : "default"}
+            documentTypes={documentTypes}
+          />
         ) : null}
         {isEditing ? (
           <div

@@ -7,6 +7,15 @@ import { requireAuth } from "@/lib/leave-requests";
 import { norm } from "@/lib/validators";
 import { syncEmployeeLeaveBalance } from "@/lib/leave-balance";
 
+function parseIsoDate(value: unknown) {
+  const raw = norm(value);
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return null;
+  }
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function DELETE(req: Request, ctx: Ctx) {
@@ -126,7 +135,14 @@ export async function PUT(req: Request, ctx: Ctx) {
     data.serviceId = v || null;
   }
   if (Object.prototype.hasOwnProperty.call(body, "hireDate")) {
-    return jsonError("Modification de la date d'embauche interdite", 403);
+    const parsed = parseIsoDate(body?.hireDate);
+    if (!parsed) return jsonError("Date d'embauche invalide", 400);
+    data.hireDate = parsed;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "companyEntryDate")) {
+    const parsed = parseIsoDate(body?.companyEntryDate);
+    if (!parsed) return jsonError("Date d'entrée invalide", 400);
+    data.companyEntryDate = parsed;
   }
 
   if (Object.keys(data).length === 0) {
@@ -153,6 +169,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       serviceId: true,
       leaveBalance: true,
       hireDate: true,
+      companyEntryDate: true,
     },
   });
 

@@ -7,6 +7,7 @@ import { norm } from "@/lib/validators";
 
 const DOCUMENT_TYPES = new Set([
   "ID_CARD",
+  "DRIVING_LICENSE",
   "BIRTH_CERTIFICATE",
   "SPOUSE_BIRTH_CERTIFICATE",
   "CHILD_BIRTH_CERTIFICATE",
@@ -31,6 +32,13 @@ function parsePositiveIntResult(value: unknown) {
   const n = Number(value);
   if (!Number.isInteger(n) || n <= 0) return { provided: true as const, value: null as number | null };
   return { provided: true as const, value: n };
+}
+
+function parseDateValue(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
 }
 
 function authFromRequest(req: Request) {
@@ -93,6 +101,7 @@ export async function GET(req: Request) {
       type: true,
       relatedPersonName: true,
       childOrder: true,
+      validUntil: true,
       contractDocumentTypeId: true,
       contractDocumentType: {
         select: {
@@ -144,6 +153,8 @@ export async function POST(req: Request) {
   const relatedPersonName = norm(body?.relatedPersonName) || null;
   const childOrderParsed = parsePositiveIntResult(body?.childOrder);
   const contractDocumentTypeId = norm(body?.contractDocumentTypeId) || null;
+  const validUntilRaw = norm(body?.validUntil);
+  const validUntilDate = parseDateValue(validUntilRaw);
   const requestedEmployeeId = norm(body?.employeeId);
   let employeeId = actorId;
   if (requestedEmployeeId && requestedEmployeeId !== actorId) {
@@ -153,8 +164,22 @@ export async function POST(req: Request) {
     employeeId = requestedEmployeeId;
   }
 
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    select: { id: true, childrenCount: true },
+  });
+  if (!employee) return jsonError("Employé introuvable", 404);
+
   if (!DOCUMENT_TYPES.has(type)) {
     return jsonError("Type de document invalide", 400);
+  }
+
+  const needsValidityDate = type === "ID_CARD" || type === "DRIVING_LICENSE";
+  if (validUntilRaw && !validUntilDate) {
+    return jsonError("Date de validité invalide", 400);
+  }
+  if (needsValidityDate && !validUntilDate) {
+    return jsonError("Date de validité requise pour ce document", 400);
   }
 
   const isContractType = type === "CONTRACT";
@@ -176,6 +201,13 @@ export async function POST(req: Request) {
   }
   if (type !== CHILD_TYPE && childOrderParsed.provided) {
     return jsonError("childOrder est autorisé uniquement pour un document enfant", 400);
+  }
+
+  const childrenTotal = typeof employee.childrenCount === "number" ? employee.childrenCount : null;
+  if (type === CHILD_TYPE && childOrderParsed.value != null && childrenTotal != null) {
+    if (childOrderParsed.value > childrenTotal) {
+      return jsonError("Le rang de l'enfant ne peut pas dépasser le nombre d'enfants", 400);
+    }
   }
 
   if (contractDocumentTypeId && type !== "CONTRACT") {
@@ -204,17 +236,12 @@ export async function POST(req: Request) {
     return jsonError("Format non supporté (PDF, JPG, PNG, WEBP)", 400);
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { id: employeeId },
-    select: { id: true },
-  });
-  if (!employee) return jsonError("Employé introuvable", 404);
-
   const created = await prisma.employeeDocument.create({
     data: {
       employeeId,
       type: type as
         | "ID_CARD"
+        | "DRIVING_LICENSE"
         | "BIRTH_CERTIFICATE"
         | "SPOUSE_BIRTH_CERTIFICATE"
         | "CHILD_BIRTH_CERTIFICATE"
@@ -228,6 +255,7 @@ export async function POST(req: Request) {
       mimeType,
       fileDataUrl,
       uploadedById: actorId,
+      validUntil: validUntilDate,
       contractDocumentTypeId: type === "CONTRACT" ? contractDocumentTypeId : null,
     },
     select: {
@@ -236,6 +264,7 @@ export async function POST(req: Request) {
       type: true,
       relatedPersonName: true,
       childOrder: true,
+      validUntil: true,
       contractDocumentTypeId: true,
       fileName: true,
       mimeType: true,

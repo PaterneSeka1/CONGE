@@ -40,6 +40,8 @@ export async function POST(req: Request) {
         leaveBalance: true,
         departmentId: true,
         serviceId: true,
+        maritalStatus: true,
+        childrenCount: true,
         department: { select: { type: true } },
       },
     });
@@ -104,6 +106,8 @@ export async function POST(req: Request) {
         hireDate: employee.companyEntryDate ?? employee.hireDate ?? null,
         companyEntryDate: employee.companyEntryDate ?? employee.hireDate ?? null,
         cnpsNumber: employee.cnpsNumber ?? null,
+        maritalStatus: employee.maritalStatus ?? null,
+        childrenCount: employee.childrenCount ?? null,
         role: employee.role,
         status: employee.status,
         leaveBalance: synced?.employee.leaveBalance ?? employee.leaveBalance ?? 25,

@@ -37,6 +37,7 @@ enum EmployeeRole {
 
 enum EmployeeDocumentType {
   ID_CARD
+  DRIVING_LICENSE
   BIRTH_CERTIFICATE
   SPOUSE_BIRTH_CERTIFICATE
   CHILD_BIRTH_CERTIFICATE
@@ -230,6 +231,7 @@ model EmployeeDocument {
   type EmployeeDocumentType
   relatedPersonName String?
   childOrder Int?
+  validUntil DateTime?
   fileName String
   mimeType String
   fileDataUrl String

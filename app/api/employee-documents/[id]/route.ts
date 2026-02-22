@@ -7,6 +7,7 @@ import { norm } from "@/lib/validators";
 
 const DOCUMENT_TYPES = new Set([
   "ID_CARD",
+  "DRIVING_LICENSE",
   "BIRTH_CERTIFICATE",
   "SPOUSE_BIRTH_CERTIFICATE",
   "CHILD_BIRTH_CERTIFICATE",
@@ -33,6 +34,13 @@ function parsePositiveIntResult(value: unknown) {
   const n = Number(value);
   if (!Number.isInteger(n) || n <= 0) return { provided: true as const, value: null as number | null };
   return { provided: true as const, value: n };
+}
+
+function parseDateValue(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
 }
 
 function authFromRequest(req: Request) {
@@ -69,6 +77,7 @@ export async function PUT(req: Request, ctx: Ctx) {
       relatedPersonName: true,
       childOrder: true,
       contractDocumentTypeId: true,
+      validUntil: true,
       contractDocumentType: {
         select: {
           id: true,
@@ -76,7 +85,7 @@ export async function PUT(req: Request, ctx: Ctx) {
         },
       },
       fileName: true,
-      employee: { select: { role: true } },
+      employee: { select: { role: true, childrenCount: true } },
     },
   });
   if (!existing) return jsonError("Document introuvable", 404);
@@ -106,6 +115,27 @@ export async function PUT(req: Request, ctx: Ctx) {
     ? norm(body?.relatedPersonName) || null
     : existing.relatedPersonName ?? null;
 
+  const nextNeedsValidityDate = nextType === "ID_CARD" || nextType === "DRIVING_LICENSE";
+  const hasValidUntilParam = Object.prototype.hasOwnProperty.call(body, "validUntil");
+  let nextValidUntil: Date | null = null;
+  if (hasValidUntilParam) {
+    const normalized = norm(body?.validUntil);
+    if (normalized) {
+      const parsed = parseDateValue(normalized);
+      if (!parsed) {
+        return jsonError("Date de validité invalide", 400);
+      }
+      nextValidUntil = parsed;
+    } else {
+      nextValidUntil = null;
+    }
+  } else if (existing.validUntil) {
+    nextValidUntil = existing.validUntil;
+  }
+  if (nextNeedsValidityDate && !nextValidUntil) {
+    return jsonError("Date de validité requise pour ce document", 400);
+  }
+
   if (needsRelated && !nextRelatedNameRaw) {
     return jsonError("Le nom du conjoint/enfant est requis pour ce type", 400);
   }
@@ -119,6 +149,14 @@ export async function PUT(req: Request, ctx: Ctx) {
   }
   if (nextType !== CHILD_TYPE && childOrderParsed.provided && childOrderParsed.value != null) {
     return jsonError("childOrder est autorisé uniquement pour un document enfant", 400);
+  }
+
+  const ownerChildrenCount =
+    typeof existing.employee?.childrenCount === "number" ? existing.employee.childrenCount : null;
+  if (nextType === CHILD_TYPE && childOrderParsed.value != null && ownerChildrenCount != null) {
+    if (childOrderParsed.value > ownerChildrenCount) {
+      return jsonError("Le rang de l'enfant ne peut pas dépasser le nombre d'enfants", 400);
+    }
   }
 
   if (nextType !== "CONTRACT") {
@@ -161,41 +199,45 @@ export async function PUT(req: Request, ctx: Ctx) {
     nextFileDataUrl = incomingFileDataUrl;
   }
 
-  const updated = await prisma.employeeDocument.update({
-    where: { id },
-    data: {
-      type: nextType as
-        | "ID_CARD"
-        | "BIRTH_CERTIFICATE"
-        | "SPOUSE_BIRTH_CERTIFICATE"
-        | "CHILD_BIRTH_CERTIFICATE"
-        | "CURRICULUM_VITAE"
-        | "COVER_LETTER"
-        | "GEOGRAPHIC_LOCATION",
-      relatedPersonName: needsRelated ? nextRelatedNameRaw : null,
-      childOrder: nextChildOrder,
-      fileName: nextFileName,
-      ...(nextMimeType && nextFileDataUrl ? { mimeType: nextMimeType, fileDataUrl: nextFileDataUrl } : {}),
-      contractDocumentTypeId: nextContractDocumentTypeId,
-    },
-    select: {
-      id: true,
-      employeeId: true,
-      type: true,
-      relatedPersonName: true,
-      childOrder: true,
-      contractDocumentTypeId: true,
-      contractDocumentType: {
-        select: {
-          id: true,
-          name: true,
-        },
+    const updated = await prisma.employeeDocument.update({
+      where: { id },
+      data: {
+        type: nextType as
+          | "ID_CARD"
+          | "DRIVING_LICENSE"
+          | "BIRTH_CERTIFICATE"
+          | "SPOUSE_BIRTH_CERTIFICATE"
+          | "CHILD_BIRTH_CERTIFICATE"
+          | "CURRICULUM_VITAE"
+          | "COVER_LETTER"
+          | "GEOGRAPHIC_LOCATION"
+          | "CONTRACT",
+        relatedPersonName: needsRelated ? nextRelatedNameRaw : null,
+        childOrder: nextChildOrder,
+        fileName: nextFileName,
+        ...(nextMimeType && nextFileDataUrl ? { mimeType: nextMimeType, fileDataUrl: nextFileDataUrl } : {}),
+        contractDocumentTypeId: nextContractDocumentTypeId,
+        validUntil: nextValidUntil,
       },
-      fileName: true,
-      mimeType: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+      select: {
+        id: true,
+        employeeId: true,
+        type: true,
+        relatedPersonName: true,
+        childOrder: true,
+        validUntil: true,
+        contractDocumentTypeId: true,
+        contractDocumentType: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        fileName: true,
+        mimeType: true,
+        createdAt: true,
+        updatedAt: true,
+      },
   });
 
   return NextResponse.json({ document: updated });

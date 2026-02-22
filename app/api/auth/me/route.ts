@@ -22,6 +22,15 @@ function isValidImageDataUrl(value: string) {
   return /^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/.test(value);
 }
 
+function parseIsoDate(value: unknown) {
+  const raw = norm(value);
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return null;
+  }
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export async function GET(req: Request) {
   const v = verifyJwt(req);
   if (!v.ok) return v.error;
@@ -72,14 +81,18 @@ export async function PUT(req: Request) {
 
   const body = await req.json().catch(() => ({}));
 
-  if (
-    Object.prototype.hasOwnProperty.call(body, "hireDate") ||
-    Object.prototype.hasOwnProperty.call(body, "companyEntryDate")
-  ) {
-    return jsonError("Date d'embauche non modifiable", 400);
-  }
-
   const data: Record<string, unknown> = {};
+
+  if (Object.prototype.hasOwnProperty.call(body, "hireDate")) {
+    const parsed = parseIsoDate(body?.hireDate);
+    if (!parsed) return jsonError("Date d'embauche invalide", 400);
+    data.hireDate = parsed;
+  }
+  if (Object.prototype.hasOwnProperty.call(body, "companyEntryDate")) {
+    const parsed = parseIsoDate(body?.companyEntryDate);
+    if (!parsed) return jsonError("Date d'entrée invalide", 400);
+    data.companyEntryDate = parsed;
+  }
 
   if (Object.prototype.hasOwnProperty.call(body, "firstName")) {
     const value = norm(body?.firstName);
