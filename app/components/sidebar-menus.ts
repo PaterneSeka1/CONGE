@@ -40,29 +40,24 @@ export const accountantMenu: SidebarSection[] = [
         icon: "users",
         to: "/dashboard/accountant/department/employees-history",
       },
-      {
-        label: "Documents RH employés",
-        icon: "users",
-        to: "/dashboard/accountant/documents/employees",
-      },
     ],
   },
   {
     title: "Documents",
     links: [
+      { label: "Mes contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
       { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/accountant/payslips" },
-      { label: "Bulletins importés", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
     ],
   },
   {
     title: "Administration",
     links: [
-      { label: "Mes contrats", icon: "shield", to: "/dashboard/accountant/administration/contracts" },
       {
-        label: "Contrats des employés",
-        icon: "shield",
-        to: "/dashboard/accountant/administration/contracts/types",
+        label: "Contrats à ajouter", icon: "shield", to: "/dashboard/accountant/administration/contracts/types",
       },
+      { label: "Documents contractuels", icon: "file-text", to: "/dashboard/accountant/administration/contracts/documents", },
+      { label: "Bulletins à ajouter", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
+      { label: "Documents RH employés", icon: "users", to: "/dashboard/accountant/documents/employees", },
     ],
   },
   {

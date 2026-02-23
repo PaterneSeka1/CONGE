@@ -57,8 +57,12 @@ type Props = {
   isContractDocumentTypesLoading?: boolean;
   showUploader?: boolean;
   showEmployeeFilter?: boolean;
+  showTypeCards?: boolean;
   filterContractDocumentTypeId?: string;
   displayDocuments?: boolean;
+  enableDocumentTypeFilter?: boolean;
+  enableEmployeeFilter?: boolean;
+  ownerEmployeeId?: string;
 };
 
 export default function ContractDocumentsSection({
@@ -67,8 +71,12 @@ export default function ContractDocumentsSection({
   isContractDocumentTypesLoading = false,
   showUploader = true,
   showEmployeeFilter = true,
+  showTypeCards = true,
   filterContractDocumentTypeId = "",
   displayDocuments = true,
+  enableDocumentTypeFilter = false,
+  enableEmployeeFilter = false,
+  ownerEmployeeId,
 }: Props) {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
   const [uploadEmployeeId, setUploadEmployeeId] = useState(employee.id);
@@ -83,8 +91,10 @@ export default function ContractDocumentsSection({
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isEditingDoc, setIsEditingDoc] = useState(false);
+  const [documentTypeFilter, setDocumentTypeFilter] = useState("");
+  const [employeeFilter, setEmployeeFilter] = useState("");
   useEffect(() => {
-    if (!showEmployeeFilter && !showUploader) return;
+    if (!showEmployeeFilter && !showUploader && !enableEmployeeFilter) return;
     const token = getToken();
     if (!token) return;
 
@@ -145,6 +155,10 @@ export default function ContractDocumentsSection({
   }, [missingDocumentTypeSummaries]);
 
   useEffect(() => {
+    if (!showTypeCards) {
+      setHighlightedDocumentTypeId(null);
+      return;
+    }
     if (contractDocumentTypes.length === 0) {
       setHighlightedDocumentTypeId(null);
       return;
@@ -152,14 +166,15 @@ export default function ContractDocumentsSection({
     setHighlightedDocumentTypeId((prev) =>
       prev && contractDocumentTypes.some((type) => type.id === prev) ? prev : contractDocumentTypes[0].id
     );
-  }, [contractDocumentTypes]);
+  }, [contractDocumentTypes, showTypeCards]);
 
   const filteredEmployeesForSelect = useMemo(() => {
+    if (!showTypeCards) return [];
     if (!highlightedDocumentTypeId) return [];
     const summary = missingDocumentTypeSummaryMap.get(highlightedDocumentTypeId);
     if (!summary) return [];
     return employees.filter((emp) => summary.missingEmployeeIds.has(emp.id));
-  }, [employees, highlightedDocumentTypeId, missingDocumentTypeSummaryMap]);
+  }, [employees, highlightedDocumentTypeId, missingDocumentTypeSummaryMap, showTypeCards]);
 
   const highlightedTypeSummary = highlightedDocumentTypeId
     ? missingDocumentTypeSummaryMap.get(highlightedDocumentTypeId) ?? null
@@ -202,10 +217,83 @@ export default function ContractDocumentsSection({
     fetchDocuments();
   }, [fetchDocuments]);
 
+  const documentEmployees = useMemo(() => {
+    const map = new Map<string, EmployeeOption>();
+    for (const doc of documents) {
+      const e = doc.employee;
+      if (e?.id) {
+        map.set(e.id, e);
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const nameA = `${a.lastName} ${a.firstName}`.trim();
+      const nameB = `${b.lastName} ${b.firstName}`.trim();
+      return nameA.localeCompare(nameB);
+    });
+  }, [documents]);
+
+  const dynamicTypeOptions = useMemo(() => {
+    if (!enableEmployeeFilter || !employeeFilter) return contractDocumentTypes;
+    const typeIds = new Set<string>();
+    for (const doc of documents) {
+      if (doc.employeeId !== employeeFilter) continue;
+      const typeId = doc.contractDocumentType?.id;
+      if (typeId) typeIds.add(typeId);
+    }
+    return contractDocumentTypes.filter((type) => typeIds.has(type.id));
+  }, [contractDocumentTypes, documents, enableEmployeeFilter, employeeFilter]);
+
+  const dynamicEmployeeOptions = useMemo(() => {
+    if (!enableDocumentTypeFilter || !documentTypeFilter) return documentEmployees;
+    const employeeIds = new Set<string>();
+    for (const doc of documents) {
+      if (doc.contractDocumentType?.id !== documentTypeFilter) continue;
+      const id = doc.employee?.id;
+      if (id) {
+        employeeIds.add(id);
+      }
+    }
+    return documentEmployees.filter((emp) => employeeIds.has(emp.id));
+  }, [documentEmployees, documents, enableDocumentTypeFilter, documentTypeFilter]);
+
+  const highlightedDocumentTypeFilter =
+    showTypeCards && highlightedDocumentTypeId ? highlightedDocumentTypeId : null;
+  const activeDocumentTypeFilter = highlightedDocumentTypeFilter ?? (enableDocumentTypeFilter ? documentTypeFilter : filterContractDocumentTypeId);
+
   const filteredDocuments = useMemo(() => {
-    if (!filterContractDocumentTypeId) return documents;
-    return documents.filter((doc) => doc.contractDocumentType?.id === filterContractDocumentTypeId);
-  }, [documents, filterContractDocumentTypeId]);
+    let list = documents;
+    if (ownerEmployeeId) {
+      list = list.filter((doc) => doc.employeeId === ownerEmployeeId);
+    } else {
+      if (activeDocumentTypeFilter) {
+        list = list.filter((doc) => doc.contractDocumentType?.id === activeDocumentTypeFilter);
+      }
+      if (enableEmployeeFilter && employeeFilter) {
+        list = list.filter((doc) => doc.employeeId === employeeFilter);
+      }
+    }
+    return list;
+  }, [documents, activeDocumentTypeFilter, enableEmployeeFilter, employeeFilter, ownerEmployeeId]);
+
+  useEffect(() => {
+    if (!enableDocumentTypeFilter) {
+      setDocumentTypeFilter("");
+      return;
+    }
+    if (documentTypeFilter && !dynamicTypeOptions.some((type) => type.id === documentTypeFilter)) {
+      setDocumentTypeFilter("");
+    }
+  }, [dynamicTypeOptions, documentTypeFilter, enableDocumentTypeFilter]);
+
+  useEffect(() => {
+    if (!enableEmployeeFilter) {
+      setEmployeeFilter("");
+      return;
+    }
+    if (employeeFilter && !dynamicEmployeeOptions.some((emp) => emp.id === employeeFilter)) {
+      setEmployeeFilter("");
+    }
+  }, [dynamicEmployeeOptions, employeeFilter, enableEmployeeFilter]);
 
   const groupedDocuments = useMemo(() => {
     const buckets = new Map<string, ContractDocument[]>();
@@ -221,7 +309,7 @@ export default function ContractDocumentsSection({
     }
     result.sort((a, b) => a.label.localeCompare(b.label));
     return result;
-  }, [documents]);
+  }, [filteredDocuments]);
 
   const uploadDocument = async () => {
     if (!selectedFile) {
@@ -384,9 +472,54 @@ export default function ContractDocumentsSection({
         <p className="text-sm text-vdm-gold-700">Envoyez ici les contrats et avenants par employé.</p>
       </div>
 
-      {(showEmployeeFilter || showUploader) && (
+      {(enableDocumentTypeFilter || enableEmployeeFilter) && (
+        <div className="grid gap-3 md:grid-cols-2">
+          {enableDocumentTypeFilter && (
+            <label className="text-sm text-vdm-gold-900">
+              Filtrer par type
+              <select
+                value={documentTypeFilter}
+                onChange={(event) => setDocumentTypeFilter(event.target.value)}
+                className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              >
+                <option value="">Tous les types</option>
+                {(dynamicTypeOptions.length === 0 ? contractDocumentTypes : dynamicTypeOptions).map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {enableEmployeeFilter && (
+            <label className="text-sm text-vdm-gold-900">
+              Filtrer par employé
+              <select
+                value={employeeFilter}
+                onChange={(event) => setEmployeeFilter(event.target.value)}
+                className="mt-1 w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+              >
+                <option value="">Tous les employés</option>
+                {(dynamicEmployeeOptions.length === 0 ? documentEmployees : dynamicEmployeeOptions).length === 0 ? (
+                  <option value="" disabled>
+                    Aucun document associé à un collaborateur
+                  </option>
+                ) : (
+                  (dynamicEmployeeOptions.length === 0 ? documentEmployees : dynamicEmployeeOptions).map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {employeeLabel(emp)}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+
+      {(showEmployeeFilter && showTypeCards) || showUploader ? (
         <div className="space-y-3">
-          {showEmployeeFilter && (
+          {showEmployeeFilter && showTypeCards && (
             <>
               <div className="space-y-3">
                 <div>
@@ -504,7 +637,7 @@ export default function ContractDocumentsSection({
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {displayDocuments ? (
         <>

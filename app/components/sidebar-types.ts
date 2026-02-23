@@ -4,7 +4,8 @@ export type SidebarIconKey =
   | "clock"
   | "users"
   | "user"
-  | "shield";
+  | "shield"
+  | "file-text";
 
 export type SidebarLink = {
   label: string;
