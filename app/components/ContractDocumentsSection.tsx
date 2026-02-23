@@ -39,6 +39,19 @@ function formatDate(value: string) {
   return date.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
 }
 
+type MissingDocumentTypeSummary = {
+  typeId: string;
+  typeName: string;
+  missingCount: number;
+  totalEmployees: number;
+};
+
+function formatMissingLabel(missingCount: number) {
+  if (missingCount <= 0) return "Tous les documents sont ajoutés";
+  const pluralSuffix = missingCount > 1 ? "s" : "";
+  return `${missingCount} collaborateur${pluralSuffix} manquant${pluralSuffix}`;
+}
+
 type Props = {
   employee: EmployeeSession;
   contractDocumentTypes: ContractDocumentType[];
@@ -120,6 +133,35 @@ export default function ContractDocumentsSection({
     () => employees.filter((item) => !employeesWithSelectedType.has(item.id)),
     [employees, employeesWithSelectedType]
   );
+
+  const missingDocumentTypeSummaries = useMemo<MissingDocumentTypeSummary[]>(() => {
+    if (contractDocumentTypes.length === 0) return [];
+    const totalEmployees = employees.length;
+    const docsByType = new Map<string, Set<string>>();
+    for (const doc of documents) {
+      const typeId = doc.contractDocumentType?.id;
+      const employeeId = doc.employeeId;
+      if (!typeId || !employeeId) continue;
+      const set = docsByType.get(typeId) ?? new Set<string>();
+      set.add(employeeId);
+      docsByType.set(typeId, set);
+    }
+
+    return contractDocumentTypes.map((type) => ({
+      typeId: type.id,
+      typeName: type.name,
+      missingCount: Math.max(totalEmployees - (docsByType.get(type.id)?.size ?? 0), 0),
+      totalEmployees,
+    }));
+  }, [contractDocumentTypes, documents, employees.length]);
+
+  const missingDocumentTypeSummaryMap = useMemo(() => {
+    const map = new Map<string, MissingDocumentTypeSummary>();
+    for (const summary of missingDocumentTypeSummaries) {
+      map.set(summary.typeId, summary);
+    }
+    return map;
+  }, [missingDocumentTypeSummaries]);
 
   useEffect(() => {
     if (!showUploader) return;
@@ -351,43 +393,71 @@ export default function ContractDocumentsSection({
       {(showEmployeeFilter || showUploader) && (
         <div className="space-y-3">
           {showEmployeeFilter && (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <div className="text-xs text-vdm-gold-600 mb-1">Afficher les documents de</div>
-                <select
-                  value={filterEmployeeId}
-                  onChange={(e) => setFilterEmployeeId(e.target.value)}
-                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                >
-                  <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
-                  {employees.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {employeeLabel(item)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {showUploader ? (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <div className="text-xs text-vdm-gold-600 mb-1">Ajouter pour l'employé</div>
+                  <div className="text-xs text-vdm-gold-600 mb-1">Afficher les documents de</div>
                   <select
-                    value={uploadEmployeeId}
-                    onChange={(e) => setUploadEmployeeId(e.target.value)}
+                    value={filterEmployeeId}
+                    onChange={(e) => setFilterEmployeeId(e.target.value)}
                     className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
                   >
-                    {availableUploadEmployees.length === 0 ? (
-                      <option value="">Aucun collaborateur disponible</option>
-                    ) : (
-                      availableUploadEmployees.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {employeeLabel(item)}
-                        </option>
-                      ))
-                    )}
+                    <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
+                    {employees.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {employeeLabel(item)}
+                      </option>
+                    ))}
                   </select>
                 </div>
-              ) : null}
-            </div>
+                {showUploader ? (
+                  <div>
+                    <div className="text-xs text-vdm-gold-600 mb-1">Ajouter pour l'employé</div>
+                    <select
+                      value={uploadEmployeeId}
+                      onChange={(e) => setUploadEmployeeId(e.target.value)}
+                      className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                    >
+                      {availableUploadEmployees.length === 0 ? (
+                        <option value="">Aucun collaborateur disponible</option>
+                      ) : (
+                        availableUploadEmployees.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {employeeLabel(item)}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <div className="text-xs text-vdm-gold-600">Documents manquants par type</div>
+                {contractDocumentTypes.length === 0 ? (
+                  <div className="text-xs text-vdm-gold-600">
+                    {isContractDocumentTypesLoading ? "Chargement des types..." : "Aucun type de document défini."}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {contractDocumentTypes.map((type) => {
+                      const summary = missingDocumentTypeSummaryMap.get(type.id);
+                      const missingCount = summary?.missingCount ?? employees.length;
+                      const isFullyAvailable = missingCount <= 0;
+                      const blockClass = isFullyAvailable
+                        ? "border-vdm-gold-300 bg-vdm-gold-50 text-vdm-gold-900"
+                        : "border-vdm-gold-200 bg-white text-vdm-gold-800 hover:bg-vdm-gold-50";
+                      const label = isLoading || isContractDocumentTypesLoading ? "Chargement..." : formatMissingLabel(missingCount);
+                      return (
+                        <div key={type.id} className={`rounded-lg border px-3 py-2 text-left ${blockClass}`}>
+                          <div className="text-sm font-semibold text-vdm-gold-900">{type.name}</div>
+                          <div className="text-xs text-vdm-gold-700">{label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
           )}
           {showUploader && (
             <div className="grid gap-3 md:grid-cols-2">
