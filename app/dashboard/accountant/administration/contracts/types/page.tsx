@@ -54,7 +54,8 @@ export default function AccountantContractTypesPage() {
                 employee={employee}
                 contractDocumentTypes={contractDocumentTypes}
                 isContractDocumentTypesLoading={isContractDocumentTypesLoading}
-                showUploader={false}
+                showUploader
+                displayDocuments={false}
               />
             ) : (
               <div className="rounded-xl border border-vdm-gold-200 bg-white p-4 text-sm text-vdm-gold-700">

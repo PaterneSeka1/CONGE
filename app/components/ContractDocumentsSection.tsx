@@ -5,8 +5,6 @@ import { getToken, type EmployeeSession } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 import { type ContractDocumentType } from "@/app/hooks/useContractDocumentTypes";
 
-const ALL_EMPLOYEES_VALUE = "__ALL__";
-
 type EmployeeOption = {
   id: string;
   firstName: string;
@@ -60,6 +58,7 @@ type Props = {
   showUploader?: boolean;
   showEmployeeFilter?: boolean;
   filterContractDocumentTypeId?: string;
+  displayDocuments?: boolean;
 };
 
 export default function ContractDocumentsSection({
@@ -69,14 +68,11 @@ export default function ContractDocumentsSection({
   showUploader = true,
   showEmployeeFilter = true,
   filterContractDocumentTypeId = "",
+  displayDocuments = true,
 }: Props) {
   const [documents, setDocuments] = useState<ContractDocument[]>([]);
-  const [filterEmployeeId, setFilterEmployeeId] = useState<string>(() =>
-    showEmployeeFilter ? ALL_EMPLOYEES_VALUE : employee.id
-  );
   const [uploadEmployeeId, setUploadEmployeeId] = useState(employee.id);
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
-  const [selectedContractDocumentTypeId, setSelectedContractDocumentTypeId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [highlightedDocumentTypeId, setHighlightedDocumentTypeId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,16 +83,6 @@ export default function ContractDocumentsSection({
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editSelectedFile, setEditSelectedFile] = useState<File | null>(null);
   const [isEditingDoc, setIsEditingDoc] = useState(false);
-  useEffect(() => {
-    if (contractDocumentTypes.length === 0) {
-      setSelectedContractDocumentTypeId("");
-      return;
-    }
-    setSelectedContractDocumentTypeId((prev) =>
-      contractDocumentTypes.some((type) => type.id === prev) ? prev : contractDocumentTypes[0].id
-    );
-  }, [contractDocumentTypes]);
-
   useEffect(() => {
     if (!showEmployeeFilter && !showUploader) return;
     const token = getToken();
@@ -111,30 +97,10 @@ export default function ContractDocumentsSection({
       const list = Array.isArray(data?.employees) ? (data.employees as EmployeeOption[]) : [];
       const filtered = list.filter((item) => item.role !== "CEO");
       setEmployees(filtered);
-      setUploadEmployeeId((prev) => (filtered.some((item) => item.id === prev) ? prev : filtered[0]?.id ?? employee.id));
     };
 
     loadEmployees();
   }, [employee.id, showEmployeeFilter, showUploader]);
-
-  const employeesWithSelectedType = useMemo(() => {
-    const set = new Set<string>();
-    for (const doc of documents) {
-      if (selectedContractDocumentTypeId) {
-        if (doc.contractDocumentType?.id === selectedContractDocumentTypeId) {
-          set.add(doc.employeeId);
-        }
-      } else if (!doc.contractDocumentTypeId) {
-        set.add(doc.employeeId);
-      }
-    }
-    return set;
-  }, [documents, selectedContractDocumentTypeId]);
-
-  const availableUploadEmployees = useMemo(
-    () => employees.filter((item) => !employeesWithSelectedType.has(item.id)),
-    [employees, employeesWithSelectedType]
-  );
 
 
   const missingDocumentTypeSummaries = useMemo<MissingDocumentTypeSummary[]>(() => {
@@ -178,44 +144,38 @@ export default function ContractDocumentsSection({
     return map;
   }, [missingDocumentTypeSummaries]);
 
+  useEffect(() => {
+    if (contractDocumentTypes.length === 0) {
+      setHighlightedDocumentTypeId(null);
+      return;
+    }
+    setHighlightedDocumentTypeId((prev) =>
+      prev && contractDocumentTypes.some((type) => type.id === prev) ? prev : contractDocumentTypes[0].id
+    );
+  }, [contractDocumentTypes]);
+
   const filteredEmployeesForSelect = useMemo(() => {
-    if (!showEmployeeFilter) return employees;
-    if (!highlightedDocumentTypeId) return employees;
+    if (!highlightedDocumentTypeId) return [];
     const summary = missingDocumentTypeSummaryMap.get(highlightedDocumentTypeId);
-    if (!summary) return employees;
+    if (!summary) return [];
     return employees.filter((emp) => summary.missingEmployeeIds.has(emp.id));
-  }, [employees, highlightedDocumentTypeId, missingDocumentTypeSummaryMap, showEmployeeFilter]);
+  }, [employees, highlightedDocumentTypeId, missingDocumentTypeSummaryMap]);
 
   const highlightedTypeSummary = highlightedDocumentTypeId
     ? missingDocumentTypeSummaryMap.get(highlightedDocumentTypeId) ?? null
     : null;
 
   useEffect(() => {
-    if (!showUploader) return;
-    if (availableUploadEmployees.length === 0) {
+    if (filteredEmployeesForSelect.length === 0) {
       setUploadEmployeeId("");
       return;
     }
     setUploadEmployeeId((prev) =>
-      availableUploadEmployees.some((item) => item.id === prev) ? prev : availableUploadEmployees[0]?.id ?? ""
+      filteredEmployeesForSelect.some((item) => item.id === prev)
+        ? prev
+        : filteredEmployeesForSelect[0]?.id ?? ""
     );
-  }, [availableUploadEmployees, showUploader]);
-
-  useEffect(() => {
-    if (!showEmployeeFilter) {
-      setFilterEmployeeId(employee.id);
-    } else if (filterEmployeeId === employee.id) {
-      setFilterEmployeeId(ALL_EMPLOYEES_VALUE);
-    }
-  }, [employee.id, showEmployeeFilter, filterEmployeeId]);
-
-  useEffect(() => {
-    if (!showEmployeeFilter) return;
-    if (filterEmployeeId === ALL_EMPLOYEES_VALUE) return;
-    if (!filteredEmployeesForSelect.some((item) => item.id === filterEmployeeId)) {
-      setFilterEmployeeId(ALL_EMPLOYEES_VALUE);
-    }
-  }, [filteredEmployeesForSelect, filterEmployeeId, showEmployeeFilter]);
+  }, [filteredEmployeesForSelect]);
 
   const fetchDocuments = useCallback(async () => {
     const token = getToken();
@@ -223,12 +183,7 @@ export default function ContractDocumentsSection({
 
     setIsLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set("type", "CONTRACT");
-      if (filterEmployeeId !== ALL_EMPLOYEES_VALUE) {
-        params.set("employeeId", filterEmployeeId);
-      }
-      const url = `/api/employee-documents?${params.toString()}`;
+      const url = `/api/employee-documents?type=CONTRACT`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -241,7 +196,7 @@ export default function ContractDocumentsSection({
     } finally {
       setIsLoading(false);
     }
-  }, [filterEmployeeId]);
+  }, []);
 
   useEffect(() => {
     fetchDocuments();
@@ -274,7 +229,11 @@ export default function ContractDocumentsSection({
       return;
     }
     if (!uploadEmployeeId) {
-      toast.error("Sélectionnez un employé pour ce contrat.");
+      toast.error("Sélectionnez un collaborateur pour ce type.");
+      return;
+    }
+    if (!highlightedDocumentTypeId) {
+      toast.error("Sélectionnez un type de document via les cartes.");
       return;
     }
     setIsUploading(true);
@@ -292,7 +251,7 @@ export default function ContractDocumentsSection({
         fileName: selectedFile.name,
         fileDataUrl: dataUrl,
         employeeId: uploadEmployeeId,
-        contractDocumentTypeId: selectedContractDocumentTypeId || null,
+        contractDocumentTypeId: highlightedDocumentTypeId,
       };
       const res = await fetch("/api/employee-documents", {
         method: "POST",
@@ -429,19 +388,19 @@ export default function ContractDocumentsSection({
         <div className="space-y-3">
           {showEmployeeFilter && (
             <>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-3">
                 <div>
-                  <div className="text-xs text-vdm-gold-600 mb-1">Afficher les documents de</div>
+                  <div className="text-xs text-vdm-gold-600 mb-1">Collaborateur concerné</div>
                   <select
-                    value={filterEmployeeId}
-                    onChange={(e) => setFilterEmployeeId(e.target.value)}
+                    value={uploadEmployeeId}
+                    onChange={(e) => setUploadEmployeeId(e.target.value)}
                     className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                    disabled={!highlightedDocumentTypeId || filteredEmployeesForSelect.length === 0}
                   >
-                    <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
-                    {filteredEmployeesForSelect.length === 0 ? (
-                      <option value="" disabled>
-                        Aucun collaborateur concerné
-                      </option>
+                    {!highlightedDocumentTypeId ? (
+                      <option value="">Sélectionnez un type de document</option>
+                    ) : filteredEmployeesForSelect.length === 0 ? (
+                      <option value="">Aucun collaborateur concerné</option>
                     ) : (
                       filteredEmployeesForSelect.map((item) => (
                         <option key={item.id} value={item.id}>
@@ -453,31 +412,11 @@ export default function ContractDocumentsSection({
                   {highlightedTypeSummary ? (
                     <div className="text-xs text-vdm-gold-600 mt-1">
                       {filteredEmployeesForSelect.length === 0
-                        ? `Aucun employé n’a encore le type ${highlightedTypeSummary.typeName}.`
+                        ? `Tous les collaborateurs ont déjà ${highlightedTypeSummary.typeName}.`
                         : `${filteredEmployeesForSelect.length} collaborateur(s) n’ont pas encore ${highlightedTypeSummary.typeName}.`}
                     </div>
                   ) : null}
                 </div>
-                {showUploader ? (
-                  <div>
-                    <div className="text-xs text-vdm-gold-600 mb-1">Ajouter pour l'employé</div>
-                    <select
-                      value={uploadEmployeeId}
-                      onChange={(e) => setUploadEmployeeId(e.target.value)}
-                      className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                    >
-                      {availableUploadEmployees.length === 0 ? (
-                        <option value="">Aucun collaborateur disponible</option>
-                      ) : (
-                        availableUploadEmployees.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {employeeLabel(item)}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </div>
-                ) : null}
               </div>
               <div className="space-y-2">
                 <div className="text-xs text-vdm-gold-600">Documents manquants par type</div>
@@ -498,15 +437,15 @@ export default function ContractDocumentsSection({
                       const isSelectedCard = highlightedDocumentTypeId === type.id;
                       const selectedClass = isSelectedCard ? "ring-2 ring-vdm-gold-300" : "";
                       return (
-                        <button
-                          key={type.id}
-                          type="button"
-                          onClick={() =>
-                            setHighlightedDocumentTypeId((prev) => (prev === type.id ? null : type.id))
-                          }
-                          className={`rounded-lg border px-3 py-2 text-left ${blockClass} ${selectedClass}`}
-                          aria-pressed={isSelectedCard}
-                        >
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() =>
+                        setHighlightedDocumentTypeId((prev) => (prev === type.id ? null : type.id))
+                      }
+                      className={`rounded-lg border px-3 py-2 text-left ${blockClass} ${selectedClass}`}
+                      aria-pressed={isSelectedCard}
+                    >
                           <div className="text-sm font-semibold text-vdm-gold-900">{type.name}</div>
                           <div className="text-xs text-vdm-gold-700">{label}</div>
                         </button>
@@ -518,135 +457,147 @@ export default function ContractDocumentsSection({
             </>
           )}
           {showUploader && (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div>
-                <div className="text-xs text-vdm-gold-600 mb-1">Catégorie du contrat</div>
-                <select
-                  value={selectedContractDocumentTypeId}
-                  onChange={(e) => setSelectedContractDocumentTypeId(e.target.value)}
-                  disabled={isContractDocumentTypesLoading}
-                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                >
-                  <option value="">Sans catégorie</option>
-                  {contractDocumentTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
+            <div className="rounded-xl border border-vdm-gold-200 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-vdm-gold-900">Ajouter un document</div>
+                  <p className="text-xs text-vdm-gold-600">
+                    {highlightedTypeSummary
+                      ? `Type ${highlightedTypeSummary.typeName}`
+                      : "Sélectionnez un type de document via les cartes ci-dessus."}
+                  </p>
+                </div>
+                {highlightedTypeSummary ? (
+                  <div className="text-xs text-vdm-gold-600">
+                    {filteredEmployeesForSelect.length === 0
+                      ? "Aucun collaborateur concerné"
+                      : `${filteredEmployeesForSelect.length} collaborateur(s) à traiter`}
+                  </div>
+                ) : null}
               </div>
-              <div>
-                <div className="text-xs text-vdm-gold-600 mb-1">Fichier (PDF ou image)</div>
-                <input
-                  key={fileInputKey}
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
-                />
+              <div className="space-y-3">
+                <label className="text-sm text-vdm-gold-900 block">
+                  Document (PDF ou image)
+                  <input
+                    key={fileInputKey}
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                    className="mt-1 block w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={uploadDocument}
+                  disabled={
+                    isUploading ||
+                    !selectedFile ||
+                    !uploadEmployeeId ||
+                    !highlightedDocumentTypeId ||
+                    filteredEmployeesForSelect.length === 0
+                  }
+                  className="px-4 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+                >
+                  {isUploading ? "Envoi..." : "Ajouter le document"}
+                </button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {showUploader ? (
-        <div>
-          <button
-            type="button"
-            onClick={uploadDocument}
-            disabled={isUploading || !selectedFile || !uploadEmployeeId}
-            className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
-          >
-            {isUploading ? "Envoi..." : "Ajouter le document"}
-          </button>
-        </div>
-      ) : null}
-
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="text-sm text-vdm-gold-700">Chargement des documents...</div>
-        ) : documents.length === 0 ? (
-          <div className="text-sm text-vdm-gold-700">Aucun document pour le moment.</div>
-        ) : (
-          groupedDocuments.map((group) => (
-            <div key={group.label} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-vdm-gold-800">{group.label}</div>
-                <div className="text-xs text-vdm-gold-600">{group.documents.length} document(s)</div>
-              </div>
-              <div className="space-y-3">
-                {group.documents.map((doc) => (
-                  <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3 flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-semibold text-vdm-gold-900">{doc.fileName}</div>
-                        <div className="text-xs text-vdm-gold-700">
-                          {employeeLabel(doc.employee)} · ajouté le {formatDate(doc.createdAt)}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openDocument(doc)}
-                          disabled={openingDocId === doc.id}
-                          className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                        >
-                          {openingDocId === doc.id ? "Ouverture..." : "Ouvrir"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => startEditDocument(doc)}
-                          disabled={editingDocId === doc.id}
-                          className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                        >
-                          Modifier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteDocument(doc)}
-                          disabled={deletingDocId === doc.id}
-                          className="px-3 py-1 rounded-md border border-red-300 text-xs text-red-700 hover:bg-red-50 disabled:opacity-60"
-                        >
-                          {deletingDocId === doc.id ? "Suppression..." : "Supprimer"}
-                        </button>
-                      </div>
-                    </div>
-                    {editingDocId === doc.id ? (
-                      <div className="flex flex-col gap-2">
-                        <input
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
-                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => saveDocumentEdit(doc)}
-                            disabled={isEditingDoc || !editSelectedFile}
-                            className="px-3 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800 disabled:opacity-60"
-                          >
-                            {isEditingDoc ? "Enregistrement..." : "Sauvegarder"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={cancelEditDocument}
-                            disabled={isEditingDoc}
-                            className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                          >
-                            Annuler
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
+      {displayDocuments ? (
+        <>
+          <div className="space-y-4">
+            {isLoading ? (
+              <div className="text-sm text-vdm-gold-700">Chargement des documents...</div>
+            ) : documents.length === 0 ? (
+              <div className="text-sm text-vdm-gold-700">Aucun document pour le moment.</div>
+            ) : (
+              groupedDocuments.map((group) => (
+                <div key={group.label} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-vdm-gold-800">{group.label}</div>
+                    <div className="text-xs text-vdm-gold-600">{group.documents.length} document(s)</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                  <div className="space-y-3">
+                    {group.documents.map((doc) => (
+                      <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-semibold text-vdm-gold-900">{doc.fileName}</div>
+                            <div className="text-xs text-vdm-gold-700">
+                              {employeeLabel(doc.employee)} · ajouté le {formatDate(doc.createdAt)}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openDocument(doc)}
+                              disabled={openingDocId === doc.id}
+                              className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                            >
+                              {openingDocId === doc.id ? "Ouverture..." : "Ouvrir"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => startEditDocument(doc)}
+                              disabled={editingDocId === doc.id}
+                              className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteDocument(doc)}
+                              disabled={deletingDocId === doc.id}
+                              className="px-3 py-1 rounded-md border border-red-300 text-xs text-red-700 hover:bg-red-50 disabled:opacity-60"
+                            >
+                              {deletingDocId === doc.id ? "Suppression..." : "Supprimer"}
+                            </button>
+                          </div>
+                        </div>
+                        {editingDocId === doc.id ? (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png,image/webp"
+                              onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
+                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => saveDocumentEdit(doc)}
+                                disabled={isEditingDoc || !editSelectedFile}
+                                className="px-3 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800 disabled:opacity-60"
+                              >
+                                {isEditingDoc ? "Enregistrement..." : "Sauvegarder"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelEditDocument}
+                                disabled={isEditingDoc}
+                                className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <section className="rounded-xl border border-vdm-gold-200 bg-white p-4 text-sm text-vdm-gold-700">
+          L'affichage des documents contractuels sera disponible dans une section dédiée juste en dessous.
+        </section>
+      )}
     </div>
   );
 }
