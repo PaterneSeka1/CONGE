@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { getEmployee } from "@/lib/auth-client";
 import RoleGate from "@/app/components/RoleGate";
 import RequireAuth from "@/app/components/RequireAuth";
@@ -12,19 +12,6 @@ export default function AccountantContractTypesPage() {
   const employee = useMemo(() => getEmployee(), []);
   const { contractDocumentTypes, refreshContractDocumentTypes, isContractDocumentTypesLoading } =
     useContractDocumentTypes();
-  const [filterTypeId, setFilterTypeId] = useState("");
-
-  const typeOptions = useMemo(
-    () => [
-      { value: "", label: "Tous les types" },
-      ...contractDocumentTypes.map((type) => ({
-        value: type.id,
-        label: type.name,
-      })),
-    ],
-    [contractDocumentTypes]
-  );
-
   return (
     <RequireAuth>
       <RoleGate allow={["ACCOUNTANT"]}>
@@ -59,30 +46,15 @@ export default function AccountantContractTypesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold text-vdm-gold-900">Documents par type</h2>
-                <p className="text-xs text-vdm-gold-500">Filtrez la vue par type puis parcourez les fichiers groupés.</p>
+                <p className="text-xs text-vdm-gold-500">Parcourez les fichiers contractuels groupés par type.</p>
               </div>
             </div>
-            <label className="text-sm text-vdm-gold-800 flex flex-col gap-2">
-              Filtrer par type
-              <select
-                value={filterTypeId}
-                onChange={(event) => setFilterTypeId(event.target.value)}
-                className="w-full rounded-md border border-vdm-gold-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-              >
-                {typeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
             {employee ? (
               <ContractDocumentsSection
                 employee={employee}
                 contractDocumentTypes={contractDocumentTypes}
                 isContractDocumentTypesLoading={isContractDocumentTypesLoading}
                 showUploader={false}
-                filterContractDocumentTypeId={filterTypeId}
               />
             ) : (
               <div className="rounded-xl border border-vdm-gold-200 bg-white p-4 text-sm text-vdm-gold-700">

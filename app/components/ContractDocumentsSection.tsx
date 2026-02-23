@@ -44,6 +44,7 @@ type MissingDocumentTypeSummary = {
   typeName: string;
   missingCount: number;
   totalEmployees: number;
+  missingEmployeeIds: Set<string>;
 };
 
 function formatMissingLabel(missingCount: number) {
@@ -77,6 +78,7 @@ export default function ContractDocumentsSection({
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [selectedContractDocumentTypeId, setSelectedContractDocumentTypeId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [highlightedDocumentTypeId, setHighlightedDocumentTypeId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -134,6 +136,7 @@ export default function ContractDocumentsSection({
     [employees, employeesWithSelectedType]
   );
 
+
   const missingDocumentTypeSummaries = useMemo<MissingDocumentTypeSummary[]>(() => {
     if (contractDocumentTypes.length === 0) return [];
     const totalEmployees = employees.length;
@@ -147,13 +150,25 @@ export default function ContractDocumentsSection({
       docsByType.set(typeId, set);
     }
 
-    return contractDocumentTypes.map((type) => ({
-      typeId: type.id,
-      typeName: type.name,
-      missingCount: Math.max(totalEmployees - (docsByType.get(type.id)?.size ?? 0), 0),
-      totalEmployees,
-    }));
-  }, [contractDocumentTypes, documents, employees.length]);
+    const employeeIds = employees.map((emp) => emp.id);
+
+    return contractDocumentTypes.map((type) => {
+      const employeesWithType = docsByType.get(type.id) ?? new Set<string>();
+      const missingEmployeeIds = new Set<string>();
+      for (const id of employeeIds) {
+        if (!employeesWithType.has(id)) {
+          missingEmployeeIds.add(id);
+        }
+      }
+      return {
+        typeId: type.id,
+        typeName: type.name,
+        missingCount: Math.max(totalEmployees - employeesWithType.size, 0),
+        totalEmployees,
+        missingEmployeeIds,
+      };
+    });
+  }, [contractDocumentTypes, documents, employees]);
 
   const missingDocumentTypeSummaryMap = useMemo(() => {
     const map = new Map<string, MissingDocumentTypeSummary>();
@@ -162,6 +177,18 @@ export default function ContractDocumentsSection({
     }
     return map;
   }, [missingDocumentTypeSummaries]);
+
+  const filteredEmployeesForSelect = useMemo(() => {
+    if (!showEmployeeFilter) return employees;
+    if (!highlightedDocumentTypeId) return employees;
+    const summary = missingDocumentTypeSummaryMap.get(highlightedDocumentTypeId);
+    if (!summary) return employees;
+    return employees.filter((emp) => summary.missingEmployeeIds.has(emp.id));
+  }, [employees, highlightedDocumentTypeId, missingDocumentTypeSummaryMap, showEmployeeFilter]);
+
+  const highlightedTypeSummary = highlightedDocumentTypeId
+    ? missingDocumentTypeSummaryMap.get(highlightedDocumentTypeId) ?? null
+    : null;
 
   useEffect(() => {
     if (!showUploader) return;
@@ -181,6 +208,14 @@ export default function ContractDocumentsSection({
       setFilterEmployeeId(ALL_EMPLOYEES_VALUE);
     }
   }, [employee.id, showEmployeeFilter, filterEmployeeId]);
+
+  useEffect(() => {
+    if (!showEmployeeFilter) return;
+    if (filterEmployeeId === ALL_EMPLOYEES_VALUE) return;
+    if (!filteredEmployeesForSelect.some((item) => item.id === filterEmployeeId)) {
+      setFilterEmployeeId(ALL_EMPLOYEES_VALUE);
+    }
+  }, [filteredEmployeesForSelect, filterEmployeeId, showEmployeeFilter]);
 
   const fetchDocuments = useCallback(async () => {
     const token = getToken();
@@ -403,12 +438,25 @@ export default function ContractDocumentsSection({
                     className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
                   >
                     <option value={ALL_EMPLOYEES_VALUE}>Tous les employés</option>
-                    {employees.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {employeeLabel(item)}
+                    {filteredEmployeesForSelect.length === 0 ? (
+                      <option value="" disabled>
+                        Aucun collaborateur concerné
                       </option>
-                    ))}
+                    ) : (
+                      filteredEmployeesForSelect.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {employeeLabel(item)}
+                        </option>
+                      ))
+                    )}
                   </select>
+                  {highlightedTypeSummary ? (
+                    <div className="text-xs text-vdm-gold-600 mt-1">
+                      {filteredEmployeesForSelect.length === 0
+                        ? `Aucun employé n’a encore le type ${highlightedTypeSummary.typeName}.`
+                        : `${filteredEmployeesForSelect.length} collaborateur(s) n’ont pas encore ${highlightedTypeSummary.typeName}.`}
+                    </div>
+                  ) : null}
                 </div>
                 {showUploader ? (
                   <div>
@@ -447,11 +495,21 @@ export default function ContractDocumentsSection({
                         ? "border-vdm-gold-300 bg-vdm-gold-50 text-vdm-gold-900"
                         : "border-vdm-gold-200 bg-white text-vdm-gold-800 hover:bg-vdm-gold-50";
                       const label = isLoading || isContractDocumentTypesLoading ? "Chargement..." : formatMissingLabel(missingCount);
+                      const isSelectedCard = highlightedDocumentTypeId === type.id;
+                      const selectedClass = isSelectedCard ? "ring-2 ring-vdm-gold-300" : "";
                       return (
-                        <div key={type.id} className={`rounded-lg border px-3 py-2 text-left ${blockClass}`}>
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() =>
+                            setHighlightedDocumentTypeId((prev) => (prev === type.id ? null : type.id))
+                          }
+                          className={`rounded-lg border px-3 py-2 text-left ${blockClass} ${selectedClass}`}
+                          aria-pressed={isSelectedCard}
+                        >
                           <div className="text-sm font-semibold text-vdm-gold-900">{type.name}</div>
                           <div className="text-xs text-vdm-gold-700">{label}</div>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
