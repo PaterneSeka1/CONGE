@@ -57,9 +57,10 @@ function statusClass(status: string) {
 
 export default function CeoLeavesHistory() {
   const HISTORY_PAGE_SIZE = 100;
+  const currentYear = new Date().getUTCFullYear();
   const [rows, setRows] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [historyYearFilter, setHistoryYearFilter] = useState("PAST");
+  const [historyYearFilter, setHistoryYearFilter] = useState(String(currentYear));
   const [historyPage, setHistoryPage] = useState(1);
   const [historyHasNext, setHistoryHasNext] = useState(false);
 
@@ -140,9 +141,7 @@ export default function CeoLeavesHistory() {
   );
 
   const filteredRows = useMemo(() => {
-    const currentYear = new Date().getUTCFullYear();
     if (historyYearFilter === "ALL") return rows;
-    if (historyYearFilter === "PAST") return rows.filter((item) => item.year != null && item.year < currentYear);
     const selectedYear = Number(historyYearFilter);
     if (!Number.isInteger(selectedYear)) return rows;
     return rows.filter((item) => item.year === selectedYear);
@@ -206,13 +205,15 @@ export default function CeoLeavesHistory() {
             onChange={(e) => setHistoryYearFilter(e.target.value)}
             className="mt-1 w-full sm:w-72 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
           >
-            <option value="PAST">Années passées</option>
+            <option value={String(currentYear)}>Année en cours ({currentYear})</option>
             <option value="ALL">Toutes</option>
-            {historyYears.map((y) => (
-              <option key={y} value={String(y)}>
-                {y}
-              </option>
-            ))}
+            {historyYears
+              .filter((y) => y !== currentYear)
+              .map((y) => (
+                <option key={y} value={String(y)}>
+                  {y}
+                </option>
+              ))}
           </select>
         </label>
       </div>

@@ -92,7 +92,7 @@ export const ceoMenu: SidebarSection[] = [
     links: [
       { label: "Demandes Reçues", icon: "clipboard", to: "/dashboard/ceo/inbox" },
       { label: "Historique congés", icon: "clock", to: "/dashboard/ceo/leaves/history" },
-      { label: "Périodes bloquées", icon: "clock", to: "/dashboard/ceo/blackouts" },
+      { label: "Périodes bloquées", icon: "shield", to: "/dashboard/ceo/blackouts" },
     ],
   },
   {

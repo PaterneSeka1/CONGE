@@ -121,7 +121,7 @@ export default function CeoBlackouts() {
       void load();
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, []); 
 
   const createBlackout = async () => {
     if (!startDate || !endDate) {
@@ -273,21 +273,22 @@ export default function CeoBlackouts() {
             <option value="PEOPLE">Personne(s)</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Département ciblé</label>
-          <select
-            value={departmentId}
-            onChange={(e) => setDepartmentId(e.target.value)}
-            disabled={targetScope !== "DEPARTMENT"}
-            className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white"
-          >
-            {deptOptions.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.type}
-              </option>
-            ))}
-          </select>
-        </div>
+        {targetScope === "DEPARTMENT" ? (
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-vdm-gold-800 mb-1">Département ciblé</label>
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white"
+            >
+              {deptOptions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.type}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         {targetScope === "PEOPLE" ? (
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-vdm-gold-800 mb-1">
@@ -414,7 +415,6 @@ export default function CeoBlackouts() {
       </div>
 
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-        <div className="text-sm font-semibold text-vdm-gold-800 mb-3">Périodes actives</div>
         <div className="grid gap-2">
           {items.length === 0 ? (
             <div className="text-sm text-gray-500">Aucune période bloquée.</div>
@@ -422,23 +422,30 @@ export default function CeoBlackouts() {
             items.map((b) => (
               <div
                 key={b.id}
-                className="flex flex-wrap items-center justify-between gap-2 border border-vdm-gold-100 rounded-lg p-3"
+                className="border border-vdm-gold-100 rounded-lg bg-white/60 p-3 space-y-2"
               >
-                <div>
-                  <div className="font-semibold text-vdm-gold-900">{b.title || "Période bloquée"}</div>
-                  <div className="text-xs text-vdm-gold-700">
-                    {formatDateDMY(b.startDate)} - {formatDateDMY(b.endDate)}
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-semibold text-vdm-gold-900">{b.title || "Période bloquée"}</div>
+                    <div className="text-xs text-vdm-gold-700">
+                      {formatDateDMY(b.startDate)} - {formatDateDMY(b.endDate)}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600">
-                    {targetLabel(b)} {b.reason ? `• ${b.reason}` : ""}
-                  </div>
+                  <button
+                    onClick={() => removeBlackout(b.id)}
+                    className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs hover:bg-red-50"
+                  >
+                    Supprimer
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeBlackout(b.id)}
-                  className="px-2 py-1 rounded-md border border-red-300 text-red-600 text-xs hover:bg-red-50"
-                >
-                  Supprimer
-                </button>
+                <div className="text-xs text-gray-600">
+                  {targetLabel(b)}
+                </div>
+                {b.reason ? (
+                  <div className="text-xs text-gray-600">
+                    <span className="font-semibold text-vdm-gold-800">Motif :</span> {b.reason}
+                  </div>
+                ) : null}
               </div>
             ))
           )}
