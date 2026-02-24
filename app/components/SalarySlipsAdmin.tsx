@@ -5,7 +5,6 @@ import { getToken } from "@/lib/auth-client";
 import {
   MONTH_LABELS,
   SalarySlip,
-  groupSlipsByYearMonth,
   toPeriod,
   formatDate,
   formatDateTime,
@@ -49,7 +48,6 @@ export default function SalarySlipsAdmin() {
   const [employeeId, setEmployeeId] = useState("");
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [year, setYear] = useState(String(now.getFullYear()));
-  const [historyYearFilter, setHistoryYearFilter] = useState("ALL");
   const [recentPage, setRecentPage] = useState(1);
   const [file, setFile] = useState<File | null>(null);
   const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
@@ -319,23 +317,6 @@ export default function SalarySlipsAdmin() {
     return pendingSlips.slice(start, start + RECENT_PAGE_SIZE);
   }, [pendingSlips, recentPage]);
 
-  const signedSlipsByYear = useMemo(() => {
-    const signedSlips = sortedSlips.filter((slip) => Boolean(slip.signedAt));
-    return groupSlipsByYearMonth(signedSlips);
-  }, [sortedSlips]);
-
-  const historyYears = useMemo(
-    () => Array.from(new Set(signedSlipsByYear.map((g) => String(g.year)))).sort((a, b) => Number(b) - Number(a)),
-    [signedSlipsByYear]
-  );
-
-  const filteredSignedSlipsByYear = useMemo(() => {
-    if (historyYearFilter === "ALL") return signedSlipsByYear;
-    const y = Number(historyYearFilter);
-    if (!Number.isInteger(y)) return signedSlipsByYear;
-    return signedSlipsByYear.filter((group) => group.year === y);
-  }, [historyYearFilter, signedSlipsByYear]);
-
   useEffect(() => {
     if (!employeeId) return;
     const stillAvailable = availableEmployeeOptions.some((emp) => emp.id === employeeId);
@@ -587,117 +568,6 @@ export default function SalarySlipsAdmin() {
         )}
       </section>
 
-      <section className="rounded-xl border border-vdm-gold-200 bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b border-vdm-gold-100">
-          <h2 className="text-base font-semibold text-vdm-gold-900">Bulletins importés par année</h2>
-        </div>
-
-        <div className="px-4 py-3 border-b border-vdm-gold-100 bg-vdm-gold-50/30">
-          <label className="text-sm text-vdm-gold-900">
-            Filtrer par année
-            <select
-              value={historyYearFilter}
-              onChange={(e) => setHistoryYearFilter(e.target.value)}
-              className="mt-1 w-full sm:w-64 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
-            >
-              <option value="ALL">Toutes</option>
-              {historyYears.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        {isLoading ? (
-          <div className="p-4 text-sm text-gray-600">Chargement...</div>
-        ) : filteredSignedSlipsByYear.length === 0 ? (
-          <div className="p-4 text-sm text-gray-600">Aucun bulletin signé.</div>
-        ) : (
-          <div className="divide-y divide-vdm-gold-100">
-            {filteredSignedSlipsByYear.map((group) => (
-              <details key={group.year}>
-                <summary className="list-none px-4 py-3 bg-vdm-gold-50 text-vdm-gold-900 font-semibold flex items-center justify-between">
-                  <span>Année {group.year}</span>
-                  <span className="text-xs text-vdm-gold-700">
-                    {group.months.reduce((total, month) => total + month.slips.length, 0)} bulletin(s)
-                  </span>
-                </summary>
-
-                <div className="divide-y divide-vdm-gold-100">
-                  {group.months.map((monthGroup) => (
-                    <details key={`${group.year}-${monthGroup.month}`}>
-                      <summary className="list-none px-4 py-3 bg-vdm-gold-50/40 text-vdm-gold-900 font-medium flex items-center justify-between">
-                        <span>{MONTH_LABELS[monthGroup.month - 1] ?? `Mois ${monthGroup.month}`}</span>
-                        <span className="text-xs text-vdm-gold-700">{monthGroup.slips.length} bulletin(s)</span>
-                      </summary>
-
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full text-sm">
-                          <thead className="bg-vdm-gold-50/60 text-vdm-gold-900">
-                            <tr>
-                              <th className="px-4 py-3 text-left font-semibold">Employé</th>
-                              <th className="px-4 py-3 text-left font-semibold">Période</th>
-                              <th className="px-4 py-3 text-left font-semibold">Fichier</th>
-                              <th className="px-4 py-3 text-left font-semibold">Statut de signature</th>
-                              <th className="px-4 py-3 text-left font-semibold">Date d&apos;import</th>
-                              <th className="px-4 py-3 text-right font-semibold">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {monthGroup.slips.map((slip) => (
-                              <tr key={slip.id} className="border-t border-vdm-gold-100">
-                                <td className="px-4 py-3">
-                                  {slip.employee
-                                    ? `${slip.employee.lastName} ${slip.employee.firstName}${
-                                        slip.employee.matricule ? ` (${slip.employee.matricule})` : ""
-                                      }`
-                                    : "-"}
-                                </td>
-                                <td className="px-4 py-3">{toPeriod(slip.year, slip.month)}</td>
-                                <td className="px-4 py-3">{slip.fileName}</td>
-                                <td className="px-4 py-3">
-                                  {slip.signedAt
-                                    ? `Signé par ${slip.signedBy?.firstName ?? "PDG"} ${slip.signedBy?.lastName ?? ""} le ${formatDateTime(
-                                        slip.signedAt
-                                      )}`.trim()
-                                    : "En attente de signature du PDG"}
-                                </td>
-                                <td className="px-4 py-3">{formatDate(slip.createdAt)}</td>
-                                <td className="px-4 py-3 text-right space-x-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => downloadSlip(slip.id)}
-                                    disabled={downloadingId === slip.id || removingId === slip.id}
-                                    className="px-3 py-1.5 rounded-md border border-vdm-gold-300 text-vdm-gold-800 hover:bg-vdm-gold-50 disabled:opacity-60"
-                                  >
-                                    {downloadingId === slip.id ? "Téléchargement..." : "Télécharger"}
-                                  </button>
-                                  {!slip.signedAt && (
-                                    <button
-                                      type="button"
-                                      onClick={() => removeSlip(slip.id)}
-                                      disabled={removingId === slip.id || downloadingId === slip.id}
-                                      className="px-3 py-1.5 rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-60"
-                                    >
-                                      {removingId === slip.id ? "Retrait..." : "Retirer"}
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </details>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }

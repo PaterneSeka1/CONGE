@@ -15,6 +15,9 @@ export default function ImportedSalarySlipsByYear() {
   const [slips, setSlips] = useState<SalarySlip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [historyYearFilter, setHistoryYearFilter] = useState("ALL");
+  const [employeeFilter, setEmployeeFilter] = useState("ALL");
+  const [employees, setEmployees] = useState<{ id: string; label: string }[]>([]);
+  const [isEmployeesLoading, setIsEmployeesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -48,6 +51,46 @@ export default function ImportedSalarySlipsByYear() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const loadEmployees = async () => {
+      setIsEmployeesLoading(true);
+      const token = getToken();
+      if (!token) {
+        setEmployees([]);
+        setIsEmployeesLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch("/api/employees/options?take=150", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setEmployees([]);
+          return;
+        }
+        const list = Array.isArray(data?.employees) ? data.employees : [];
+        const formatted = list
+          .flatMap((emp: { id?: string; firstName?: string; lastName?: string }) => {
+            if (!emp?.id) return [];
+            return [
+              {
+                id: String(emp.id),
+                label: `${emp.lastName ?? ""} ${emp.firstName ?? ""}`.trim(),
+              },
+            ];
+          })
+          .filter((emp) => emp.label.length > 0)
+          .sort((a, b) => a.label.localeCompare(b.label));
+        setEmployees(formatted);
+      } finally {
+        setIsEmployeesLoading(false);
+      }
+    };
+
+    loadEmployees();
+  }, []);
+
   const sortedSlips = useMemo(
     () =>
       [...slips].sort((a, b) => {
@@ -59,10 +102,15 @@ export default function ImportedSalarySlipsByYear() {
     [slips]
   );
 
-  const signedSlipsByYear = useMemo(() => {
+  const signedSlipsForGrouping = useMemo(() => {
     const signedSlips = sortedSlips.filter((slip) => Boolean(slip.signedAt));
-    return groupSlipsByYearMonth(signedSlips);
-  }, [sortedSlips]);
+    if (employeeFilter === "ALL") return signedSlips;
+    return signedSlips.filter((slip) => slip.employeeId === employeeFilter);
+  }, [sortedSlips, employeeFilter]);
+
+  const signedSlipsByYear = useMemo(() => {
+    return groupSlipsByYearMonth(signedSlipsForGrouping);
+  }, [signedSlipsForGrouping]);
 
   const historyYears = useMemo(
     () => Array.from(new Set(signedSlipsByYear.map((group) => String(group.year)))).sort((a, b) => Number(b) - Number(a)),
@@ -75,6 +123,13 @@ export default function ImportedSalarySlipsByYear() {
     if (!Number.isInteger(y)) return signedSlipsByYear;
     return signedSlipsByYear.filter((group) => group.year === y);
   }, [historyYearFilter, signedSlipsByYear]);
+
+  useEffect(() => {
+    if (employeeFilter === "ALL") return;
+    if (!employees.some((emp) => emp.id === employeeFilter)) {
+      setEmployeeFilter("ALL");
+    }
+  }, [employees, employeeFilter]);
 
   const downloadSlip = useCallback(
     async (slip: SalarySlip) => {
@@ -135,7 +190,7 @@ export default function ImportedSalarySlipsByYear() {
           <h2 className="text-base font-semibold text-vdm-gold-900">Bulletins importés par année</h2>
         </div>
 
-        <div className="px-4 py-3 border-b border-vdm-gold-100 bg-vdm-gold-50/30">
+        <div className="px-4 py-3 border-b border-vdm-gold-100 bg-vdm-gold-50/30 space-y-3">
           <label className="text-sm text-vdm-gold-900">
             Filtrer par année
             <select
@@ -147,6 +202,23 @@ export default function ImportedSalarySlipsByYear() {
               {historyYears.map((year) => (
                 <option key={year} value={year}>
                   {year}
+                </option>
+              ))}
+            </select>
+          </label>
+          {' '}
+          <label className="text-sm text-vdm-gold-900">
+            Filtrer par employé
+            <select
+              value={employeeFilter}
+              onChange={(event) => setEmployeeFilter(event.target.value)}
+              className="mt-1 w-full sm:w-64 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
+              disabled={isEmployeesLoading}
+            >
+              <option value="ALL">{isEmployeesLoading ? "Chargement..." : "Tous les employés"}</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.label}
                 </option>
               ))}
             </select>
