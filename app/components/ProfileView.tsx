@@ -163,21 +163,11 @@ export default function ProfileView({ documentTypes }: ProfileViewProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isPhotoPreviewOpen]);
 
-  if (!employee || !draft) {
-    return (
-      <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-        <div className="text-sm text-vdm-gold-700">Aucune session trouvée.</div>
-      </div>
-    );
-  }
-  const phone = parsePhone(draft.phone);
   const hasChanges = useMemo(() => {
-    if (!employee || !draft) return false;
-    const stringEq = (a: string | null | undefined, b: string | null | undefined) =>
-      (a ?? "") === (b ?? "");
+    const stringEq = (a: string | null | undefined, b: string | null | undefined) => (a ?? "") === (b ?? "");
     const numberEq = (a: number | null | undefined, b: number | null | undefined) =>
       String(a ?? "") === String(b ?? "");
-
+    if (!employee || !draft) return false;
     return (
       !stringEq(employee.firstName, draft.firstName) ||
       !stringEq(employee.lastName, draft.lastName) ||
@@ -350,7 +340,17 @@ export default function ProfileView({ documentTypes }: ProfileViewProps) {
     }
   };
 
+  if (!employee || !draft) {
     return (
+      <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
+        <div className="text-sm text-vdm-gold-700">Aucune session trouvée.</div>
+      </div>
+    );
+  }
+
+  const phone = parsePhone(draft.phone);
+
+  return (
     <div>
       <div className="bg-white border border-vdm-gold-200 rounded-xl p-6">
         <div className="flex items-center gap-4 mb-5 pb-4 border-b border-vdm-gold-100">

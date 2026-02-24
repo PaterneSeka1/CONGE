@@ -24,27 +24,6 @@ export default function ManagerTeamPage() {
   const [isLoading, setIsLoading] = useState(false);
   const manager = useMemo(() => getEmployee(), []);
 
-  const removeEmployee = useCallback(
-    async (id: string) => {
-      const target = rows.find((r) => r.id === id);
-      if (!target) return;
-      const ok = window.confirm(`Supprimer ${target.firstName} ${target.lastName} du service -`);
-      if (!ok) return;
-
-      setRows((prev) => prev.filter((r) => r.id !== id));
-      const token = getToken();
-      if (!token) return;
-      const res = await fetch(`/api/manager/team/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        alert("Erreur lors de la suppression.");
-      }
-    },
-    [rows]
-  );
-
   const loadTeam = useCallback(async () => {
     const token = getToken();
     if (!token) return;
@@ -68,7 +47,8 @@ export default function ManagerTeamPage() {
         matricule: e.matricule,
         jobTitle: e.jobTitle,
         status: e.status ?? "ACTIVE",
-        service: e.serviceId ?? null,
+        service:
+          e.service?.name ?? e.service?.type ?? e.serviceId ?? null,
         departmentId: e.departmentId ?? null,
       })) as TeamMember[];
       setRows(employees);
@@ -79,7 +59,7 @@ export default function ManagerTeamPage() {
 
   useEffect(() => {
     loadTeam();
-  }, [loadTeam]);
+    }, [loadTeam]);
 
   const columns = useMemo<ColumnDef<TeamMember>[]>(
     () => [
@@ -107,39 +87,21 @@ export default function ManagerTeamPage() {
       { header: "Poste", accessorKey: "jobTitle" },
       { header: "Statut", accessorKey: "status" },
       { header: "Service", accessorKey: "service" },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => {
-          const canDelete =
-            (manager?.serviceId && row.original.service === manager.serviceId) ||
-            (!manager?.serviceId && manager?.departmentId && row.original.departmentId === manager.departmentId);
-          if (!canDelete) return "—";
-          return (
-            <button
-              onClick={() => removeEmployee(row.original.id)}
-              className="px-2 py-1 rounded-md border border-red-300 text-red-700 text-xs hover:bg-red-50"
-            >
-              Supprimer
-            </button>
-          );
-        },
-      },
     ],
-    [removeEmployee, manager]
+    [manager]
   );
 
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Équipe</div>
       <div className="text-sm text-vdm-gold-700 mb-4">
-        Liste des employés de votre service. Vous pouvez retirer un employé de votre service.
+        Liste des employés de votre service.
       </div>
 
       <DataTable
         data={rows}
         columns={columns}
-        searchPlaceholder="Rechercher un employ?..."
+        searchPlaceholder="Rechercher un employé..."
         onRefresh={loadTeam}
       />
       {isLoading ? (

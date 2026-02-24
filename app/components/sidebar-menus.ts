@@ -81,7 +81,10 @@ export const managerMenu: SidebarSection[] = [
   },
   {
     title: "Documents",
-    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/manager/payslips" }],
+    links: [
+      { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/manager/payslips" },
+      { label: "Mes contrats", icon: "shield", to: "/dashboard/manager/administration/contracts" },
+    ],
   },
   {
     title: "Compte",
