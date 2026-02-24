@@ -53,7 +53,7 @@ function buildMonth(date: Date) {
   const month = date.getMonth();
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
-  const startWeekday = (first.getDay() + 6) % 7; // lundi=0
+  const startWeekday = (first.getDay() + 6) % 7;
   const daysInMonth = last.getDate();
 
   const cells: (number | null)[] = [];
@@ -199,7 +199,7 @@ export default function CeoHome() {
 
   const barData = useMemo(
     () => [
-      { name: "Demandes escaladées", value: metrics?.escalatedPending ?? 0 },
+      { name: "Demandes Reçues", value: metrics?.escalatedPending ?? 0 },
       { name: "Décisions du mois", value: metrics?.decisionsThisMonth ?? 0 },
       {
         name: "Délai moyen",
@@ -252,7 +252,7 @@ export default function CeoHome() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-          <div className="text-sm text-vdm-gold-700">Demandes escaladées</div>
+          <div className="text-sm text-vdm-gold-700">Demandes Reçues</div>
           <div className="text-3xl font-bold text-vdm-gold-800 mt-2">
             {metrics?.escalatedPending ?? "—"}
           </div>

@@ -88,9 +88,9 @@ export const managerMenu: SidebarSection[] = [
 export const ceoMenu: SidebarSection[] = [
   { title: null, links: [{ label: "Tableau de bord", icon: "home", to: "/dashboard/ceo" }] },
   {
-    title: "Validation",
+    title: "CONGÉS",
     links: [
-      { label: "Demandes escaladées", icon: "clipboard", to: "/dashboard/ceo/inbox" },
+      { label: "Demandes Reçues", icon: "clipboard", to: "/dashboard/ceo/inbox" },
       { label: "Historique congés", icon: "clock", to: "/dashboard/ceo/leaves/history" },
       { label: "Périodes bloquées", icon: "clock", to: "/dashboard/ceo/blackouts" },
     ],
@@ -99,20 +99,22 @@ export const ceoMenu: SidebarSection[] = [
     title: "Employés",
     links: [
       { label: "Tous les employés", icon: "users", to: "/dashboard/ceo/employees" },
-      { label: "Documents RH", icon: "users", to: "/dashboard/ceo/documents" },
     ],
   },
   {
     title: "Département Autres",
     links: [
-      { label: "Employés (actuels)", icon: "users", to: "/dashboard/ceo/department/others/employees" },
-      {
-        label: "Historique des employés",
-        icon: "users",
-        to: "/dashboard/ceo/department/others/employees-history",
-      },
+      { label: "Employés", icon: "users", to: "/dashboard/ceo/department/others/employees" },
+      { label: "Historique des employés", icon: "clock", to: "/dashboard/ceo/department/others/employees-history", },
     ],
   },
-  { title: "Documents", links: [{ label: "Signer les bulletins", icon: "shield", to: "/dashboard/ceo/payslips/sign" }], },
+  { title: "ADMINISTRATION", 
+    links: [
+      { label: "Bulletins à signer", icon: "shield", to: "/dashboard/ceo/payslips/sign" },
+      { label: "Bulletins employés", icon: "file-text", to: "/dashboard/ceo/payslips/imported/by-year" },
+      { label: "Documents contractuels", icon: "file-text", to: "/dashboard/ceo/administration/contracts/documents", },
+      { label: "Documents RH", icon: "file-text", to: "/dashboard/ceo/documents" },
+    ], 
+  },
   { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }], },
 ];

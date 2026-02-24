@@ -106,12 +106,14 @@ type Props = {
   employee: EmployeeSession;
   scope?: "default" | "self" | "employees";
   documentTypes?: readonly DocumentTypeItem[];
+  filtersInlineOnLarge?: boolean;
 };
 
 export default function EmployeeDocumentsSection({
   employee,
   scope = "default",
   documentTypes: documentTypesProp,
+  filtersInlineOnLarge = false,
 }: Props) {
   const isSelfScope = scope === "self";
   const isEmployeesScope = scope === "employees";
@@ -120,6 +122,10 @@ export default function EmployeeDocumentsSection({
   const hasGlobalAccess = isReadAllRole && !isSelfScope;
   const canUploadDocuments = employee.role !== "CEO" && !isEmployeesScope;
   const allEmployeesLabel = isEmployeesScope ? "Tous les employés" : "Tous les employés";
+  const filtersGridClass = filtersInlineOnLarge ? "grid gap-3 lg:grid-cols-2" : "grid gap-3 md:grid-cols-3";
+  const employeeFilterWrapperClass = filtersInlineOnLarge
+    ? "lg:col-span-1"
+    : "md:col-span-3 grid gap-3 md:grid-cols-2";
 
   const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
   const [uploadOwnerDocuments, setUploadOwnerDocuments] = useState<EmployeeDocument[]>([]);
@@ -688,9 +694,9 @@ export default function EmployeeDocumentsSection({
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3 mb-4">
+      <div className={`${filtersGridClass} mb-4`}>
         {hasGlobalAccess ? (
-          <div className="md:col-span-3 grid gap-3 md:grid-cols-2">
+          <div className={employeeFilterWrapperClass}>
             <div>
               <div className="text-xs text-vdm-gold-600 mb-1">Afficher les documents de</div>
               <select

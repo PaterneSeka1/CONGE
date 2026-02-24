@@ -85,7 +85,7 @@ export default function CeoBlackouts() {
     const [blackoutRes, deptRes, empRes] = await Promise.all([
       fetch("/api/leave-blackouts", { headers: { Authorization: `Bearer ${token}` } }),
       fetch("/api/departments", { headers: { Authorization: `Bearer ${token}` } }),
-      fetch("/api/employees", { headers: { Authorization: `Bearer ${token}` } }),
+      fetch("/api/employees/options?take=150", { headers: { Authorization: `Bearer ${token}` } }),
     ]);
     const blackoutData = (await blackoutRes.json().catch(() => ({}))) as BlackoutsResponse;
     const deptData = (await deptRes.json().catch(() => ({}))) as DepartmentsResponse;

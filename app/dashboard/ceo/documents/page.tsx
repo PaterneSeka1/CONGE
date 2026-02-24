@@ -14,7 +14,7 @@ export default function CeoDocumentsPage() {
         Liste des documents RH des employés (consultation et téléchargement).
       </div>
       {employee ? (
-        <EmployeeDocumentsSection employee={employee} scope="employees" />
+        <EmployeeDocumentsSection employee={employee} scope="employees" filtersInlineOnLarge />
       ) : (
         <div className="bg-white border border-vdm-gold-200 rounded-xl p-4 text-sm text-vdm-gold-700">
           Aucune session trouvée.

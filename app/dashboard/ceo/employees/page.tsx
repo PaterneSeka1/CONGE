@@ -56,10 +56,7 @@ export default function CeoEmployees() {
     serviceId: "",
   });
 
-  const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [serviceFilter, setServiceFilter] = useState("ALL");
 
   const selectedDeptType = useMemo(
     () => (editForm.departmentId ? String(departments[editForm.departmentId] ?? "") : ""),
@@ -228,15 +225,10 @@ export default function CeoEmployees() {
 
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
-      const deptType = departments[r.departmentId ?? ""] ?? "ALL";
-      const svcType = services[r.serviceId ?? ""] ?? "NONE";
-      if (departmentFilter !== "ALL" && deptType !== departmentFilter) return false;
       if (roleFilter !== "ALL" && r.role !== roleFilter) return false;
-      if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
-      if (serviceFilter !== "ALL" && svcType !== serviceFilter) return false;
       return true;
     });
-  }, [rows, departmentFilter, roleFilter, statusFilter, serviceFilter, departments, services]);
+  }, [rows, roleFilter]);
 
   const columns = useMemo<ColumnDef<EmployeeRow>[]>(
     () => [
@@ -378,23 +370,9 @@ export default function CeoEmployees() {
   return (
     <div className="p-6">
       <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Tous les employés</div>
-      <div className="text-sm text-vdm-gold-700 mb-4">
-        Filtrer par département, rôle, statut ou service.
-      </div>
+      <div className="text-sm text-vdm-gold-700 mb-4">Filtrer par rôle.</div>
 
-      <div className="grid gap-3 md:grid-cols-4 mb-4">
-        <select
-          value={departmentFilter}
-          onChange={(e) => setDepartmentFilter(e.target.value)}
-          className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-        >
-          <option value="ALL">Tous les départements</option>
-          <option value="DSI">DSI</option>
-          <option value="DAF">DAF</option>
-          <option value="OPERATIONS">Opérations</option>
-          <option value="OTHERS">Autres</option>
-        </select>
-
+      <div className="grid gap-3 mb-4 max-w-xs">
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
@@ -406,29 +384,6 @@ export default function CeoEmployees() {
           <option value="SERVICE_HEAD">Directeur adjoint</option>
           <option value="ACCOUNTANT">Comptable</option>
           <option value="CEO">PDG</option>
-        </select>
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-        >
-          <option value="ALL">Tous les statuts</option>
-          <option value="ACTIVE">Actif</option>
-          <option value="PENDING">En attente</option>
-          <option value="REJECTED">Rejeté</option>
-        </select>
-
-        <select
-          value={serviceFilter}
-          onChange={(e) => setServiceFilter(e.target.value)}
-          className="w-full border border-vdm-gold-200 rounded-md p-2 bg-white focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-        >
-          <option value="ALL">Tous les services</option>
-          <option value="INFORMATION">INFORMATION</option>
-          <option value="REPUTATION">REPUTATION</option>
-          <option value="QUALITE">QUALITE</option>
-          <option value="NONE">Aucun</option>
         </select>
       </div>
 
