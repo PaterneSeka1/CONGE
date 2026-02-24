@@ -44,6 +44,13 @@ export async function GET(req: Request) {
         : { id: "__none__" }
       : {};
 
+  const url = new URL(req.url);
+  const maxParam = Number(url.searchParams.get("maxEmployees") ?? url.searchParams.get("max"));
+  const take =
+    Number.isInteger(maxParam) && maxParam > 0
+      ? Math.min(maxParam, 120)
+      : 120;
+
   const employees = await prisma.employee.findMany({
     where: {
       departmentId: operationsDepartment.id,
@@ -67,6 +74,7 @@ export async function GET(req: Request) {
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
+    take,
   });
 
   return NextResponse.json({ employees });

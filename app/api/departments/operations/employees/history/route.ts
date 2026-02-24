@@ -38,6 +38,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ leaves: [] });
   }
 
+  const url = new URL(req.url);
+  const maxParam = Number(url.searchParams.get("maxLeaves") ?? url.searchParams.get("max"));
+  const take =
+    Number.isInteger(maxParam) && maxParam > 0
+      ? Math.min(maxParam, 120)
+      : 120;
+
   const leaves = await prisma.leaveRequest.findMany({
     where: {
       status: { in: ["APPROVED", "REJECTED", "CANCELLED"] },
@@ -65,6 +72,7 @@ export async function GET(req: Request) {
       },
     },
     orderBy: { createdAt: "desc" },
+    take,
   });
 
   return NextResponse.json({ leaves });

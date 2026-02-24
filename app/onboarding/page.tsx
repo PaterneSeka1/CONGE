@@ -17,6 +17,11 @@ import {
   EMPLOYEE_GENDERS,
   isEmployeeGender,
 } from "@/lib/employee-gender";
+import {
+  MARITAL_STATUS_LABELS,
+  MARITAL_STATUSES,
+  isMaritalStatus,
+} from "@/lib/marital-status";
 
 type EditableEmployee = EmployeeSession & {
   jobTitle?: string | null;
@@ -187,6 +192,19 @@ export default function OnboardingPage() {
       toast.error("Numéro CNPS obligatoire.");
       return;
     }
+    if (!draft.maritalStatus) {
+      toast.error("Statut matrimonial obligatoire.");
+      return;
+    }
+    if (
+      draft.childrenCount === null ||
+      draft.childrenCount === undefined ||
+      !Number.isInteger(draft.childrenCount) ||
+      draft.childrenCount < 0
+    ) {
+      toast.error("Nombre d'enfants invalide ou manquant.");
+      return;
+    }
 
     const token = getToken();
     if (!token) return;
@@ -211,6 +229,8 @@ export default function OnboardingPage() {
           companyEntryDate: hireDate ?? null,
           cnpsNumber: draft.cnpsNumber ?? null,
           gender: draft.gender ?? null,
+          maritalStatus: draft.maritalStatus ?? null,
+          childrenCount: draft.childrenCount ?? null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -240,17 +260,23 @@ export default function OnboardingPage() {
   if (!draft) return null;
   const phone = parsePhone(draft.phone);
   const hireDateValue = String(currentHireDateValue(draft) ?? "").trim();
+  const childrenCountValid =
+    typeof draft.childrenCount === "number" &&
+    Number.isInteger(draft.childrenCount) &&
+    draft.childrenCount >= 0;
   const canFinalize =
     Boolean(String(draft.firstName ?? "").trim()) &&
     Boolean(String(draft.lastName ?? "").trim()) &&
     Boolean(draft.gender) &&
+    Boolean(draft.maritalStatus) &&
     Boolean(String(draft.profilePhotoUrl ?? "").trim()) &&
     !photoError &&
     Boolean(String(draft.phone ?? "").trim()) &&
     isCompletePhone(String(draft.phone ?? "")) &&
     Boolean(String(draft.fullAddress ?? "").trim()) &&
     /^\d{4}-\d{2}-\d{2}$/.test(hireDateValue) &&
-    Boolean(String(draft.cnpsNumber ?? "").trim());
+    Boolean(String(draft.cnpsNumber ?? "").trim()) &&
+    childrenCountValid;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -309,6 +335,61 @@ export default function OnboardingPage() {
             </select>
           </div>
           <div>
+            <div className="text-xs text-vdm-gold-600 mb-1">Poste</div>
+            <input
+              value={draft.jobTitle ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, jobTitle: e.target.value })
+              }
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
+              placeholder="Intitulé du poste"
+            />
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Statut matrimonial (obligatoire)
+            </div>
+            <select
+              value={draft.maritalStatus ?? ""}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDraft({
+                  ...draft,
+                  maritalStatus: isMaritalStatus(next) ? next : null,
+                });
+              }}
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm bg-white"
+            >
+              <option value="">Sélectionner</option>
+              {MARITAL_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {MARITAL_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div className="text-xs text-vdm-gold-600 mb-1">
+              Nombre d'enfants (obligatoire)
+            </div>
+            <input
+              type="number"
+              min={0}
+              value={draft.childrenCount ?? ""}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setDraft({
+                  ...draft,
+                  childrenCount:
+                    raw === "" ? null : Number(raw.replace(/\D/g, "")),
+                });
+              }}
+              inputMode="numeric"
+              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
+              placeholder="0"
+            />
+          </div>
+          <div>
             <div className="text-xs text-vdm-gold-600 mb-1">
               Téléphone (obligatoire)
             </div>
@@ -343,18 +424,7 @@ export default function OnboardingPage() {
               />
             </div>
           </div>
-          <div>
-            <div className="text-xs text-vdm-gold-600 mb-1">Poste</div>
-            <input
-              value={draft.jobTitle ?? ""}
-              onChange={(e) =>
-                setDraft({ ...draft, jobTitle: e.target.value })
-              }
-              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm"
-              placeholder="Intitulé du poste"
-            />
-          </div>
-          <div className="md:col-span-2">
+          <div className="">
             <div className="text-xs text-vdm-gold-600 mb-1">
               Adresse précise (obligatoire)
             </div>
@@ -369,7 +439,7 @@ export default function OnboardingPage() {
           </div>
           <div>
             <div className="text-xs text-vdm-gold-600 mb-1">
-              Date d&apos;entrée dans l&apos;entreprise (obligatoire)
+              Date d'entrée dans l'entreprise (obligatoire)
             </div>
             <input
               type="date"

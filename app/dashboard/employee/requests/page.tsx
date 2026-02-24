@@ -61,7 +61,8 @@ export default function EmployeeRequests() {
   const HISTORY_PAGE_SIZE = 120;
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
-  const [historyYearFilter, setHistoryYearFilter] = useState("PAST");
+  const currentYear = new Date().getUTCFullYear();
+  const [historyYearFilter, setHistoryYearFilter] = useState(String(currentYear));
   const [historyPage, setHistoryPage] = useState(1);
   const [historyHasNext, setHistoryHasNext] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -138,18 +139,19 @@ export default function EmployeeRequests() {
     () => items.filter((item) => ["SUBMITTED", "PENDING"].includes(item.status)),
     [items]
   );
-  const historyYears = useMemo(
-    () =>
-      Array.from(new Set(historyItems.map((item) => item.year).filter((value): value is number => value != null))).sort(
-        (a, b) => b - a
-      ),
-    [historyItems]
-  );
+  const historyYears = useMemo(() => {
+    const yearSet = new Set<number>();
+    for (const item of historyItems) {
+      if (item.year != null) {
+        yearSet.add(item.year);
+      }
+    }
+    yearSet.add(currentYear);
+    return Array.from(yearSet).sort((a, b) => b - a);
+  }, [historyItems, currentYear]);
 
   const filteredHistoryItems = useMemo(() => {
-    const currentYear = new Date().getUTCFullYear();
     if (historyYearFilter === "ALL") return historyItems;
-    if (historyYearFilter === "PAST") return historyItems.filter((item) => item.year != null && item.year < currentYear);
     const selectedYear = Number(historyYearFilter);
     if (!Number.isInteger(selectedYear)) return historyItems;
     return historyItems.filter((item) => item.year === selectedYear);
@@ -269,7 +271,7 @@ export default function EmployeeRequests() {
 
       <div className="mt-8">
         <div className="text-lg font-semibold mb-1 text-vdm-gold-800">Historique</div>
-        <div className="text-sm text-vdm-gold-700 mb-4">Demandes traitées, avec visibilité par année passée.</div>
+        <div className="text-sm text-vdm-gold-700 mb-4">Demandes traitées, filtrables par année.</div>
 
         <div className="mb-3">
           <label className="text-sm text-vdm-gold-900">
@@ -279,7 +281,6 @@ export default function EmployeeRequests() {
               onChange={(e) => setHistoryYearFilter(e.target.value)}
               className="mt-1 w-full sm:w-72 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
             >
-              <option value="PAST">Années passées</option>
               <option value="ALL">Toutes</option>
               {historyYears.map((y) => (
                 <option key={y} value={String(y)}>

@@ -78,7 +78,8 @@ export default function OperationsLeaveHistory() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [activeStatusFilter, setActiveStatusFilter] = useState("ALL");
   const [historyStatusFilter, setHistoryStatusFilter] = useState("ALL");
-  const [historyYearFilter, setHistoryYearFilter] = useState("PAST");
+  const currentYear = new Date().getUTCFullYear();
+  const [historyYearFilter, setHistoryYearFilter] = useState(String(currentYear));
   const [historyPage, setHistoryPage] = useState(1);
   const [historyHasNext, setHistoryHasNext] = useState(false);
 
@@ -172,20 +173,21 @@ export default function OperationsLeaveHistory() {
     if (activeStatusFilter === "ALL") return activeItems;
     return activeItems.filter((item) => item.status === activeStatusFilter);
   }, [activeItems, activeStatusFilter]);
-  const historyYears = useMemo(
-    () =>
-      Array.from(new Set(historyItems.map((item) => item.year).filter((value): value is number => value != null))).sort(
-        (a, b) => b - a
-      ),
-    [historyItems]
-  );
+  const historyYears = useMemo(() => {
+    const yearSet = new Set<number>();
+    for (const item of historyItems) {
+      if (item.year != null) {
+        yearSet.add(item.year);
+      }
+    }
+    yearSet.add(currentYear);
+    return Array.from(yearSet).sort((a, b) => b - a);
+  }, [historyItems, currentYear]);
 
   const filteredHistoryItems = useMemo(() => {
     const currentYear = new Date().getUTCFullYear();
     let itemsByYear = historyItems;
-    if (historyYearFilter === "PAST") {
-      itemsByYear = itemsByYear.filter((item) => item.year != null && item.year < currentYear);
-    } else if (historyYearFilter !== "ALL") {
+    if (historyYearFilter !== "ALL") {
       const selectedYear = Number(historyYearFilter);
       if (Number.isInteger(selectedYear)) {
         itemsByYear = itemsByYear.filter((item) => item.year === selectedYear);
@@ -345,7 +347,6 @@ export default function OperationsLeaveHistory() {
               onChange={(e) => setHistoryYearFilter(e.target.value)}
               className="mt-1 w-full sm:w-72 rounded-lg border border-vdm-gold-300 px-3 py-2 bg-white"
             >
-              <option value="PAST">Années passées</option>
               <option value="ALL">Toutes</option>
               {historyYears.map((y) => (
                 <option key={y} value={String(y)}>

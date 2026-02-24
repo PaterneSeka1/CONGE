@@ -11,7 +11,11 @@ export const employeeMenu: SidebarSection[] = [
   },
   {
     title: "Documents",
-    links: [{ label: "Mes bulletins", icon: "clipboard", to: "/dashboard/employee/payslips" }],
+    links: [
+      { label: "Mes bulletins", icon: "clipboard", to: "/dashboard/employee/payslips" },
+      { label: "Mes contrats", icon: "shield", to: "/dashboard/employee/administration/contracts" },
+    ],
+    
   },
   { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/employee/profile" }] },
 ];

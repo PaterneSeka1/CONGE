@@ -51,7 +51,7 @@ export default function ManagerTeamPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/departments/operations/employees", {
+      const res = await fetch("/api/departments/operations/employees?maxEmployees=120", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => ({}));

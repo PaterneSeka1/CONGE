@@ -75,7 +75,7 @@ export default function OperationsDeptEmployeesHistory() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/departments/operations/employees/history", {
+      const res = await fetch("/api/departments/operations/employees/history?maxLeaves=120", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
