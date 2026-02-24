@@ -22,25 +22,11 @@ npm install
 ```
 
 ## Configuration
-Creer un fichier `.env` a la racine et definir :
+Créer un fichier `.env` à la racine et définir :
 ```
 DATABASE_URL=
 JWT_SECRET=
 DEPT_HEAD_VALIDATION_DAYS=5
-
-# (Optionnel) comptes seed
-SEED_ADMIN_EMAIL=admin.dsi@local.test
-SEED_ADMIN_MATRICULE=DSI-ADMIN
-SEED_ADMIN_PASSWORD=Passw0rd!
-SEED_ACCOUNTANT_EMAIL=comptable@local.test
-SEED_ACCOUNTANT_MATRICULE=ACC-001
-SEED_ACCOUNTANT_PASSWORD=Passw0rd!
-SEED_CEO_EMAIL=pdg@local.test
-SEED_CEO_MATRICULE=CEO-001
-SEED_CEO_PASSWORD=Passw0rd!
-SEED_OPS_DIRECTOR_EMAIL=directeur.ops@local.test
-SEED_OPS_DIRECTOR_MATRICULE=OPS-DIR-001
-SEED_OPS_DIRECTOR_PASSWORD=Passw0rd!
 ```
 
 ## Prisma
@@ -50,16 +36,8 @@ npx prisma db push
 npx prisma generate
 ```
 
-## Seed (comptes de demarrage)
-```bash
-npm run seed
-```
-
-Comptes par defaut (si les variables SEED_* ne sont pas redefinies) :
-- Admin DSI (DEPT_HEAD) : admin.dsi@local.test / Passw0rd!
-- Comptable (ACCOUNTANT) : comptable@local.test / Passw0rd!
-- CEO : pdg@local.test / Passw0rd!
-- Directeur Operations (DEPT_HEAD) : directeur.ops@local.test / Passw0rd!
+## Comptes
+Créez les comptes de démarrage directement dans Mongo ou via votre propre script : les identifiants par défaut ne sont plus fournis automatiquement.
 
 ## Lancer le projet
 ```bash
@@ -68,22 +46,28 @@ npm run dev
 Puis ouvrir http://localhost:3000
 
 ## Docker
-### Developpement (hot reload)
+### Développement avec MongoDB local
+- `docker compose up --build` matérialise deux services : l'app Next (avec hot reload) et une base Mongo (`mongo:7.0`).  
+  Le conteneur de l'app monte votre code (`.:/app`) ainsi que `node_modules`/`.next` pour éviter de recompiler à chaque changement.
+- La variable `DATABASE_URL` est automatiquement pointée vers `mongodb://mongo:27017/conge` (ajustez `.env` si vous utilisez un autre nom de base).
 ```bash
 docker compose up --build
 ```
 Puis ouvrir http://localhost:3000
 
-### Production
+### Production (ex. OVH)
+- Assurez-vous que votre serveur OVH héberge une base MongoDB (pas Atlas) et que la variable `DATABASE_URL` pointe vers ce service, par exemple `mongodb://mongodb.internal:27017/conge`.  
+- Construisez l'image à partir du `runner` stage (production) :
 ```bash
 docker build -t conge:latest --target runner .
+```
+- Démarrez un conteneur en reliant votre `.env` (avec `DATABASE_URL` réel) :
+```bash
 docker run --rm -p 3000:3000 --env-file .env conge:latest
 ```
 
-### Seed dans le conteneur
-```bash
-docker compose exec app npm run seed
-```
+### Seeds
+Le projet ne fournit plus de runner `npm run seed`. Injectez les comptes manuellement dans Mongo si nécessaire.
 
 ## Notes importantes
 - Le solde annuel par defaut est 25 jours.
@@ -116,4 +100,3 @@ flowchart TD
 - `npm run build` : build
 - `npm run start` : production
 - `npm run lint` : lint
-- `npm run seed` : seed base
