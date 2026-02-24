@@ -28,13 +28,13 @@ export const accountantMenu: SidebarSection[] = [
   {
     title: "Demandes",
     links: [
-      { label: "Boîte de réception (à traiter)", icon: "clipboard", to: "/dashboard/accountant/inbox" },
+      { label: "Demandes reçues", icon: "clipboard", to: "/dashboard/accountant/inbox" },
     ],
   },
   {
     title: "Département DAF",
     links: [
-      { label: "Employés (actuels)", icon: "users", to: "/dashboard/accountant/department/employees" },
+      { label: "Employés DAF", icon: "users", to: "/dashboard/accountant/department/employees" },
       {
         label: "Historique des employés",
         icon: "users",
@@ -52,9 +52,7 @@ export const accountantMenu: SidebarSection[] = [
   {
     title: "Administration",
     links: [
-      {
-        label: "Contrats à ajouter", icon: "shield", to: "/dashboard/accountant/administration/contracts/types",
-      },
+      { label: "Contrats à ajouter", icon: "shield", to: "/dashboard/accountant/administration/contracts/types", },
       { label: "Documents contractuels", icon: "file-text", to: "/dashboard/accountant/administration/contracts/documents", },
       { label: "Bulletins à ajouter", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
       { label: "Documents RH employés", icon: "users", to: "/dashboard/accountant/documents/employees", },
@@ -114,12 +112,6 @@ export const ceoMenu: SidebarSection[] = [
       },
     ],
   },
-  {
-    title: "Documents",
-    links: [{ label: "Signer les bulletins", icon: "shield", to: "/dashboard/ceo/payslips/sign" }],
-  },
-  {
-    title: "Compte",
-    links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }],
-  },
+  { title: "Documents", links: [{ label: "Signer les bulletins", icon: "shield", to: "/dashboard/ceo/payslips/sign" }], },
+  { title: "Compte", links: [{ label: "Profil", icon: "user", to: "/dashboard/ceo/profile" }], },
 ];

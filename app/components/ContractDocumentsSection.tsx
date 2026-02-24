@@ -93,6 +93,7 @@ export default function ContractDocumentsSection({
   const [isEditingDoc, setIsEditingDoc] = useState(false);
   const [documentTypeFilter, setDocumentTypeFilter] = useState("");
   const [employeeFilter, setEmployeeFilter] = useState("");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set<string>());
   useEffect(() => {
     if (!showEmployeeFilter && !showUploader && !enableEmployeeFilter) return;
     const token = getToken();
@@ -310,6 +311,18 @@ export default function ContractDocumentsSection({
     result.sort((a, b) => a.label.localeCompare(b.label));
     return result;
   }, [filteredDocuments]);
+
+  const toggleGroupCollapse = (groupLabel: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupLabel)) {
+        next.delete(groupLabel);
+      } else {
+        next.add(groupLabel);
+      }
+      return next;
+    });
+  };
 
   const uploadDocument = async () => {
     if (!selectedFile) {
@@ -647,88 +660,108 @@ export default function ContractDocumentsSection({
             ) : documents.length === 0 ? (
               <div className="text-sm text-vdm-gold-700">Aucun document pour le moment.</div>
             ) : (
-              groupedDocuments.map((group) => (
-                <div key={group.label} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-vdm-gold-800">{group.label}</div>
-                    <div className="text-xs text-vdm-gold-600">{group.documents.length} document(s)</div>
-                  </div>
-                  <div className="space-y-3">
-                    {group.documents.map((doc) => (
-                      <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3 flex flex-col gap-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm font-semibold text-vdm-gold-900">{doc.fileName}</div>
-                            <div className="text-xs text-vdm-gold-700">
-                              {employeeLabel(doc.employee)} · ajouté le {formatDate(doc.createdAt)}
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openDocument(doc)}
-                              disabled={openingDocId === doc.id}
-                              className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                            >
-                              {openingDocId === doc.id ? "Ouverture..." : "Ouvrir"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => startEditDocument(doc)}
-                              disabled={editingDocId === doc.id}
-                              className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                            >
-                              Modifier
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteDocument(doc)}
-                              disabled={deletingDocId === doc.id}
-                              className="px-3 py-1 rounded-md border border-red-300 text-xs text-red-700 hover:bg-red-50 disabled:opacity-60"
-                            >
-                              {deletingDocId === doc.id ? "Suppression..." : "Supprimer"}
-                            </button>
-                          </div>
-                        </div>
-                        {editingDocId === doc.id ? (
-                          <div className="flex flex-col gap-2">
-                            <input
-                              type="file"
-                              accept="application/pdf,image/jpeg,image/png,image/webp"
-                              onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
-                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => saveDocumentEdit(doc)}
-                                disabled={isEditingDoc || !editSelectedFile}
-                                className="px-3 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800 disabled:opacity-60"
-                              >
-                                {isEditingDoc ? "Enregistrement..." : "Sauvegarder"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={cancelEditDocument}
-                                disabled={isEditingDoc}
-                                className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
-                              >
-                                Annuler
-                              </button>
-                            </div>
-                          </div>
-                        ) : null}
+              groupedDocuments.map((group) => {
+                const isCollapsed = collapsedGroups.has(group.label);
+                return (
+                  <div key={group.label} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-vdm-gold-800">{group.label}</div>
+                        <div className="text-xs text-vdm-gold-600">{group.documents.length} document(s)</div>
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => toggleGroupCollapse(group.label)}
+                        className="text-xs text-vdm-gold-600 hover:text-vdm-gold-900 focus:outline-none"
+                      >
+                        {isCollapsed ? "Afficher" : "Masquer"}
+                      </button>
+                    </div>
+                    {isCollapsed ? (
+                      <div className="text-xs text-vdm-gold-500">Section repliée. Cliquez sur "Afficher".</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {group.documents.map((doc) => (
+                          <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3 flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-semibold text-vdm-gold-900">{doc.fileName}</div>
+                                <div className="text-xs text-vdm-gold-700">
+                                  {employeeLabel(doc.employee)} · ajouté le {formatDate(doc.createdAt)}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openDocument(doc)}
+                                  disabled={openingDocId === doc.id}
+                                  className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                                >
+                                  {openingDocId === doc.id ? "Ouverture..." : "Ouvrir"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditDocument(doc)}
+                                  disabled={editingDocId === doc.id}
+                                  className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                                >
+                                  Modifier
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteDocument(doc)}
+                                  disabled={deletingDocId === doc.id}
+                                  className="px-3 py-1 rounded-md border border-red-300 text-xs text-red-700 hover:bg-red-50 disabled:opacity-60"
+                                >
+                                  {deletingDocId === doc.id ? "Suppression..." : "Supprimer"}
+                                </button>
+                              </div>
+                            </div>
+                            {editingDocId === doc.id ? (
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="file"
+                                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                                  onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
+                                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-xs focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => saveDocumentEdit(doc)}
+                                    disabled={isEditingDoc || !editSelectedFile}
+                                    className="px-3 py-1 rounded-md bg-vdm-gold-700 text-white text-xs hover:bg-vdm-gold-800 disabled:opacity-60"
+                                  >
+                                    {isEditingDoc ? "Enregistrement..." : "Sauvegarder"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEditDocument}
+                                    disabled={isEditingDoc}
+                                    className="px-3 py-1 rounded-md border border-vdm-gold-300 text-xs text-vdm-gold-800 hover:bg-vdm-gold-50"
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </>
       ) : (
-        <section className="rounded-xl border border-vdm-gold-200 bg-white p-4 text-sm text-vdm-gold-700">
-          L'affichage des documents contractuels sera disponible dans une section dédiée juste en dessous.
+        <section className="">
+          {/* 
+          L'affichage des documents contractuels sera disponible dans une section dédiée juste en dessous. 
+          ------------------------------------------------------------------------------------------------
+          section className="rounded-xl border border-vdm-gold-200 bg-white p-4 text-sm text-vdm-gold-700"
+          */}
         </section>
       )}
     </div>

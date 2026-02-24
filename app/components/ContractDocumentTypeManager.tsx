@@ -14,6 +14,7 @@ export default function ContractDocumentTypeManager({ contractDocumentTypes, onR
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isListExpanded, setIsListExpanded] = useState(false);
 
   const sortedTypes = useMemo(
     () => [...contractDocumentTypes].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -103,28 +104,42 @@ export default function ContractDocumentTypeManager({ contractDocumentTypes, onR
           {isSaving ? "Ajout..." : "Ajouter"}
         </button>
       </form>
-      <div className="mt-4 text-xs text-vdm-gold-600">Types existants ({contractDocumentTypes.length})</div>
+      <div className="mt-4 flex items-center justify-between text-xs text-vdm-gold-600">
+        <span>Types existants ({contractDocumentTypes.length})</span>
+        <button
+          type="button"
+          className="text-vdm-gold-700 hover:underline focus:outline-none"
+          onClick={() => setIsListExpanded((prev) => !prev)}
+          aria-expanded={isListExpanded}
+        >
+          {isListExpanded ? "Masquer" : "Afficher"}
+        </button>
+      </div>
       {sortedTypes.length > 0 ? (
-        <ul className="mt-2 space-y-2 text-sm text-vdm-gold-700">
-          {sortedTypes.map((type) => (
-            <li key={type.id} className="flex items-center justify-between gap-3">
-              <div>
-                <div>{type.name}</div>
-                <div className="text-xs text-vdm-gold-500">
-                  {new Date(type.createdAt).toLocaleString("fr-FR", { dateStyle: "short" })}
+        isListExpanded ? (
+          <ul className="mt-2 space-y-2 text-sm text-vdm-gold-700">
+            {sortedTypes.map((type) => (
+              <li key={type.id} className="flex items-center justify-between gap-3">
+                <div>
+                  <div>{type.name}</div>
+                  <div className="text-xs text-vdm-gold-500">
+                    {new Date(type.createdAt).toLocaleString("fr-FR", { dateStyle: "short" })}
+                  </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleDelete(type.id, type.name)}
-                className="text-xs text-red-600 hover:underline"
-                disabled={deletingId === type.id}
-              >
-                {deletingId === type.id ? "Suppression..." : "Supprimer"}
-              </button>
-            </li>
-          ))}
-        </ul>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(type.id, type.name)}
+                  className="text-xs text-red-600 hover:underline"
+                  disabled={deletingId === type.id}
+                >
+                  {deletingId === type.id ? "Suppression..." : "Supprimer"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-xs text-vdm-gold-500">Liste repliée. Cliquez sur "Afficher" pour voir les types.</p>
+        )
       ) : (
         <p className="mt-2 text-sm text-vdm-gold-700">Aucun type défini pour le moment.</p>
       )}
