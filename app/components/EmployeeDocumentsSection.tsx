@@ -131,6 +131,7 @@ export default function EmployeeDocumentsSection({
   const [isUploading, setIsUploading] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employee.id);
   const [selectedType, setSelectedType] = useState<DocumentType>("ID_CARD");
+  const [viewTypeFilter, setViewTypeFilter] = useState<DocumentType | "ALL">("ALL");
   const [relatedPersonName, setRelatedPersonName] = useState("");
   const [childOrder, setChildOrder] = useState("");
   const [validUntil, setValidUntil] = useState("");
@@ -167,6 +168,13 @@ export default function EmployeeDocumentsSection({
     }
     setSelectedEmployeeId(ALL_EMPLOYEES_VALUE);
   }, [employee.id, hasGlobalAccess, isSelfScope]);
+
+  useEffect(() => {
+    if (viewTypeFilter === "ALL") return;
+    if (!documentTypes.some((item) => item.value === viewTypeFilter)) {
+      setViewTypeFilter("ALL");
+    }
+  }, [documentTypes, viewTypeFilter]);
 
   const loadDocuments = useCallback(
     async ({
@@ -638,6 +646,11 @@ export default function EmployeeDocumentsSection({
       .filter((group) => group.documents.length > 0);
   }, [documents, documentTypes]);
 
+  const visibleDocumentGroups = useMemo(() => {
+    if (viewTypeFilter === "ALL") return documentsByCategory;
+    return documentsByCategory.filter((group) => group.type === viewTypeFilter);
+  }, [documentsByCategory, viewTypeFilter]);
+
   return (
     <div className="bg-white border border-vdm-gold-200 rounded-xl p-6 mt-6">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -691,6 +704,22 @@ export default function EmployeeDocumentsSection({
             </div>
           </div>
         ) : null}
+
+        <div>
+          <div className="text-xs text-vdm-gold-600 mb-1">Filtrer par type</div>
+          <select
+            value={viewTypeFilter}
+            onChange={(e) => setViewTypeFilter(e.target.value as DocumentType | "ALL")}
+            className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+          >
+            <option value="ALL">Tous les types</option>
+            {documentTypes.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {canUploadDocuments ? (
           <>
@@ -784,7 +813,7 @@ export default function EmployeeDocumentsSection({
         <div className="text-sm text-vdm-gold-700">Aucun document pour le moment.</div>
       ) : (
         <div className="space-y-4">
-          {documentsByCategory.map((group) => (
+              {visibleDocumentGroups.map((group) => (
             <div key={group.type} className="space-y-2">
               <div className="text-sm font-semibold text-vdm-gold-800">
                 {group.label} ({group.documents.length})
