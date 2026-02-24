@@ -2,6 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken } from "@/lib/auth-client";
+import {
+  MONTH_LABELS,
+  SalarySlip,
+  groupSlipsByYearMonth,
+  toPeriod,
+  formatDate,
+  formatDateTime,
+} from "@/app/components/salary-slip-utils";
 
 type EmployeeItem = {
   id: string;
@@ -19,75 +27,6 @@ type RawEmployeeItem = {
   email?: string;
 };
 
-type Slip = {
-  id: string;
-  employeeId: string;
-  year: number;
-  month: number;
-  fileName: string;
-  signedAt?: string | null;
-  createdAt: string;
-  signedBy?: {
-    firstName: string;
-    lastName: string;
-    role: string;
-  } | null;
-  employee?: {
-    firstName: string;
-    lastName: string;
-    matricule?: string | null;
-    email: string;
-  };
-};
-
-type MonthGroup = {
-  month: number;
-  slips: Slip[];
-};
-
-type YearGroup = {
-  year: number;
-  months: MonthGroup[];
-};
-
-const MONTH_LABELS = [
-  "Janvier",
-  "Février",
-  "Mars",
-  "Avril",
-  "Mai",
-  "Juin",
-  "Juillet",
-  "Août",
-  "Septembre",
-  "Octobre",
-  "Novembre",
-  "Décembre",
-];
-
-function toPeriod(year: number, month: number) {
-  const label = MONTH_LABELS[month - 1] ?? String(month);
-  return `${label} ${year}`;
-}
-
-function formatDate(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-FR");
-}
-
-function formatDateTime(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString("fr-FR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -97,31 +36,11 @@ function fileToDataUrl(file: File) {
   });
 }
 
-function groupSlipsByYearMonth(slips: Slip[]): YearGroup[] {
-  const years = new Map<number, Map<number, Slip[]>>();
-  for (const slip of slips) {
-    const months = years.get(slip.year) ?? new Map<number, Slip[]>();
-    const monthSlips = months.get(slip.month) ?? [];
-    monthSlips.push(slip);
-    months.set(slip.month, monthSlips);
-    years.set(slip.year, months);
-  }
-
-  return Array.from(years.entries())
-    .sort((a, b) => b[0] - a[0])
-    .map(([year, months]) => ({
-      year,
-      months: Array.from(months.entries())
-        .sort((a, b) => b[0] - a[0])
-        .map(([month, monthSlips]) => ({ month, slips: monthSlips })),
-    }));
-}
-
 export default function SalarySlipsAdmin() {
   const now = new Date();
   const currentYear = now.getFullYear();
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
-  const [slips, setSlips] = useState<Slip[]>([]);
+  const [slips, setSlips] = useState<SalarySlip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);

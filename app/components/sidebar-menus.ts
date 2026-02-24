@@ -37,7 +37,7 @@ export const accountantMenu: SidebarSection[] = [
       { label: "Employés DAF", icon: "users", to: "/dashboard/accountant/department/employees" },
       {
         label: "Historique des employés",
-        icon: "users",
+        icon: "clock",
         to: "/dashboard/accountant/department/employees-history",
       },
     ],
@@ -55,7 +55,8 @@ export const accountantMenu: SidebarSection[] = [
       { label: "Contrats à ajouter", icon: "shield", to: "/dashboard/accountant/administration/contracts/types", },
       { label: "Documents contractuels", icon: "file-text", to: "/dashboard/accountant/administration/contracts/documents", },
       { label: "Bulletins à ajouter", icon: "shield", to: "/dashboard/accountant/payslips/imported" },
-      { label: "Documents RH employés", icon: "users", to: "/dashboard/accountant/documents/employees", },
+      { label: "Bulletins employés", icon: "file-text", to: "/dashboard/accountant/payslips/imported/by-year" },
+      { label: "Documents RH employés", icon: "file-text", to: "/dashboard/accountant/documents/employees", },
     ],
   },
   {
