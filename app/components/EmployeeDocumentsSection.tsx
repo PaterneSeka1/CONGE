@@ -132,6 +132,7 @@ export default function EmployeeDocumentsSection({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(employee.id);
   const [selectedType, setSelectedType] = useState<DocumentType>("ID_CARD");
   const [viewTypeFilter, setViewTypeFilter] = useState<DocumentType | "ALL">("ALL");
+  const [collapsedTypes, setCollapsedTypes] = useState<Set<DocumentType>>(() => new Set<DocumentType>());
   const [relatedPersonName, setRelatedPersonName] = useState("");
   const [childOrder, setChildOrder] = useState("");
   const [validUntil, setValidUntil] = useState("");
@@ -646,6 +647,18 @@ export default function EmployeeDocumentsSection({
       .filter((group) => group.documents.length > 0);
   }, [documents, documentTypes]);
 
+  const toggleCollapse = (type: DocumentType) => {
+    setCollapsedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  };
+
   const visibleDocumentGroups = useMemo(() => {
     if (viewTypeFilter === "ALL") return documentsByCategory;
     return documentsByCategory.filter((group) => group.type === viewTypeFilter);
@@ -813,205 +826,208 @@ export default function EmployeeDocumentsSection({
         <div className="text-sm text-vdm-gold-700">Aucun document pour le moment.</div>
       ) : (
         <div className="space-y-4">
-              {visibleDocumentGroups.map((group) => (
-            <div key={group.type} className="space-y-2">
-              <div className="text-sm font-semibold text-vdm-gold-800">
-                {group.label} ({group.documents.length})
-              </div>
-              {group.documents.map((doc) => (
-                <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div className="flex items-start gap-3">
-                      {doc.employee?.profilePhotoUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPhotoPreviewUrl(doc.employee?.profilePhotoUrl ?? null);
-                            setPhotoPreviewLabel(`Photo de ${employeeLabel(doc.employee)}`);
-                          }}
-                          className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                          aria-label={`Agrandir la photo de ${employeeLabel(doc.employee)}`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={doc.employee.profilePhotoUrl}
-                            alt={`Photo de ${employeeLabel(doc.employee)}`}
-                            className="h-10 w-10 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
-                          />
-                        </button>
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center text-xs font-semibold">
-                          {(doc.employee?.firstName?.[0] ?? "").toUpperCase()}
-                          {(doc.employee?.lastName?.[0] ?? "").toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-sm font-semibold text-vdm-gold-900">{typeLabel(doc.type, documentTypes)}</div>
-                        <div className="text-xs text-vdm-gold-700">
-                          Fichier: {doc.fileName} | Ajouté le: {formatDate(doc.createdAt)}
-                        </div>
-                        {doc.relatedPersonName ? (
-                          <div className="text-xs text-vdm-gold-700">
-                            {doc.type === "CHILD_BIRTH_CERTIFICATE" ? "Enfant" : "Conjoint"}: {doc.relatedPersonName}
-                            {doc.type === "CHILD_BIRTH_CERTIFICATE" && doc.childOrder
-                              ? ` (rang ${doc.childOrder})`
-                              : ""}
-                          </div>
-                        ) : null}
-                        {doc.validUntil ? (
-                          <div className="text-xs text-vdm-gold-700">
-                            Valide jusqu&apos;au {formatValidityDate(doc.validUntil)}
-                          </div>
-                        ) : null}
-                        {hasGlobalAccess ? (
-                          <div className="text-xs text-vdm-gold-700">
-                            Employé: {employeeLabel(doc.employee)} | Déposé par: {doc.uploadedBy?.firstName}{" "}
-                            {doc.uploadedBy?.lastName}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openDocument(doc)}
-                        disabled={openingDocId === doc.id}
-                        className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-                      >
-                        {openingDocId === doc.id ? "Ouverture..." : "Ouvrir / Télécharger"}
-                      </button>
-                      {canManageDocument(doc) ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => startEditDocument(doc)}
-                            className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-                            disabled={isEditingBusy}
-                          >
-                            Modifier
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => deleteDocument(doc)}
-                            className="px-3 py-2 rounded-md border border-red-300 text-red-700 text-sm hover:bg-red-50"
-                            disabled={isEditingBusy}
-                          >
-                            Supprimer
-                          </button>
-                        </>
-                      ) : null}
+          {visibleDocumentGroups.map((group) => {
+            const isCollapsed = collapsedTypes.has(group.type);
+            return (
+              <div key={group.type} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-vdm-gold-800">{group.label}</div>
+                    <div className="text-xs text-vdm-gold-600">
+                      {group.documents.length} document{group.documents.length > 1 ? "s" : ""}
                     </div>
                   </div>
-
-                  {editingId === doc.id ? (
-                    <div className="mt-3 border-t border-vdm-gold-100 pt-3 space-y-3">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div>
-                          <div className="text-xs text-vdm-gold-600 mb-1">Type de document</div>
-                          <select
-                            value={editType}
-                            onChange={(e) => setEditType(e.target.value as DocumentType)}
-                            className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                            disabled={isEditingBusy}
-                          >
-                            {getEditTypeOptions(doc).map((item) => (
-                              <option key={item.value} value={item.value}>
-                                {item.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {isEditingNeedsRelatedName ? (
-                          <div>
-                            <div className="text-xs text-vdm-gold-600 mb-1">
-                              {isEditingChildType ? "Nom de l'enfant" : "Nom du conjoint"}
-                            </div>
-                            <input
-                              value={editRelatedPersonName}
-                              onChange={(e) => setEditRelatedPersonName(e.target.value)}
-                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                              disabled={isEditingBusy}
-                            />
-                          </div>
-                        ) : null}
-
-                        {isEditingChildType ? (
-                          <div>
-                            <div className="text-xs text-vdm-gold-600 mb-1">Rang de l&apos;enfant (facultatif)</div>
-                            <input
-                              value={editChildOrder}
-                              onChange={(e) => setEditChildOrder(e.target.value.replace(/\D/g, ""))}
-                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                              disabled={isEditingBusy}
-                            />
-                          </div>
-                        ) : null}
-                        {isEditingNeedsValidityDate ? (
-                          <div>
-                            <div className="text-xs text-vdm-gold-600 mb-1">Date de validité</div>
-                            <input
-                              type="date"
-                              value={editValidUntil}
-                              onChange={(e) => setEditValidUntil(e.target.value)}
-                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-                              disabled={isEditingBusy}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-vdm-gold-600 mb-1">Remplacer le fichier (optionnel)</div>
-                        <input
-                          key={editFileInputKey}
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
-                          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
-                          disabled={isEditingBusy}
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => saveEditDocument(doc)}
-                          className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
-                          disabled={isEditingBusy}
-                        >
-                          {isEditingBusy ? "Enregistrement..." : "Enregistrer"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEditDocument}
-                          className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
-                          disabled={isEditingBusy}
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => toggleCollapse(group.type)}
+                    className="text-xs text-vdm-gold-600 hover:text-vdm-gold-900 focus:outline-none"
+                    aria-expanded={!isCollapsed}
+                  >
+                    {isCollapsed ? "Afficher" : "Masquer"}
+                  </button>
                 </div>
-              ))}
-            </div>
-          ))}
-          {hasMoreDocuments ? (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={loadMoreDocuments}
-                disabled={isLoadingMore}
-                className="px-4 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50 disabled:opacity-60"
-              >
-                {isLoadingMore ? "Chargement..." : "Charger plus de documents"}
-              </button>
-            </div>
-          ) : null}
+                {isCollapsed ? (
+                  <div className="text-xs text-vdm-gold-500">Section repliée. Cliquez sur "Afficher".</div>
+                ) : (
+                  group.documents.map((doc) => (
+                    <div key={doc.id} className="border border-vdm-gold-200 rounded-md p-3">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div className="flex items-start gap-3">
+                          {doc.employee?.profilePhotoUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPhotoPreviewUrl(doc.employee?.profilePhotoUrl ?? null);
+                                setPhotoPreviewLabel(`Photo de ${employeeLabel(doc.employee)}`);
+                              }}
+                              className="rounded-full focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                              aria-label={`Agrandir la photo de ${employeeLabel(doc.employee)}`}
+                            >
+                              <img
+                                src={doc.employee.profilePhotoUrl}
+                                alt={`Photo de ${employeeLabel(doc.employee)}`}
+                                className="h-10 w-10 rounded-full object-cover border border-vdm-gold-200 cursor-zoom-in"
+                              />
+                            </button>
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-vdm-gold-100 text-vdm-gold-800 border border-vdm-gold-200 flex items-center justify-center text-xs font-semibold">
+                              {(doc.employee?.firstName?.[0] ?? "").toUpperCase()}
+                              {(doc.employee?.lastName?.[0] ?? "").toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="text-sm font-semibold text-vdm-gold-900">{typeLabel(doc.type, documentTypes)}</div>
+                            <div className="text-xs text-vdm-gold-700">
+                              Fichier: {doc.fileName} | Ajouté le: {formatDate(doc.createdAt)}
+                            </div>
+                            {doc.relatedPersonName ? (
+                              <div className="text-xs text-vdm-gold-700">
+                                {doc.type === "CHILD_BIRTH_CERTIFICATE" ? "Enfant" : "Conjoint"}: {doc.relatedPersonName}
+                                {doc.type === "CHILD_BIRTH_CERTIFICATE" && doc.childOrder
+                                  ? ` (rang ${doc.childOrder})`
+                                  : ""}
+                              </div>
+                            ) : null}
+                            {doc.validUntil ? (
+                              <div className="text-xs text-vdm-gold-700">
+                                Valide jusqu&apos;au {formatValidityDate(doc.validUntil)}
+                              </div>
+                            ) : null}
+                            {hasGlobalAccess ? (
+                              <div className="text-xs text-vdm-gold-700">
+                                Employé: {employeeLabel(doc.employee)} | Déposé par: {doc.uploadedBy?.firstName} {doc.uploadedBy?.lastName}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openDocument(doc)}
+                            disabled={openingDocId === doc.id}
+                            className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                          >
+                            {openingDocId === doc.id ? "Ouverture..." : "Ouvrir / Télécharger"}
+                          </button>
+                          {canManageDocument(doc) ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startEditDocument(doc)}
+                                className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                                disabled={isEditingBusy}
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteDocument(doc)}
+                                className="px-3 py-2 rounded-md border border-red-300 text-red-700 text-sm hover:bg-red-50"
+                                disabled={isEditingBusy}
+                              >
+                                Supprimer
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {editingId === doc.id ? (
+                        <div className="mt-3 border-t border-vdm-gold-100 pt-3 space-y-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                              <div className="text-xs text-vdm-gold-600 mb-1">Type de document</div>
+                              <select
+                                value={editType}
+                                onChange={(e) => setEditType(e.target.value as DocumentType)}
+                                className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                                disabled={isEditingBusy}
+                              >
+                                {getEditTypeOptions(doc).map((item) => (
+                                  <option key={item.value} value={item.value}>
+                                    {item.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {isEditingNeedsRelatedName ? (
+                              <div>
+                                <div className="text-xs text-vdm-gold-600 mb-1">{isEditingChildType ? "Nom de l'enfant" : "Nom du conjoint"}</div>
+                                <input
+                                  value={editRelatedPersonName}
+                                  onChange={(e) => setEditRelatedPersonName(e.target.value)}
+                                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                                  disabled={isEditingBusy}
+                                />
+                              </div>
+                            ) : null}
+
+                            {isEditingChildType ? (
+                              <div>
+                                <div className="text-xs text-vdm-gold-600 mb-1">Rang de l'enfant (facultatif)</div>
+                                <input
+                                  value={editChildOrder}
+                                  onChange={(e) => setEditChildOrder(e.target.value.replace(/\D/g, ""))}
+                                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                                  disabled={isEditingBusy}
+                                />
+                              </div>
+                            ) : null}
+                            {isEditingNeedsValidityDate ? (
+                              <div>
+                                <div className="text-xs text-vdm-gold-600 mb-1">Date de validité</div>
+                                <input
+                                  type="date"
+                                  value={editValidUntil}
+                                  onChange={(e) => setEditValidUntil(e.target.value)}
+                                  className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+                                  disabled={isEditingBusy}
+                                />
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-vdm-gold-600 mb-1">Remplacer le fichier (optionnel)</div>
+                            <input
+                              key={editFileInputKey}
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png,image/webp"
+                              onChange={(e) => setEditSelectedFile(e.target.files?.[0] ?? null)}
+                              className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500 bg-white"
+                              disabled={isEditingBusy}
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => saveEditDocument(doc)}
+                              className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
+                              disabled={isEditingBusy}
+                            >
+                              {isEditingBusy ? "Enregistrement..." : "Enregistrer"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelEditDocument}
+                              className="px-3 py-2 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-sm hover:bg-vdm-gold-50"
+                              disabled={isEditingBusy}
+                            >
+                              Annuler
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
-
       {photoPreviewUrl ? (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
