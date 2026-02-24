@@ -482,7 +482,6 @@ export default function ContractDocumentsSection({
     <div className="bg-white border border-vdm-gold-200 rounded-xl p-6 space-y-6">
       <div>
         <div className="text-lg font-semibold text-vdm-gold-800">Documents RH</div>
-        <p className="text-sm text-vdm-gold-700">Envoyez ici les contrats et avenants par employé.</p>
       </div>
 
       {(enableDocumentTypeFilter || enableEmployeeFilter) && (

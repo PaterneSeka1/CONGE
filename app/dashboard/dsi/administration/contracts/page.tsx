@@ -14,8 +14,7 @@ export default function DsiAdministrationContractsPage() {
       <div>
         <div className="text-xl font-semibold mb-1 text-vdm-gold-800">Mes contrats</div>
         <p className="text-sm text-vdm-gold-700">
-          Retrouvez ici uniquement les documents contractuels classés par type (types définis par la comptable) ;
-          ces documents restent distincts de ceux déjà présents dans votre profil.
+          Retrouvez ici vos documents contractuels classés par type.
         </p>
       </div>
       {employee ? (

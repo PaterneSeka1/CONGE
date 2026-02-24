@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getToken, type EmployeeSession } from "@/lib/auth-client";
 import toast from "react-hot-toast";
+import { documentRequiresValidityDate } from "@/lib/document-validity";
 
 export const DEFAULT_DOCUMENT_TYPES = [
   { value: "CONTRACT", label: "Contrat / avenant" },
@@ -160,8 +161,7 @@ export default function EmployeeDocumentsSection({
   const isEditingChildType = editType === "CHILD_BIRTH_CERTIFICATE";
   const isEditingNeedsRelatedName =
     editType === "SPOUSE_BIRTH_CERTIFICATE" || editType === "CHILD_BIRTH_CERTIFICATE";
-  const isEditingNeedsValidityDate =
-    editType === "ID_CARD" || editType === "DRIVING_LICENSE";
+  const isEditingNeedsValidityDate = documentRequiresValidityDate(editType);
   useEffect(() => {
     if (!isEditingNeedsValidityDate) {
       setEditValidUntil("");
@@ -367,8 +367,13 @@ export default function EmployeeDocumentsSection({
   const needsRelatedName =
     effectiveSelectedType === "SPOUSE_BIRTH_CERTIFICATE" || effectiveSelectedType === "CHILD_BIRTH_CERTIFICATE";
   const isChildType = effectiveSelectedType === "CHILD_BIRTH_CERTIFICATE";
-  const needsValidityDate =
-    effectiveSelectedType === "ID_CARD" || effectiveSelectedType === "DRIVING_LICENSE";
+  const needsValidityDate = documentRequiresValidityDate(effectiveSelectedType);
+  const isUploadButtonDisabled =
+    isUploading ||
+    availableUploadTypes.length === 0 ||
+    !selectedFile ||
+    (needsRelatedName && !relatedPersonName.trim()) ||
+    (needsValidityDate && !validUntil);
   useEffect(() => {
     if (!needsValidityDate) {
       setValidUntil("");
@@ -694,6 +699,22 @@ export default function EmployeeDocumentsSection({
         </div>
       </div>
 
+      <div className="mb-4">
+        <div className="text-xs text-vdm-gold-600 mb-1">Filtrer par type</div>
+        <select
+          value={viewTypeFilter}
+          onChange={(e) => setViewTypeFilter(e.target.value as DocumentType | "ALL")}
+          className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
+        >
+          <option value="ALL">Tous les types</option>
+          {documentTypes.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className={`${filtersGridClass} mb-4`}>
         {hasGlobalAccess ? (
           <div className={employeeFilterWrapperClass}>
@@ -723,22 +744,6 @@ export default function EmployeeDocumentsSection({
             </div>
           </div>
         ) : null}
-
-        <div>
-          <div className="text-xs text-vdm-gold-600 mb-1">Filtrer par type</div>
-          <select
-            value={viewTypeFilter}
-            onChange={(e) => setViewTypeFilter(e.target.value as DocumentType | "ALL")}
-            className="w-full border border-vdm-gold-200 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-vdm-gold-500"
-          >
-            <option value="ALL">Tous les types</option>
-            {documentTypes.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </div>
 
         {canUploadDocuments ? (
           <>
@@ -812,7 +817,7 @@ export default function EmployeeDocumentsSection({
           <button
             type="button"
             onClick={uploadDocument}
-            disabled={isUploading || availableUploadTypes.length === 0}
+            disabled={isUploadButtonDisabled}
             className="px-3 py-2 rounded-md bg-vdm-gold-700 text-white text-sm hover:bg-vdm-gold-800 disabled:opacity-60"
           >
             {isUploading ? "Envoi..." : "Ajouter le document"}

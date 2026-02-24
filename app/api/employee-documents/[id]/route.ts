@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, verifyJwt } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { documentRequiresValidityDate } from "@/lib/document-validity";
 
 const DOCUMENT_TYPES = new Set([
   "ID_CARD",
@@ -115,7 +116,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     ? norm(body?.relatedPersonName) || null
     : existing.relatedPersonName ?? null;
 
-  const nextNeedsValidityDate = nextType === "ID_CARD" || nextType === "DRIVING_LICENSE";
+  const nextNeedsValidityDate = documentRequiresValidityDate(nextType);
   const hasValidUntilParam = Object.prototype.hasOwnProperty.call(body, "validUntil");
   let nextValidUntil: Date | null = null;
   if (hasValidUntilParam) {

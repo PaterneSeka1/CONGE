@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, verifyJwt } from "@/lib/auth";
 import { norm } from "@/lib/validators";
+import { documentRequiresValidityDate } from "@/lib/document-validity";
 
 const DOCUMENT_TYPES = new Set([
   "ID_CARD",
@@ -189,7 +190,7 @@ export async function POST(req: Request) {
     return jsonError("Type de document invalide", 400);
   }
 
-  const needsValidityDate = type === "ID_CARD" || type === "DRIVING_LICENSE";
+  const needsValidityDate = documentRequiresValidityDate(type);
   if (validUntilRaw && !validUntilDate) {
     return jsonError("Date de validité invalide", 400);
   }
