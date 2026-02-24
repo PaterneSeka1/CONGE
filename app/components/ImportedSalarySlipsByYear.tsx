@@ -80,8 +80,8 @@ export default function ImportedSalarySlipsByYear() {
               },
             ];
           })
-          .filter((emp) => emp.label.length > 0)
-          .sort((a, b) => a.label.localeCompare(b.label));
+          .filter((emp: { label: string | any[]; }) => emp.label.length > 0)
+          .sort((a: { label: string; }, b: { label: any; }) => a.label.localeCompare(b.label));
         setEmployees(formatted);
       } finally {
         setIsEmployeesLoading(false);
