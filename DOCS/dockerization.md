@@ -12,3 +12,5 @@
   2. Garder `@next/swc-linux-x64-gnu` dans `optionalDependencies` pour garantir la cohérence Linux/Docker.
   3. Suivre les logs Prisma/Next lors de chaque build pour s’assurer qu’OpenSSL et Turbopack détectent bien les binaires natifs.
   4. Pour Docker + Compass (Mongo local), démarre `mongod` via `--replSet rs0`, valide `rs.initiate()` et expose l’URL `mongodb://host.docker.internal:27017/conge?replicaSet=rs0` dans un fichier `.env` utilisé par Compose afin que le conteneur puisse exécuter les transactions (la base peut ensuite être préparée manuellement, sans script `seed`).
+
+- Les sous-directeurs sont automatiquement rattachés aux services Information, Réputation et Qualité de la Direction des Opérations, via le seed, ce qui reflète la structure attendue en production.

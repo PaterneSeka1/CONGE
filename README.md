@@ -67,7 +67,10 @@ docker run --rm -p 3000:3000 --env-file .env conge:latest
 ```
 
 ### Seeds
-Le projet ne fournit plus de runner `npm run seed`. Injectez les comptes manuellement dans Mongo si nécessaire.
+- Utilisez `npm run seed` (ou `ts-node --transpile-only prisma/seed.ts`) pour créer les comptes PDG, DSI (admin), Comptable DAF, Directeur des opérations et les trois sous-directeurs automatiquement. Le script est idempotent : si un utilisateur existe déjà, il ne le remplace pas.
+- Indiquez `SEED_ADMIN_PASSWORD` dans `.env` / `.env.production` pour définir le mot de passe commun aux comptes initiaux (défaut : `ChangeMe123!`). Les mots de passe sont hashés côté Prisma.
+- Les trois sous-directeurs sont rattachés aux services Information, Réputation et Qualité de la Direction des Opérations, ce qui garantit qu’ils héritent des workflows attendus.
+- Pour vérifier en une seule commande qu’ils sont présents, exécute `./scripts/check-seed.sh` après avoir démarré les services Docker (ou `./scripts/check-seed.sh -c <compose-file>` si tu utilises un autre fichier Compose).
 
 ## Notes importantes
 - Le solde annuel par defaut est 25 jours.
