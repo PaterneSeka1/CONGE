@@ -1,4 +1,5 @@
-import { PrismaClient, DepartmentType, EmployeeRole, EmployeeStatus, ServiceType } from "@prisma/client";
+import pkg from "@prisma/client";
+const { PrismaClient, DepartmentType, EmployeeRole, EmployeeStatus, ServiceType } = pkg;
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 
