@@ -2,9 +2,6 @@
 import { formatDateDMY } from "@/lib/date-format";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import RequireAuth from "@/app/components/RequireAuth";
-import RoleGate from "@/app/components/RoleGate";
-import DashboardShell from "@/app/components/DashboardShell";
 import DashboardCharts from "@/app/components/DashboardCharts";
 import { getToken } from "@/lib/auth-client";
 
@@ -167,49 +164,92 @@ export default function EmployeeDashboard() {
   }, [leaves, baseAllowance]);
 
   return (
-    <RequireAuth>
-      <RoleGate allow={["EMPLOYEE", "SERVICE_HEAD"]}>
-        <DashboardShell title="Tableau de bord Employé">
-          <div className="grid gap-6">
-            <section className="grid gap-4 md:grid-cols-3">
-              <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-sm text-vdm-gold-700">Solde de congés</div>
-                  <button
-                    type="button"
-                    onClick={refreshData}
-                    className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
-                  >
-                    Rafraîchir
-                  </button>
-                </div>
-                <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.balance}</div>
-                <div className="text-xs text-gray-500 mt-2">Base annuelle : {baseAllowance} jours.</div>
-              </div>
+    <div className="p-6 space-y-6">
+      <div>
+        <div className="text-xl font-semibold text-vdm-gold-800">Tableau de bord Employé</div>
+        <p className="text-sm text-vdm-gold-700 mt-1">
+          Suivi personnel de vos demandes de congé et de votre solde.
+        </p>
+      </div>
 
-              <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-                <div className="text-sm text-vdm-gold-700">Demandes en cours</div>
-                <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.pendingCount}</div>
-                <div className="text-xs text-gray-500 mt-2">En attente de validation.</div>
-              </div>
-
-              <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
-                <div className="text-sm text-vdm-gold-700">Dernière demande</div>
-                <div className="text-sm font-semibold text-vdm-gold-800 mt-3">{stats.lastLabel}</div>
-                <div className="text-xs text-gray-500 mt-2">Statut et période.</div>
-              </div>
-            </section>
-
-            <DashboardCharts
-              title="Mes statistiques"
-              subtitle="Suivi de mes demandes de congé."
-              lineData={stats.lineData}
-              pieData={stats.pieData}
-              barData={stats.barData}
-            />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm text-vdm-gold-700">Solde de congés</div>
+            <button
+              type="button"
+              onClick={refreshData}
+              className="px-2 py-1 rounded-md border border-vdm-gold-300 text-vdm-gold-800 text-xs hover:bg-vdm-gold-50"
+            >
+              Rafraîchir
+            </button>
           </div>
-        </DashboardShell>
-      </RoleGate>
-    </RequireAuth>
+          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.balance}</div>
+          <div className="text-xs text-gray-500 mt-2">Base annuelle : {baseAllowance} jours.</div>
+        </div>
+
+        <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
+          <div className="text-sm text-vdm-gold-700">Demandes en cours</div>
+          <div className="text-3xl font-bold text-vdm-gold-800 mt-2">{stats.pendingCount}</div>
+          <div className="text-xs text-gray-500 mt-2">En attente de validation.</div>
+        </div>
+
+        <div className="bg-white border border-vdm-gold-200 rounded-xl p-4">
+          <div className="text-sm text-vdm-gold-700">Dernière demande</div>
+          <div className="text-sm font-semibold text-vdm-gold-800 mt-3">{stats.lastLabel}</div>
+          <div className="text-xs text-gray-500 mt-2">Statut et période.</div>
+        </div>
+      </div>
+
+      <DashboardCharts
+        title="Mes congés"
+        subtitle="Synthèse de mes demandes et de mon solde."
+        lineData={stats.lineData}
+        pieData={stats.pieData}
+        barData={stats.barData}
+      />
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-vdm-gold-800">Historique des demandes</h2>
+            <p className="text-sm text-gray-500">Toutes les demandes pour l'année.</p>
+          </div>
+          <button
+            type="button"
+            onClick={refreshData}
+            className="text-xs uppercase tracking-wide text-vdm-gold-800 font-semibold"
+          >
+            Actualiser
+          </button>
+        </div>
+        <div className="bg-white border border-vdm-gold-200 rounded-xl overflow-hidden">
+          <table className="min-w-full text-left">
+            <thead className="bg-vdm-gold-50 text-xs uppercase text-vdm-gold-700">
+              <tr>
+                <th className="px-4 py-2">Type</th>
+                <th className="px-4 py-2">Début</th>
+                <th className="px-4 py-2">Fin</th>
+                <th className="px-4 py-2">Statut</th>
+                <th className="px-4 py-2">Créée le</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaves.map((leave) => (
+                <tr key={leave.id} className="border-t border-gray-100 hover:bg-vdm-gold-50">
+                  <td className="px-4 py-3 text-sm text-gray-600">{leave.type}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDateDMY(leave.startDate)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDateDMY(leave.endDate)}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-vdm-gold-800">
+                    {statusLabel(leave.status)}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{formatDateDMY(leave.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   );
 }

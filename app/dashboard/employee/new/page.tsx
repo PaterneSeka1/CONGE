@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { getEmployee, getToken } from "@/lib/auth-client";
 import toast from "react-hot-toast";
 import { DEFAULT_LEAVE_TYPE, leaveOptionsForGender, type LeaveTypeValue } from "@/lib/leave-types";
+import { isEntryYearCurrent } from "@/lib/entry-year";
 
 type LeaveItem = {
   startDate: string;
@@ -134,8 +135,16 @@ export default function EmployeeLeaveNew() {
     [startDate, endDate]
   );
   const isExhausted = balance <= 0;
-  const employeeGender = getEmployee()?.gender ?? null;
-  const leaveOptions = useMemo(() => leaveOptionsForGender(employeeGender), [employeeGender]);
+  const employeeSession = useMemo(() => getEmployee(), []);
+  const employeeGender = employeeSession?.gender ?? null;
+  const hideAnnualPaidLeave = useMemo(() => isEntryYearCurrent(employeeSession), [employeeSession]);
+  const leaveOptions = useMemo(() => {
+    const options = leaveOptionsForGender(employeeGender);
+    if (hideAnnualPaidLeave) {
+      return options.filter((option) => option.value !== "ANNUAL_PAID");
+    }
+    return options;
+  }, [employeeGender, hideAnnualPaidLeave]);
 
   useEffect(() => {
     if (leaveOptions.length && !leaveOptions.some((opt) => opt.value === type)) {

@@ -111,6 +111,7 @@ export default function ProfileView({ documentTypes }: ProfileViewProps) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [departmentNames, setDepartmentNames] = useState<Record<string, string>>({});
+  const [serviceNames, setServiceNames] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
   const pw = useMemo(() => {
@@ -152,6 +153,22 @@ export default function ProfileView({ documentTypes }: ProfileViewProps) {
       }
     };
     loadDepartments();
+    const loadServices = async () => {
+      const res = await fetch("/api/services", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        services?: Array<{ id: string; name?: string; type?: string }>;
+      };
+      if (res.ok) {
+        const map: Record<string, string> = {};
+        (data?.services ?? []).forEach((s) => {
+          map[s.id] = s.name ?? s.type ?? "—";
+        });
+        setServiceNames(map);
+      }
+    };
+    loadServices();
   }, []);
 
   useEffect(() => {
@@ -486,8 +503,10 @@ export default function ProfileView({ documentTypes }: ProfileViewProps) {
             </div>
           </div>
           <div>
-            <div className="text-xs text-vdm-gold-600">Service</div>
-            <div className="text-sm text-vdm-gold-900 font-medium">{draft.serviceId ?? "—"}</div>
+          <div className="text-xs text-vdm-gold-600">Service</div>
+          <div className="text-sm text-vdm-gold-900 font-medium">
+            {draft.serviceId ? serviceNames[draft.serviceId] ?? "—" : "—"}
+          </div>
           </div>
           <div>
             <div className="text-xs text-vdm-gold-600">Date d&apos;entrée dans l&apos;entreprise</div>
